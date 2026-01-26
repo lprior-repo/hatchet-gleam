@@ -5,6 +5,7 @@ import gleam/httpc
 import gleam/int
 import gleam/list
 import gleam/option
+import hatchet/internal/ffi/timer
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
 import hatchet/types.{
@@ -299,6 +300,6 @@ fn parse_status(resp: p.WorkflowStatusResponse) -> RunStatus {
   }
 }
 
-fn sleep_ms(_ms: Int) -> Nil {
-  Nil
+fn sleep_ms(ms: Int) -> Nil {
+  timer.sleep_ms(ms)
 }

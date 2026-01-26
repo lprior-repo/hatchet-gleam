@@ -188,7 +188,7 @@ pub fn backoff_encoding_test() {
 
 pub fn client_configuration_test() {
   let assert Ok(client) = hatchet.new("hatchet.example.com", "secret-token")
-  let client_with_port = hatchet.with_port(client, 7077)
+  let client_with_port = hatchet.with_port(client, 7070)
   let client_with_namespace =
     hatchet.with_namespace(client_with_port, "production")
 
@@ -196,7 +196,7 @@ pub fn client_configuration_test() {
   |> should.equal("hatchet.example.com")
 
   types.get_port(client_with_namespace)
-  |> should.equal(7077)
+  |> should.equal(7070)
 
   types.get_namespace(client_with_namespace)
   |> should.equal(option.Some("production"))
