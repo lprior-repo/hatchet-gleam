@@ -59,6 +59,12 @@ pub fn protobuf_message_from_bits(bits: BitArray) -> ProtobufMessage {
   ProtobufMessage(bits)
 }
 
+//// Extract the raw bits from a ProtobufMessage
+pub fn protobuf_message_to_bits(msg: ProtobufMessage) -> BitArray {
+  let ProtobufMessage(bits) = msg
+  bits
+}
+
 //// Opaque type for Erlang map with mixed value types
 pub opaque type ErlangMap
 
