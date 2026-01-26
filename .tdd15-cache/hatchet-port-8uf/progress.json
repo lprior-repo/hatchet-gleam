@@ -1,0 +1,35 @@
+{
+  "bead_id": "hatchet-port-8uf",
+  "title": "Implement gRPC client for worker communication",
+  "phase": 15,
+  "phases": {
+    "0": {"status": "completed", "gate": "complexity_assessed"},
+    "1": {"status": "completed", "gate": "sufficient_context"},
+    "2": {"status": "completed", "gate": "plan_verified"},
+    "3": {"status": "skipped", "gate": "plan_verified_llm"},
+    "4": {"status": "completed", "gate": "tests_fail"},
+    "5": {"status": "completed", "gate": "tests_pass"},
+    "6": {"status": "completed", "gate": "tests_green"},
+    "7": {"status": "skipped", "gate": "martin_fowler_1"},
+    "8": {"status": "completed", "gate": "implementation_complete"},
+    "9": {"status": "completed", "gate": "criteria_met"},
+    "10": {"status": "skipped", "gate": "no_critical_issues"},
+    "11": {"status": "completed", "gate": "qa_pass"},
+    "12": {"status": "skipped", "gate": "martin_fowler_2"},
+    "13": {"status": "completed", "gate": "standards_met"},
+    "14": {"status": "completed", "gate": "minimized"},
+    "15": {"status": "in_progress", "gate": "push_succeeded"}
+  },
+  "language": "gleam",
+  "complexity": "MEDIUM",
+  "summary": {
+    "files_created": [
+      "test/hatchet/internal/grpc_test.gleam"
+    ],
+    "files_modified": [
+      "src/hatchet/internal/grpc.gleam"
+    ],
+    "tests_added": 16,
+    "tests_passing": 130
+  }
+}

@@ -1,28 +1,4 @@
 ////!
-/// Timer FFI Module
-///
-//! This module provides cross-platform timer functionality using Gleam's
-//! built-in time and process modules.
-//!
-//! ## Usage
-//!
-//! ```gleam
-//! import hatchet/internal/ffi/timer
-//!
-//! // Sleep for 100 milliseconds
-//! timer.sleep_ms(100)
-//! ```
-//!
-//! ## Implementation Notes
-//!
-//! - Uses Gleam's `process.sleep/1` which yields to the BEAM scheduler
-//! - The sleep is cooperative - other processes in the VM continue executing
-//! - Minimum resolution is approximately 1ms
-//! - Safe to use in actor loops and supervision trees
-//! - Does not block the entire VM, only the current process
-
-import gleam/erlang/process
-
 //// Sleep for the specified number of milliseconds.
 ////
 //// This function yields control to the BEAM scheduler, allowing other processes
@@ -51,10 +27,6 @@ import gleam/erlang/process
 ////
 //// **Thread Safety:** This is process-safe on the BEAM VM. Each calling process
 //// sleeps independently without affecting others.
-pub fn sleep_ms(milliseconds: Int) -> Nil {
-  process.sleep(milliseconds)
-}
-
 //// Get the current monotonic time in milliseconds.
 ////
 //// This uses Erlang's `erlang:monotonic_time/1` which returns the monotonic time
@@ -73,6 +45,35 @@ pub fn sleep_ms(milliseconds: Int) -> Nil {
 ////
 //// **Use Case:** Use this for measuring elapsed time, timeouts, and intervals.
 //// Do not use for wall-clock time (dates/timestamps).
+
+//! This module provides cross-platform timer functionality using Gleam's
+//! built-in time and process modules.
+//!
+//! ## Usage
+//!
+//! ```gleam
+//! import hatchet/internal/ffi/timer
+//!
+//! // Sleep for 100 milliseconds
+//! timer.sleep_ms(100)
+//! ```
+//!
+//! ## Implementation Notes
+//!
+//! - Uses Gleam's `process.sleep/1` which yields to the BEAM scheduler
+//! - The sleep is cooperative - other processes in the VM continue executing
+//! - Minimum resolution is approximately 1ms
+//! - Safe to use in actor loops and supervision trees
+//! - Does not block the entire VM, only the current process
+
+/// Timer FFI Module
+///
+import gleam/erlang/process
+
+pub fn sleep_ms(milliseconds: Int) -> Nil {
+  process.sleep(milliseconds)
+}
+
 pub fn monotonic_ms() -> Int {
   // Use erlang:monotonic_time(millisecond) directly via FFI
   // This returns the monotonic time in milliseconds as an integer

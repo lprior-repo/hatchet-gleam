@@ -1,8 +1,8 @@
 import gleam/option.{None, Some}
-import hatchet/internal/config.{type Config, from_environment_checked, MissingTokenError}
-import hatchet/types.{
-  type Client, type Worker, type WorkerConfig, type Workflow,
+import hatchet/internal/config.{
+  type Config, MissingTokenError, from_environment_checked,
 }
+import hatchet/types.{type Client, type Worker, type WorkerConfig, type Workflow}
 
 /// Create a new Hatchet client with the given host and token.
 ///
@@ -54,7 +54,8 @@ pub fn from_environment() -> Result(Client, String) {
   let cfg = from_environment_checked()
   case cfg {
     Ok(config) -> with_config(config)
-    Error(MissingTokenError) -> Error("HATCHET_TOKEN environment variable is required")
+    Error(MissingTokenError) ->
+      Error("HATCHET_TOKEN environment variable is required")
     _ -> Error("Invalid configuration")
   }
 }
@@ -92,12 +93,7 @@ pub fn with_config(config: Config) -> Result(Client, String) {
   case config.token {
     None -> Error("Token is required for client configuration")
     Some(token) ->
-      Ok(types.create_client(
-        config.host,
-        config.port,
-        token,
-        config.namespace,
-      ))
+      Ok(types.create_client(config.host, config.port, token, config.namespace))
   }
 }
 

@@ -1,31 +1,4 @@
 ////!
-/// Configuration Module Tests
-///
-//! Comprehensive test suite for the configuration module following Martin Fowler's
-//! testing philosophy:
-//!
-//! 1. Tests serve as documentation - each test clearly describes expected behavior
-//! 2. Tests behavior over implementation - we verify config values, not code paths
-//! 3. Edge cases covered - missing values, invalid values, boundary conditions
-//! 4. Clear test names that describe the scenario
-//!
-//! Note: Tests that require environment variable manipulation must be run
-//! in isolation or with proper setup/teardown to avoid interference.
-
-import gleeunit
-import gleeunit/should
-import gleam/dict
-import gleam/option
-import hatchet/internal/config
-
-pub fn main() {
-  gleeunit.main()
-}
-
-// ============================================================================
-// FROM_DICT FUNCTION TESTS
-// ============================================================================
-
 //// Test: Creating config from empty dict uses defaults.
 ////
 //// When no values are provided, all fields should have sensible defaults:
@@ -37,6 +10,134 @@ pub fn main() {
 //// - tls_ca: None
 //// - tls_cert: None
 //// - tls_key: None
+//// Test: Creating config from dict with custom host.
+////
+//// The host field should be overridden when provided in the dict.
+//// Test: Creating config from dict with custom port.
+////
+//// The port field should be overridden when provided as a valid integer string.
+//// Test: Creating config from dict with custom gRPC port.
+////
+//// The grpc_port field should be overridden when provided.
+//// Test: Creating config from dict with token.
+////
+//// The token field should be set when provided in the dict.
+//// Test: Creating config from dict with namespace.
+////
+//// The namespace field should be set when provided.
+//// Test: Creating config from dict with TLS CA certificate.
+////
+//// The tls_ca field should be set when a certificate path is provided.
+//// Test: Creating config from dict with mTLS certificates.
+////
+//// Both tls_cert and tls_key should be set when provided for mTLS.
+//// Test: Creating config from dict with all fields.
+////
+//// When all fields are provided, none should use defaults.
+//// Test: Invalid port string falls back to default.
+////
+//// When the port string cannot be parsed as an integer, the default
+//// port (7070) should be used instead.
+//// Test: Out-of-range port falls back to default.
+////
+//// When the port is outside the valid range (1-65535), the default
+//// should be used.
+//// Test: Zero port falls back to default.
+////
+//// Port 0 is reserved and not usable. The default should be used.
+//// Test: Negative port falls back to default.
+////
+//// Negative port numbers are invalid. The default should be used.
+//// Test: Maximum valid port is accepted.
+////
+//// Port 65535 is the maximum valid port number and should be accepted.
+//// Test: Minimum valid port is accepted.
+////
+//// Port 1 is the minimum valid port number and should be accepted.
+//// Test: REST URL for default localhost config.
+////
+//// The default config should generate "http://localhost:7070"
+//// Test: REST URL for custom host and port.
+////
+//// Custom host and port should be reflected in the generated URL.
+//// Test: gRPC URL for default config.
+////
+//// The default config should generate "localhost:7070" for gRPC.
+//// Test: gRPC URL for custom host and port.
+////
+//// Custom host and gRPC port should be reflected in the generated URL.
+//// Test: has_tls returns false when no TLS config.
+////
+//// A config without any TLS fields should not be detected as TLS-enabled.
+//// Test: has_tls returns true when CA cert is set.
+////
+//// A config with just a CA certificate should be detected as TLS-enabled.
+//// Test: has_tls returns true when client cert is set.
+////
+//// A config with just a client certificate should be detected as TLS-enabled.
+//// Test: has_tls returns true when client key is set.
+////
+//// A config with just a client key should be detected as TLS-enabled.
+//// Test: has_tls returns true when all TLS fields are set.
+////
+//// A config with all mTLS fields should be detected as TLS-enabled.
+//// Test: Empty string token is treated as present.
+////
+//// An empty string token is still "set" - we distinguish between
+//// None (not set) and Some("") (set but empty).
+//// Test: Empty string host is accepted.
+////
+//// An empty string host is technically valid (though not useful).
+//// The config module doesn't validate, it just loads.
+//// Test: Whitespace-only token is preserved.
+////
+//// Whitespace tokens are unusual but valid. They should be preserved
+//// as-is for the application layer to validate.
+//// Test: Special characters in namespace are preserved.
+////
+//// Namespaces may contain special characters (dots, dashes, etc.).
+//// These should be preserved as-is.
+//// Test: Complete config for production scenario.
+////
+//// Verify a realistic production configuration with all fields set.
+//// Test: Minimal config for development scenario.
+////
+//// Verify a minimal development configuration works.
+//// Test: Config from dict overrides defaults selectively.
+////
+//// When only some fields are provided, others should use defaults.
+//// Test: Config records are immutable.
+////
+//// Gleam records are immutable by default. This test verifies that
+//// modifying a "copy" of config doesn't affect the original.
+
+//! Comprehensive test suite for the configuration module following Martin Fowler's
+//! testing philosophy:
+//!
+//! 1. Tests serve as documentation - each test clearly describes expected behavior
+//! 2. Tests behavior over implementation - we verify config values, not code paths
+//! 3. Edge cases covered - missing values, invalid values, boundary conditions
+//! 4. Clear test names that describe the scenario
+//!
+//! Note: Tests that require environment variable manipulation must be run
+//! in isolation or with proper setup/teardown to avoid interference.
+
+/// Configuration Module Tests
+///
+import gleam/dict
+import gleam/option
+import gleeunit
+import gleeunit/should
+import hatchet/internal/config
+
+pub fn main() {
+  gleeunit.main()
+}
+
+// ============================================================================
+// FROM_DICT FUNCTION TESTS
+// ============================================================================
+
 pub fn from_dict_empty_uses_defaults_test() {
   let cfg = config.from_dict(dict.new())
 
@@ -65,9 +166,6 @@ pub fn from_dict_empty_uses_defaults_test() {
   |> should.equal(option.None)
 }
 
-//// Test: Creating config from dict with custom host.
-////
-//// The host field should be overridden when provided in the dict.
 pub fn from_dict_custom_host_test() {
   let values =
     dict.from_list([
@@ -84,9 +182,6 @@ pub fn from_dict_custom_host_test() {
   |> should.equal(7070)
 }
 
-//// Test: Creating config from dict with custom port.
-////
-//// The port field should be overridden when provided as a valid integer string.
 pub fn from_dict_custom_port_test() {
   let values =
     dict.from_list([
@@ -99,9 +194,6 @@ pub fn from_dict_custom_port_test() {
   |> should.equal(8080)
 }
 
-//// Test: Creating config from dict with custom gRPC port.
-////
-//// The grpc_port field should be overridden when provided.
 pub fn from_dict_custom_grpc_port_test() {
   let values =
     dict.from_list([
@@ -114,9 +206,6 @@ pub fn from_dict_custom_grpc_port_test() {
   |> should.equal(7070)
 }
 
-//// Test: Creating config from dict with token.
-////
-//// The token field should be set when provided in the dict.
 pub fn from_dict_with_token_test() {
   let values =
     dict.from_list([
@@ -129,9 +218,6 @@ pub fn from_dict_with_token_test() {
   |> should.equal(option.Some("test-token-12345"))
 }
 
-//// Test: Creating config from dict with namespace.
-////
-//// The namespace field should be set when provided.
 pub fn from_dict_with_namespace_test() {
   let values =
     dict.from_list([
@@ -144,9 +230,6 @@ pub fn from_dict_with_namespace_test() {
   |> should.equal(option.Some("tenant-123"))
 }
 
-//// Test: Creating config from dict with TLS CA certificate.
-////
-//// The tls_ca field should be set when a certificate path is provided.
 pub fn from_dict_with_tls_ca_test() {
   let values =
     dict.from_list([
@@ -159,9 +242,6 @@ pub fn from_dict_with_tls_ca_test() {
   |> should.equal(option.Some("/path/to/ca.pem"))
 }
 
-//// Test: Creating config from dict with mTLS certificates.
-////
-//// Both tls_cert and tls_key should be set when provided for mTLS.
 pub fn from_dict_with_mtls_certificates_test() {
   let values =
     dict.from_list([
@@ -182,9 +262,6 @@ pub fn from_dict_with_mtls_certificates_test() {
   |> should.equal(option.Some("/path/to/client-key.pem"))
 }
 
-//// Test: Creating config from dict with all fields.
-////
-//// When all fields are provided, none should use defaults.
 pub fn from_dict_with_all_fields_test() {
   let values =
     dict.from_list([
@@ -229,10 +306,6 @@ pub fn from_dict_with_all_fields_test() {
 // INVALID PORT HANDLING TESTS
 // ============================================================================
 
-//// Test: Invalid port string falls back to default.
-////
-//// When the port string cannot be parsed as an integer, the default
-//// port (7070) should be used instead.
 pub fn from_dict_invalid_port_uses_default_test() {
   let values =
     dict.from_list([
@@ -245,10 +318,6 @@ pub fn from_dict_invalid_port_uses_default_test() {
   |> should.equal(7070)
 }
 
-//// Test: Out-of-range port falls back to default.
-////
-//// When the port is outside the valid range (1-65535), the default
-//// should be used.
 pub fn from_dict_out_of_range_port_uses_default_test() {
   let values =
     dict.from_list([
@@ -261,9 +330,6 @@ pub fn from_dict_out_of_range_port_uses_default_test() {
   |> should.equal(7070)
 }
 
-//// Test: Zero port falls back to default.
-////
-//// Port 0 is reserved and not usable. The default should be used.
 pub fn from_dict_zero_port_uses_default_test() {
   let values =
     dict.from_list([
@@ -276,9 +342,6 @@ pub fn from_dict_zero_port_uses_default_test() {
   |> should.equal(7070)
 }
 
-//// Test: Negative port falls back to default.
-////
-//// Negative port numbers are invalid. The default should be used.
 pub fn from_dict_negative_port_uses_default_test() {
   let values =
     dict.from_list([
@@ -291,9 +354,6 @@ pub fn from_dict_negative_port_uses_default_test() {
   |> should.equal(7070)
 }
 
-//// Test: Maximum valid port is accepted.
-////
-//// Port 65535 is the maximum valid port number and should be accepted.
 pub fn from_dict_max_valid_port_test() {
   let values =
     dict.from_list([
@@ -303,12 +363,9 @@ pub fn from_dict_max_valid_port_test() {
   let cfg = config.from_dict(values)
 
   cfg.port
-  |> should.equal(65535)
+  |> should.equal(65_535)
 }
 
-//// Test: Minimum valid port is accepted.
-////
-//// Port 1 is the minimum valid port number and should be accepted.
 pub fn from_dict_min_valid_port_test() {
   let values =
     dict.from_list([
@@ -325,9 +382,6 @@ pub fn from_dict_min_valid_port_test() {
 // URL GENERATION TESTS
 // ============================================================================
 
-//// Test: REST URL for default localhost config.
-////
-//// The default config should generate "http://localhost:7070"
 pub fn rest_url_default_config_test() {
   let cfg =
     config.Config(
@@ -345,9 +399,6 @@ pub fn rest_url_default_config_test() {
   |> should.equal("http://localhost:7070")
 }
 
-//// Test: REST URL for custom host and port.
-////
-//// Custom host and port should be reflected in the generated URL.
 pub fn rest_url_custom_host_port_test() {
   let cfg =
     config.Config(
@@ -365,9 +416,6 @@ pub fn rest_url_custom_host_port_test() {
   |> should.equal("http://api.hatchet.run:443")
 }
 
-//// Test: gRPC URL for default config.
-////
-//// The default config should generate "localhost:7070" for gRPC.
 pub fn grpc_url_default_config_test() {
   let cfg =
     config.Config(
@@ -385,9 +433,6 @@ pub fn grpc_url_default_config_test() {
   |> should.equal("localhost:7070")
 }
 
-//// Test: gRPC URL for custom host and port.
-////
-//// Custom host and gRPC port should be reflected in the generated URL.
 pub fn grpc_url_custom_host_port_test() {
   let cfg =
     config.Config(
@@ -409,9 +454,6 @@ pub fn grpc_url_custom_host_port_test() {
 // TLS DETECTION TESTS
 // ============================================================================
 
-//// Test: has_tls returns false when no TLS config.
-////
-//// A config without any TLS fields should not be detected as TLS-enabled.
 pub fn has_tls_returns_false_when_no_tls_test() {
   let cfg =
     config.Config(
@@ -429,9 +471,6 @@ pub fn has_tls_returns_false_when_no_tls_test() {
   |> should.be_false()
 }
 
-//// Test: has_tls returns true when CA cert is set.
-////
-//// A config with just a CA certificate should be detected as TLS-enabled.
 pub fn has_tls_returns_true_when_ca_set_test() {
   let cfg =
     config.Config(
@@ -449,9 +488,6 @@ pub fn has_tls_returns_true_when_ca_set_test() {
   |> should.be_true()
 }
 
-//// Test: has_tls returns true when client cert is set.
-////
-//// A config with just a client certificate should be detected as TLS-enabled.
 pub fn has_tls_returns_true_when_cert_set_test() {
   let cfg =
     config.Config(
@@ -469,9 +505,6 @@ pub fn has_tls_returns_true_when_cert_set_test() {
   |> should.be_true()
 }
 
-//// Test: has_tls returns true when client key is set.
-////
-//// A config with just a client key should be detected as TLS-enabled.
 pub fn has_tls_returns_true_when_key_set_test() {
   let cfg =
     config.Config(
@@ -489,9 +522,6 @@ pub fn has_tls_returns_true_when_key_set_test() {
   |> should.be_true()
 }
 
-//// Test: has_tls returns true when all TLS fields are set.
-////
-//// A config with all mTLS fields should be detected as TLS-enabled.
 pub fn has_tls_returns_true_when_all_tls_set_test() {
   let cfg =
     config.Config(
@@ -513,10 +543,6 @@ pub fn has_tls_returns_true_when_all_tls_set_test() {
 // EDGE CASE TESTS
 // ============================================================================
 
-//// Test: Empty string token is treated as present.
-////
-//// An empty string token is still "set" - we distinguish between
-//// None (not set) and Some("") (set but empty).
 pub fn from_dict_empty_string_token_is_some_test() {
   let values =
     dict.from_list([
@@ -529,10 +555,6 @@ pub fn from_dict_empty_string_token_is_some_test() {
   |> should.equal(option.Some(""))
 }
 
-//// Test: Empty string host is accepted.
-////
-//// An empty string host is technically valid (though not useful).
-//// The config module doesn't validate, it just loads.
 pub fn from_dict_empty_string_host_test() {
   let values =
     dict.from_list([
@@ -545,10 +567,6 @@ pub fn from_dict_empty_string_host_test() {
   |> should.equal("")
 }
 
-//// Test: Whitespace-only token is preserved.
-////
-//// Whitespace tokens are unusual but valid. They should be preserved
-//// as-is for the application layer to validate.
 pub fn from_dict_whitespace_token_preserved_test() {
   let values =
     dict.from_list([
@@ -561,10 +579,6 @@ pub fn from_dict_whitespace_token_preserved_test() {
   |> should.equal(option.Some("   "))
 }
 
-//// Test: Special characters in namespace are preserved.
-////
-//// Namespaces may contain special characters (dots, dashes, etc.).
-//// These should be preserved as-is.
 pub fn from_dict_special_chars_namespace_preserved_test() {
   let values =
     dict.from_list([
@@ -581,9 +595,6 @@ pub fn from_dict_special_chars_namespace_preserved_test() {
 // INTEGRATION TESTS
 // ============================================================================
 
-//// Test: Complete config for production scenario.
-////
-//// Verify a realistic production configuration with all fields set.
 pub fn production_config_scenario_test() {
   let values =
     dict.from_list([
@@ -636,9 +647,6 @@ pub fn production_config_scenario_test() {
   |> should.be_true()
 }
 
-//// Test: Minimal config for development scenario.
-////
-//// Verify a minimal development configuration works.
 pub fn development_config_scenario_test() {
   let values =
     dict.from_list([
@@ -666,9 +674,6 @@ pub fn development_config_scenario_test() {
   |> should.be_false()
 }
 
-//// Test: Config from dict overrides defaults selectively.
-////
-//// When only some fields are provided, others should use defaults.
 pub fn selective_override_maintains_defaults_test() {
   let values =
     dict.from_list([
@@ -700,10 +705,6 @@ pub fn selective_override_maintains_defaults_test() {
 // IMMUTABILITY TESTS
 // ============================================================================
 
-//// Test: Config records are immutable.
-////
-//// Gleam records are immutable by default. This test verifies that
-//// modifying a "copy" of config doesn't affect the original.
 pub fn config_immutability_test() {
   let original =
     config.Config(

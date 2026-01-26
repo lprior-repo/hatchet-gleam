@@ -1,0 +1,46 @@
+{
+  "phase": 1,
+  "completed": true,
+  "findings": {
+    "existing_patterns": {
+      "grpc_stub": "src/hatchet/internal/grpc.gleam has proper API design with opaque Channel/Stream types",
+      "tls_module": "tls.gleam provides GrpcOpts type matching grpcbox expectations",
+      "ffi_pattern": "ffi/timer.gleam shows @external(erlang, module, function) pattern",
+      "config": "config.gleam includes grpc_port and TLS certificate paths"
+    },
+    "grpc_library": {
+      "choice": "grpcbox",
+      "reason": "Most established Erlang gRPC client",
+      "dependency_needed": "grpcbox >= 1.0.0"
+    },
+    "proto_messages": {
+      "requests": [
+        "WorkerRegisterRequest",
+        "WorkerListenRequest",
+        "HeartbeatRequest",
+        "StepActionEvent"
+      ],
+      "responses": [
+        "WorkerRegisterResponse",
+        "HeartbeatResponse",
+        "ActionEventResponse"
+      ],
+      "enums": [
+        "StepActionEventType: Started, Completed, Failed, Acknowledged",
+        "ActionType: START_STEP_RUN, CANCEL_STEP_RUN, START_GET_GROUP_KEY"
+      ]
+    },
+    "ffi_requirements": [
+      "grpcbox:connect for channel creation",
+      "grpcbox:call for unary RPCs",
+      "grpcbox:stream for ListenV2",
+      "Process management with gleam/erlang/process"
+    ],
+    "tls_integration": "tls.to_grpc_opts() converts TLSConfig to grpcbox format",
+    "gaps": [
+      "No protobuf encoding/decoding - need protobuf dependency",
+      "No grpcbox dependency in gleam.toml",
+      "Missing timestamp handling for protobuf Timestamp"
+    ]
+  }
+}

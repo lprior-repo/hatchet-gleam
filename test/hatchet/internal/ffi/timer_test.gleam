@@ -1,12 +1,12 @@
 ////!
+
 /// Timer Module Tests
 ///
 /// Comprehensive test suite for the timer module following Martin Fowler's
 /// testing philosophy.
-
+import gleam/list
 import gleeunit
 import gleeunit/should
-import gleam/list
 import hatchet/internal/ffi/timer
 
 pub fn main() {
@@ -135,7 +135,8 @@ pub fn sleep_is_cooperative_test() {
     |> list.fold(0, fn(acc, x) { acc + x })
 
   result
-  |> should.equal(500500) // Sum of 1 to 1000
+  |> should.equal(500_500)
+  // Sum of 1 to 1000
 }
 
 pub fn consecutive_sleeps_work_test() {
@@ -158,11 +159,16 @@ pub fn consecutive_sleeps_work_test() {
 
 pub fn sleep_boundary_values_test() {
   // Test boundary values
-  timer.sleep_ms(0) // No-op, just yields
-  timer.sleep_ms(1) // Minimum practical sleep
-  timer.sleep_ms(10) // 1 centisecond
-  timer.sleep_ms(100) // 1 decisecond
-  timer.sleep_ms(1000) // 1 second
+  timer.sleep_ms(0)
+  // No-op, just yields
+  timer.sleep_ms(1)
+  // Minimum practical sleep
+  timer.sleep_ms(10)
+  // 1 centisecond
+  timer.sleep_ms(100)
+  // 1 decisecond
+  timer.sleep_ms(1000)
+  // 1 second
 
   // If we got here, all boundary values worked
   should.be_true(True)

@@ -6,9 +6,9 @@
 //!
 //! ## Note
 //!
-//! This is a stub implementation for Phase 2. The complete gRPC integration
-//! with proper protobuf encoding will be implemented once the basic
-//! worker infrastructure is in place.
+//! This is a stub implementation. The complete gRPC integration with proper
+//! protobuf encoding will be implemented once the basic worker infrastructure
+//! is in place.
 //!
 //! ## Architecture
 //!
@@ -21,10 +21,7 @@
 //! 4. Send step events as tasks progress
 //! 5. Send heartbeats to keep the connection alive
 
-import gleam/list
 import gleam/option.{type Option, None, Some}
-import gleam/result
-import gleam/string
 import hatchet/internal/tls.{type TLSConfig}
 
 //// ========================================================================
@@ -68,7 +65,7 @@ pub type StepEventType {
 /// Connection Management
 //// ========================================================================
 
-//// Connect to the Hatchet gRPC dispatcher (stub).
+//// Connect to the Hatchet gRPC dispatcher.
 ////
 //// **Parameters:**
 ////   - `host` - The Hatchet server hostname
@@ -79,16 +76,21 @@ pub type StepEventType {
 //// **Returns:** `Ok(Channel)` on success, `Error(String)` on failure
 pub fn connect(
   host: String,
-  port: Int,
-  tls_config: TLSConfig,
-  timeout_ms: Int,
+  _port: Int,
+  _tls_config: TLSConfig,
+  _timeout_ms: Int,
 ) -> Result(Channel, String) {
-  // Stub implementation - returns a mock channel
+  // Stub implementation - validates input and returns a mock channel
   // Real implementation will use grpcbox:connect/4
-  Ok(Channel(pid: 12345))
+
+  // Validate host is not empty
+  case host {
+    "" -> Error("Invalid host: cannot be empty")
+    _ -> Ok(Channel(pid: 12_345))
+  }
 }
 
-//// Register a worker with the Hatchet dispatcher (stub).
+//// Register a worker with the Hatchet dispatcher.
 ////
 //// **Parameters:**
 ////   - `channel` - The gRPC channel
@@ -97,15 +99,15 @@ pub fn connect(
 ////
 //// **Returns:** `Ok(RegisterResponse)` on success, `Error(String)` on failure
 pub fn register_worker(
-  channel: Channel,
+  _channel: Channel,
   worker_id: String,
-  actions: List(String),
+  _actions: List(String),
 ) -> Result(RegisterResponse, String) {
   // Stub implementation
   Ok(RegisterResponse(worker_id: worker_id))
 }
 
-//// Start listening for task assignments via ListenV2 (stub).
+//// Start listening for task assignments via ListenV2.
 ////
 //// **Parameters:**
 ////   - `channel` - The gRPC channel
@@ -113,14 +115,14 @@ pub fn register_worker(
 ////
 //// **Returns:** `Ok(Stream)` on success, `Error(String)` on failure
 pub fn listen_v2(
-  channel: Channel,
-  worker_id: String,
+  _channel: Channel,
+  _worker_id: String,
 ) -> Result(Stream, String) {
   // Stub implementation
-  Ok(Stream(pid: 12346))
+  Ok(Stream(pid: 12_346))
 }
 
-//// Send a step event on the active stream (stub).
+//// Send a step event on the active stream.
 ////
 //// **Parameters:**
 ////   - `stream` - The ListenV2 stream
@@ -131,33 +133,33 @@ pub fn listen_v2(
 ////
 //// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
 pub fn send_step_event(
-  stream: Stream,
-  step_run_id: String,
-  event_type: StepEventType,
-  output_data: Option(String),
-  error_message: Option(String),
+  _stream: Stream,
+  _step_run_id: String,
+  _event_type: StepEventType,
+  _output_data: Option(String),
+  _error_message: Option(String),
 ) -> Result(Nil, String) {
   // Stub implementation
   Ok(Nil)
 }
 
-//// Send a heartbeat to keep the worker connection alive (stub).
+//// Send a heartbeat to keep the worker connection alive.
 ////
 //// **Parameters:**
 ////   - `stream` - The ListenV2 stream
 ////   - `worker_id` - The worker identifier
 ////
 //// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
-pub fn heartbeat(stream: Stream, worker_id: String) -> Result(Nil, String) {
+pub fn heartbeat(_stream: Stream, _worker_id: String) -> Result(Nil, String) {
   // Stub implementation
   Ok(Nil)
 }
 
-//// Close a gRPC channel (stub).
+//// Close a gRPC channel.
 ////
 //// **Parameters:**
 ////   - `channel` - The gRPC channel to close
-pub fn close(channel: Channel) -> Nil {
+pub fn close(_channel: Channel) -> Nil {
   Nil
 }
 
@@ -175,7 +177,7 @@ pub type RegisterResponse {
 //// ========================================================================
 
 //// Convert event type to string for debugging.
-fn event_type_to_string(event: StepEventType) -> String {
+pub fn event_type_to_string(event: StepEventType) -> String {
   case event {
     Started -> "EVENT_TYPE_STARTED"
     Completed -> "EVENT_TYPE_COMPLETED"
@@ -183,4 +185,48 @@ fn event_type_to_string(event: StepEventType) -> String {
     Cancelled -> "EVENT_TYPE_CANCELLED"
     Timeout -> "EVENT_TYPE_TIMEOUT"
   }
+}
+
+//// ========================================================================
+/// Test Helper Functions
+//// ========================================================================
+
+//// Create a mock channel for testing.
+////
+//// **Parameters:**
+////   - `pid` - Mock process pid
+////
+//// **Returns:** A mock Channel
+pub fn mock_channel(pid: Int) -> Channel {
+  Channel(pid: pid)
+}
+
+//// Create a mock stream for testing.
+////
+//// **Parameters:**
+////   - `pid` - Mock process pid
+////
+//// **Returns:** A mock Stream
+pub fn mock_stream(pid: Int) -> Stream {
+  Stream(pid: pid)
+}
+
+//// Get the pid from a Channel (for testing).
+////
+//// **Parameters:**
+////   - `channel` - The Channel
+////
+//// **Returns:** The process pid
+pub fn get_channel_pid(channel: Channel) -> Int {
+  channel.pid
+}
+
+//// Get the pid from a Stream (for testing).
+////
+//// **Parameters:**
+////   - `stream` - The Stream
+////
+//// **Returns:** The process pid
+pub fn get_stream_pid(stream: Stream) -> Int {
+  stream.pid
 }

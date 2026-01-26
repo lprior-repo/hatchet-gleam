@@ -1,0 +1,62 @@
+{
+  "phase": 2,
+  "title": "Implement gRPC client for worker communication",
+  "complexity": "MEDIUM",
+  "files": [
+    "src/hatchet/internal/grpc.gleam",
+    "src/hatchet/internal/ffi/grpcbox.gleam (new)",
+    "test/hatchet/internal/grpc_test.gleam (new)"
+  ],
+  "approach": "FFI to grpcbox with manual protobuf encoding",
+  "phases": ["0", "1", "2", "4", "5", "6", "7", "9", "11", "15"],
+  "implementation_plan": {
+    "1_protobuf": {
+      "description": "Add protobuf encoding/decoding",
+      "files": ["src/hatchet/internal/ffi/protobuf.gleam"],
+      "actions": [
+        "Use @external for protobuf encode/decode",
+        "Manual encoding for simple proto messages",
+        "Decode responses with dynamic parsing"
+      ]
+    },
+    "2_grpcbox_ffi": {
+      "description": "Create grpcbox FFI layer",
+      "files": ["src/hatchet/internal/ffi/grpcbox.gleam"],
+      "actions": [
+        "@external(erlang, 'grpcbox', 'connect')",
+        "@external(erlang, 'grpcbox', 'call')",
+        "@external(erlang, 'grpcbox', 'stream')",
+        "@external(erlang, 'grpcbox', 'stop_session')"
+      ]
+    },
+    "3_update_grpc_module": {
+      "description": "Replace stubs with real implementation",
+      "files": ["src/hatchet/internal/grpc.gleam"],
+      "actions": [
+        "Replace connect() stub with grpcbox call",
+        "Replace register_worker() with gRPC call",
+        "Replace listen_v2() with streaming implementation",
+        "Replace send_step_event() with gRPC call",
+        "Implement heartbeat()"
+      ]
+    },
+    "4_tests": {
+      "description": "Write comprehensive tests",
+      "files": ["test/hatchet/internal/grpc_test.gleam"],
+      "test_cases": [
+        "connect_insecure_creates_channel",
+        "connect_with_tls_creates_secure_channel",
+        "register_worker_sends_correct_request",
+        "send_step_event_encodes_correctly",
+        "heartbeat_sends_timestamp"
+      ]
+    }
+  },
+  "acceptance_criteria": [
+    "gRPC client connects to Hatchet",
+    "Protobuf messages encode/decode correctly",
+    "Heartbeat mechanism works",
+    "Integration test passes against local Hatchet",
+    "All existing tests still pass"
+  ]
+}
