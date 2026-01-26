@@ -1,45 +1,13 @@
 ////!
-/// gRPC Client Module
-///
-//! This module provides a Gleam-friendly interface to the Hatchet gRPC
-//! dispatcher using Erlang FFI to grpcbox.
-
-import gleam/option.{type Option, None, Some}
-import hatchet/internal/ffi/grpcbox as grpcbox
-import hatchet/internal/ffi/protobuf as protobuf
-import hatchet/internal/tls.{type TLSConfig, Insecure, Mtls, Tls}
-
 //// ========================================================================
-/// Connection Types
 //// ========================================================================
-
 //// A gRPC channel to the Hatchet dispatcher.
-pub opaque type Channel {
-  Channel(grpcbox.Channel)
-}
-
 //// A bidirectional stream for receiving task assignments.
-pub opaque type Stream {
-  Stream(grpcbox.Stream)
-}
-
 //// ========================================================================
-/// Step Event Types
 //// ========================================================================
-
 //// Types of step events that can be reported to the dispatcher.
-pub type StepEventType {
-  Started
-  Completed
-  Failed
-  Cancelled
-  Timeout
-}
-
 //// ========================================================================
-/// Connection Management
 //// ========================================================================
-
 //// Connect to the Hatchet gRPC dispatcher.
 ////
 //// **Parameters:**
@@ -49,6 +17,91 @@ pub type StepEventType {
 ////   - `timeout_ms` - Connection timeout in milliseconds
 ////
 //// **Returns:** `Ok(Channel)` on success, `Error(String)` on failure
+//// Register a worker with the Hatchet dispatcher.
+////
+//// **Parameters:**
+////   - `channel` - The gRPC channel
+////   - `request` - The worker registration request
+////
+//// **Returns:** `Ok(RegisterResponse)` on success, `Error(String)` on failure
+//// Start listening for task assignments via ListenV2.
+////
+//// **Parameters:**
+////   - `channel` - The gRPC channel
+////   - `worker_id` - The worker identifier from registration
+////
+//// **Returns:** `Ok(Stream)` on success, `Error(String)` on failure
+//// Send a step event on the active stream.
+////
+//// **Parameters:**
+////   - `stream` - The ListenV2 stream
+////   - `event_data` - The encoded step action event
+////
+//// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
+//// Send a heartbeat to keep the worker connection alive.
+////
+//// **Parameters:**
+////   - `stream` - The ListenV2 stream
+////   - `heartbeat_data` - The encoded heartbeat request
+////
+//// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
+//// Receive a message from the stream.
+////
+//// **Parameters:**
+////   - `stream` - The ListenV2 stream
+////   - `timeout_ms` - Receive timeout in milliseconds
+////
+//// **Returns:** `Ok(BitArray)` on success, `Error(String)` on failure
+//// Close a gRPC channel.
+////
+//// **Parameters:**
+////   - `channel` - The gRPC channel to close
+//// Close a bidirectional stream.
+////
+//// **Parameters:**
+////   - `stream` - The stream to close
+//// ========================================================================
+//// ========================================================================
+//// Response from worker registration.
+//// ========================================================================
+//// ========================================================================
+//// Convert event type to string for debugging.
+//// ========================================================================
+//// ========================================================================
+//// Create a mock channel for testing.
+//// Create a mock stream for testing.
+//// Get the internal pid from a Channel (for testing compatibility).
+//// Get the internal pid from a Stream (for testing compatibility).
+
+//! This module provides a Gleam-friendly interface to the Hatchet gRPC
+//! dispatcher using Erlang FFI to grpcbox.
+
+/// gRPC Client Module
+///
+import gleam/option.{type Option, None, Some}
+import hatchet/internal/ffi/grpcbox
+import hatchet/internal/ffi/protobuf
+import hatchet/internal/tls.{type TLSConfig, Insecure, Mtls, Tls}
+
+/// Connection Types
+pub opaque type Channel {
+  Channel(grpcbox.Channel)
+}
+
+pub opaque type Stream {
+  Stream(grpcbox.Stream)
+}
+
+/// Step Event Types
+pub type StepEventType {
+  Started
+  Completed
+  Failed
+  Cancelled
+  Timeout
+}
+
+/// Connection Management
 pub fn connect(
   host: String,
   port: Int,
@@ -56,12 +109,13 @@ pub fn connect(
   timeout_ms: Int,
 ) -> Result(Channel, String) {
   let grpcbox_opts = convert_tls_config(tls_config)
-  let conn_opts = grpcbox.ConnectionOptions(
-    host: host,
-    port: port,
-    tls_config: grpcbox_opts,
-    timeout_ms: timeout_ms,
-  )
+  let conn_opts =
+    grpcbox.ConnectionOptions(
+      host: host,
+      port: port,
+      tls_config: grpcbox_opts,
+      timeout_ms: timeout_ms,
+    )
   case grpcbox.connect(conn_opts) {
     Ok(ch) -> Ok(Channel(ch))
     Error(e) -> Error(error_to_string(e))
@@ -98,13 +152,6 @@ fn error_to_string(err: grpcbox.GrpcError) -> String {
   }
 }
 
-//// Register a worker with the Hatchet dispatcher.
-////
-//// **Parameters:**
-////   - `channel` - The gRPC channel
-////   - `request` - The worker registration request
-////
-//// **Returns:** `Ok(RegisterResponse)` on success, `Error(String)` on failure
 pub fn register_worker(
   channel: Channel,
   request: protobuf.ProtobufMessage,
@@ -112,11 +159,21 @@ pub fn register_worker(
   let Channel(ch) = channel
   let data = protobuf.protobuf_message_to_bits(request)
   let rpc_opts = grpcbox.RpcOptions(timeout_ms: 5000, metadata: [])
-  case grpcbox.unary_call(ch, "hatchet.dispatcher.Dispatcher", "Register", data, rpc_opts) {
+  case
+    grpcbox.unary_call(
+      ch,
+      "hatchet.dispatcher.Dispatcher",
+      "Register",
+      data,
+      rpc_opts,
+    )
+  {
     Ok(resp_data) ->
-      case protobuf.decode_worker_register_response(
-        protobuf.protobuf_message_from_bits(resp_data),
-      ) {
+      case
+        protobuf.decode_worker_register_response(
+          protobuf.protobuf_message_from_bits(resp_data),
+        )
+      {
         Ok(resp) -> Ok(RegisterResponse(worker_id: resp.worker_id))
         Error(e) -> Error("Decode error: " <> error_message(e))
       }
@@ -131,13 +188,6 @@ fn error_message(err: protobuf.ProtobufError) -> String {
   }
 }
 
-//// Start listening for task assignments via ListenV2.
-////
-//// **Parameters:**
-////   - `channel` - The gRPC channel
-////   - `worker_id` - The worker identifier from registration
-////
-//// **Returns:** `Ok(Stream)` on success, `Error(String)` on failure
 pub fn listen_v2(
   _channel: Channel,
   _worker_id: String,
@@ -147,13 +197,6 @@ pub fn listen_v2(
   Error("Not yet implemented")
 }
 
-//// Send a step event on the active stream.
-////
-//// **Parameters:**
-////   - `stream` - The ListenV2 stream
-////   - `event_data` - The encoded step action event
-////
-//// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
 pub fn send_step_event(
   stream: Stream,
   event_data: protobuf.ProtobufMessage,
@@ -166,13 +209,6 @@ pub fn send_step_event(
   }
 }
 
-//// Send a heartbeat to keep the worker connection alive.
-////
-//// **Parameters:**
-////   - `stream` - The ListenV2 stream
-////   - `heartbeat_data` - The encoded heartbeat request
-////
-//// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
 pub fn heartbeat(
   stream: Stream,
   heartbeat_data: protobuf.ProtobufMessage,
@@ -185,13 +221,6 @@ pub fn heartbeat(
   }
 }
 
-//// Receive a message from the stream.
-////
-//// **Parameters:**
-////   - `stream` - The ListenV2 stream
-////   - `timeout_ms` - Receive timeout in milliseconds
-////
-//// **Returns:** `Ok(BitArray)` on success, `Error(String)` on failure
 pub fn stream_recv(stream: Stream, timeout_ms: Int) -> Result(BitArray, String) {
   let Stream(s) = stream
   case grpcbox.stream_recv(s, timeout_ms) {
@@ -200,38 +229,22 @@ pub fn stream_recv(stream: Stream, timeout_ms: Int) -> Result(BitArray, String) 
   }
 }
 
-//// Close a gRPC channel.
-////
-//// **Parameters:**
-////   - `channel` - The gRPC channel to close
 pub fn close(channel: Channel) -> Nil {
   let Channel(ch) = channel
   grpcbox.close_channel(ch)
 }
 
-//// Close a bidirectional stream.
-////
-//// **Parameters:**
-////   - `stream` - The stream to close
 pub fn close_stream(stream: Stream) -> Nil {
   let Stream(s) = stream
   grpcbox.close_stream(s)
 }
 
-//// ========================================================================
 /// Internal Types
-//// ========================================================================
-
-//// Response from worker registration.
 pub type RegisterResponse {
   RegisterResponse(worker_id: String)
 }
 
-//// ========================================================================
 /// Helper Functions
-//// ========================================================================
-
-//// Convert event type to string for debugging.
 pub fn event_type_to_string(event: StepEventType) -> String {
   case event {
     Started -> "EVENT_TYPE_STARTED"
@@ -242,11 +255,7 @@ pub fn event_type_to_string(event: StepEventType) -> String {
   }
 }
 
-//// ========================================================================
 /// Test Helper Functions
-//// ========================================================================
-
-//// Create a mock channel for testing.
 pub fn mock_channel(_pid: Int) -> Channel {
   Channel(dummy_channel())
 }
@@ -254,7 +263,6 @@ pub fn mock_channel(_pid: Int) -> Channel {
 @external(erlang, "grpcbox_helper", "dummy_channel")
 fn dummy_channel() -> grpcbox.Channel
 
-//// Create a mock stream for testing.
 pub fn mock_stream(_pid: Int) -> Stream {
   Stream(dummy_stream())
 }
@@ -262,13 +270,11 @@ pub fn mock_stream(_pid: Int) -> Stream {
 @external(erlang, "grpcbox_helper", "dummy_stream")
 fn dummy_stream() -> grpcbox.Stream
 
-//// Get the internal pid from a Channel (for testing compatibility).
 pub fn get_channel_pid(channel: Channel) -> Int {
   let Channel(_) = channel
   0
 }
 
-//// Get the internal pid from a Stream (for testing compatibility).
 pub fn get_stream_pid(stream: Stream) -> Int {
   let Stream(_) = stream
   0

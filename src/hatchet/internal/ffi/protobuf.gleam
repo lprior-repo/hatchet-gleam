@@ -1,18 +1,26 @@
 ////!
-/// Protobuf FFI Module for Hatchet Dispatcher
-///
+//// Errors
+//// Message Types
+//// Create a ProtobufMessage from raw bits (for testing)
+//// Extract the raw bits from a ProtobufMessage
+//// Opaque type for Erlang map with mixed value types
+//// Encoding - using Erlang map construction
+//// Decoding
+//// FFI to gpb-generated dispatcher_pb module (via helper for atom conversion)
+//// Erlang map construction helpers via dispatcher_pb_helper
+
 //! Simplified protobuf encoding/decoding using gpb-generated Erlang modules.
 
+/// Protobuf FFI Module for Hatchet Dispatcher
+///
 import gleam/dict
 import gleam/option.{type Option, None, Some}
 
-//// Errors
 pub type ProtobufError {
   ProtobufEncodeError(String)
   ProtobufDecodeError(String)
 }
 
-//// Message Types
 pub type WorkerRegisterRequest {
   WorkerRegisterRequest(
     worker_name: String,
@@ -25,7 +33,11 @@ pub type WorkerRegisterRequest {
 }
 
 pub type WorkerRegisterResponse {
-  WorkerRegisterResponse(tenant_id: String, worker_id: String, worker_name: String)
+  WorkerRegisterResponse(
+    tenant_id: String,
+    worker_id: String,
+    worker_name: String,
+  )
 }
 
 pub type StepActionEvent {
@@ -54,21 +66,17 @@ pub opaque type ProtobufMessage {
   ProtobufMessage(BitArray)
 }
 
-//// Create a ProtobufMessage from raw bits (for testing)
 pub fn protobuf_message_from_bits(bits: BitArray) -> ProtobufMessage {
   ProtobufMessage(bits)
 }
 
-//// Extract the raw bits from a ProtobufMessage
 pub fn protobuf_message_to_bits(msg: ProtobufMessage) -> BitArray {
   let ProtobufMessage(bits) = msg
   bits
 }
 
-//// Opaque type for Erlang map with mixed value types
 pub opaque type ErlangMap
 
-//// Encoding - using Erlang map construction
 pub fn encode_worker_register_request(
   req: WorkerRegisterRequest,
 ) -> Result(ProtobufMessage, ProtobufError) {
@@ -87,7 +95,9 @@ pub fn encode_worker_register_request(
   Ok(ProtobufMessage(encode_msg("WorkerRegisterRequest", map)))
 }
 
-pub fn encode_step_action_event(event: StepActionEvent) -> Result(ProtobufMessage, ProtobufError) {
+pub fn encode_step_action_event(
+  event: StepActionEvent,
+) -> Result(ProtobufMessage, ProtobufError) {
   let map = erlang_map_new()
   let map = erlang_map_put_string(map, "worker_id", event.worker_id)
   let map = erlang_map_put_string(map, "job_id", event.job_id)
@@ -101,14 +111,15 @@ pub fn encode_step_action_event(event: StepActionEvent) -> Result(ProtobufMessag
   Ok(ProtobufMessage(encode_msg("StepActionEvent", map)))
 }
 
-pub fn encode_heartbeat_request(req: HeartbeatRequest) -> Result(ProtobufMessage, ProtobufError) {
+pub fn encode_heartbeat_request(
+  req: HeartbeatRequest,
+) -> Result(ProtobufMessage, ProtobufError) {
   let map = erlang_map_new()
   let map = erlang_map_put_string(map, "worker_id", req.worker_id)
   let map = erlang_map_put_int(map, "heartbeat_at", req.heartbeat_at)
   Ok(ProtobufMessage(encode_msg("HeartbeatRequest", map)))
 }
 
-//// Decoding
 pub fn decode_worker_register_response(
   binary: ProtobufMessage,
 ) -> Result(WorkerRegisterResponse, ProtobufError) {
@@ -133,28 +144,29 @@ pub fn decode_worker_register_response(
   }
 }
 
-pub fn decode_heartbeat_response(binary: ProtobufMessage) -> Result(
-  HeartbeatResponse,
-  ProtobufError,
-) {
+pub fn decode_heartbeat_response(
+  binary: ProtobufMessage,
+) -> Result(HeartbeatResponse, ProtobufError) {
   let ProtobufMessage(bits) = binary
   let _map = decode_msg("HeartbeatResponse", bits)
   Ok(HeartbeatResponse)
 }
 
-//// FFI to gpb-generated dispatcher_pb module (via helper for atom conversion)
 @external(erlang, "dispatcher_pb_helper", "encode_msg")
 fn encode_msg(msg_type: String, map: ErlangMap) -> BitArray
 
 @external(erlang, "dispatcher_pb_helper", "decode_msg")
 fn decode_msg(msg_type: String, binary: BitArray) -> ErlangMap
 
-//// Erlang map construction helpers via dispatcher_pb_helper
 @external(erlang, "dispatcher_pb_helper", "new_map")
 fn erlang_map_new() -> ErlangMap
 
 @external(erlang, "dispatcher_pb_helper", "put_string")
-fn erlang_map_put_string(map: ErlangMap, key: String, value: String) -> ErlangMap
+fn erlang_map_put_string(
+  map: ErlangMap,
+  key: String,
+  value: String,
+) -> ErlangMap
 
 @external(erlang, "dispatcher_pb_helper", "put_int")
 fn erlang_map_put_int(map: ErlangMap, key: String, value: Int) -> ErlangMap
