@@ -1,6 +1,7 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
-import gleam/option.{type Option}
+import gleam/erlang/process.{type Subject}
+import gleam/option.{type Option, None, Some}
 
 pub opaque type Client {
   Client(host: String, port: Int, token: String, namespace: Option(String))
@@ -170,26 +171,68 @@ pub type RunStatus {
   Cancelled
 }
 
+/// Worker handle for the background worker process.
+///
+/// The worker process manages:
+/// - Connection to the Hatchet dispatcher
+/// - Task assignment and execution
+/// - Heartbeat and health monitoring
 pub opaque type Worker {
-  Worker(process: ProcessHandle)
+  Worker(subject: Option(Subject(WorkerActorMessage)), id: String)
 }
 
+/// Internal message type for the worker actor (re-exported from worker_actor).
+/// This is an opaque placeholder - the real type is in worker_actor.gleam.
+pub type WorkerActorMessage
+
+/// Create a worker with just an ID (for testing/backwards compatibility).
 pub fn create_worker(id: String) -> Worker {
-  Worker(ProcessHandle(id))
+  Worker(subject: None, id: id)
 }
 
+/// Create a worker with an actor subject (internal use).
+pub fn create_worker_with_subject(subject: Subject(a)) -> Worker {
+  // We cast the subject type since it's opaque anyway
+  Worker(subject: Some(coerce_subject(subject)), id: "active-worker")
+}
+
+/// Get the worker's actor subject if available.
+pub fn get_worker_subject(worker: Worker) -> Option(Subject(WorkerActorMessage)) {
+  worker.subject
+}
+
+/// Get the worker ID.
+pub fn get_worker_id(worker: Worker) -> String {
+  worker.id
+}
+
+// Coerce a Subject of any type to our opaque WorkerActorMessage type
+// This is safe because we only use it internally and the subject operations
+// are type-erased at runtime on the BEAM
+@external(erlang, "erlang", "element")
+fn do_element(n: Int, tuple: a) -> b
+
+fn coerce_subject(subject: Subject(a)) -> Subject(WorkerActorMessage) {
+  // Subject is just a wrapper around a Pid, so this is safe
+  do_coerce_subject(subject)
+}
+
+@external(erlang, "hatchet_types_ffi", "identity")
+fn do_coerce_subject(subject: Subject(a)) -> Subject(WorkerActorMessage)
+
+// Legacy types kept for backwards compatibility
 pub type ProcessHandle {
   ProcessHandle(id: String)
 }
 
-pub type WorkerMessage {
+pub type LegacyWorkerMessage {
   Start
   Stop
   AddWorkflows(List(Workflow))
 }
 
-pub type WorkerState {
-  WorkerState(
+pub type LegacyWorkerState {
+  LegacyWorkerState(
     client: Client,
     config: WorkerConfig,
     workflows: List(Workflow),

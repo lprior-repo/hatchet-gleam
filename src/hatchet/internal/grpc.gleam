@@ -188,13 +188,63 @@ fn error_message(err: protobuf.ProtobufError) -> String {
   }
 }
 
+/// Start listening for task assignments via ListenV2 bidirectional stream.
+///
+/// This establishes a bidirectional gRPC stream with the dispatcher.
+/// The stream is used to:
+/// 1. Receive AssignedAction messages (task assignments)
+/// 2. Send heartbeats to keep the connection alive
+///
+/// **Parameters:**
+///   - `channel` - The gRPC channel
+///   - `worker_id` - The worker identifier from registration
+///   - `auth_token` - Bearer token for authentication
+///
+/// **Returns:** `Ok(Stream)` on success, `Error(String)` on failure
 pub fn listen_v2(
-  _channel: Channel,
-  _worker_id: String,
+  channel: Channel,
+  worker_id: String,
+  auth_token: String,
 ) -> Result(Stream, String) {
-  // TODO: Implement using grpcbox.start_bidirectional_stream
-  // This requires sending an initial WorkerListenRequest message
-  Error("Not yet implemented")
+  let Channel(ch) = channel
+
+  // Set up metadata with authentication
+  let metadata = [#("authorization", "Bearer " <> auth_token)]
+
+  // Create stream options for ListenV2
+  let stream_opts =
+    grpcbox.StreamOptions(
+      channel: ch,
+      service: "hatchet.dispatcher.Dispatcher",
+      rpc: "ListenV2",
+      metadata: metadata,
+    )
+
+  // Start the bidirectional stream
+  case grpcbox.start_bidirectional_stream(stream_opts) {
+    Ok(#(stream, _stream_ref)) -> {
+      // Send the initial WorkerListenRequest
+      let listen_request = protobuf.WorkerListenRequest(worker_id: worker_id)
+      case protobuf.encode_worker_listen_request(listen_request) {
+        Ok(encoded) -> {
+          let data = protobuf.protobuf_message_to_bits(encoded)
+          case grpcbox.stream_send(stream, data) {
+            Ok(_) -> Ok(Stream(stream))
+            Error(e) -> Error(error_to_string(e))
+          }
+        }
+        Error(e) -> Error("Failed to encode listen request: " <> pb_error_message(e))
+      }
+    }
+    Error(e) -> Error(error_to_string(e))
+  }
+}
+
+fn pb_error_message(err: protobuf.ProtobufError) -> String {
+  case err {
+    protobuf.ProtobufEncodeError(msg) -> msg
+    protobuf.ProtobufDecodeError(msg) -> msg
+  }
 }
 
 pub fn send_step_event(
@@ -228,6 +278,115 @@ pub fn stream_recv(stream: Stream, timeout_ms: Int) -> Result(BitArray, String) 
     Error(e) -> Error(error_to_string(e))
   }
 }
+
+/// Receive and decode an AssignedAction from the stream
+pub fn recv_assigned_action(
+  stream: Stream,
+  timeout_ms: Int,
+) -> Result(protobuf.AssignedAction, String) {
+  case stream_recv(stream, timeout_ms) {
+    Ok(data) -> {
+      let msg = protobuf.protobuf_message_from_bits(data)
+      case protobuf.decode_assigned_action(msg) {
+        Ok(action) -> Ok(action)
+        Error(e) -> Error("Decode error: " <> pb_error_message(e))
+      }
+    }
+    Error(e) -> Error(e)
+  }
+}
+
+/// Send a step action event to the dispatcher via unary RPC
+pub fn send_step_action_event(
+  channel: Channel,
+  event: protobuf.StepActionEvent,
+  auth_token: String,
+) -> Result(protobuf.ActionEventResponse, String) {
+  let Channel(ch) = channel
+
+  case protobuf.encode_step_action_event(event) {
+    Ok(encoded) -> {
+      let data = protobuf.protobuf_message_to_bits(encoded)
+      let rpc_opts =
+        grpcbox.RpcOptions(
+          timeout_ms: 10_000,
+          metadata: [#("authorization", "Bearer " <> auth_token)],
+        )
+
+      case
+        grpcbox.unary_call(
+          ch,
+          "hatchet.dispatcher.Dispatcher",
+          "SendStepActionEvent",
+          data,
+          rpc_opts,
+        )
+      {
+        Ok(resp_data) -> {
+          let msg = protobuf.protobuf_message_from_bits(resp_data)
+          case protobuf.decode_action_event_response(msg) {
+            Ok(resp) -> Ok(resp)
+            Error(e) -> Error("Decode error: " <> pb_error_message(e))
+          }
+        }
+        Error(e) -> Error(error_to_string(e))
+      }
+    }
+    Error(e) -> Error("Encode error: " <> pb_error_message(e))
+  }
+}
+
+/// Send a heartbeat via unary RPC
+pub fn send_heartbeat(
+  channel: Channel,
+  worker_id: String,
+  auth_token: String,
+) -> Result(Nil, String) {
+  let Channel(ch) = channel
+
+  // Get current timestamp in milliseconds
+  let timestamp = current_time_ms()
+  let heartbeat_req = protobuf.HeartbeatRequest(
+    worker_id: worker_id,
+    heartbeat_at: timestamp,
+  )
+
+  case protobuf.encode_heartbeat_request(heartbeat_req) {
+    Ok(encoded) -> {
+      let data = protobuf.protobuf_message_to_bits(encoded)
+      let rpc_opts =
+        grpcbox.RpcOptions(
+          timeout_ms: 5000,
+          metadata: [#("authorization", "Bearer " <> auth_token)],
+        )
+
+      case
+        grpcbox.unary_call(
+          ch,
+          "hatchet.dispatcher.Dispatcher",
+          "Heartbeat",
+          data,
+          rpc_opts,
+        )
+      {
+        Ok(_) -> Ok(Nil)
+        Error(e) -> Error(error_to_string(e))
+      }
+    }
+    Error(e) -> Error("Encode error: " <> pb_error_message(e))
+  }
+}
+
+@external(erlang, "erlang", "system_time")
+fn erlang_system_time(unit: atom) -> Int
+
+fn current_time_ms() -> Int {
+  // Call erlang:system_time(millisecond)
+  do_current_time_ms()
+}
+
+@external(erlang, "hatchet_time_ffi", "system_time_ms")
+fn do_current_time_ms() -> Int
 
 pub fn close(channel: Channel) -> Nil {
   let Channel(ch) = channel

@@ -3,6 +3,7 @@ import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/option
 import hatchet/client
+import hatchet/context
 import hatchet/events
 import hatchet/run
 import hatchet/standalone
@@ -14,6 +15,10 @@ import hatchet/types.{
   type Workflow, type WorkflowRunRef,
 }
 import hatchet/workflow
+
+// Re-export Context type from the new context module
+pub type Context =
+  context.Context
 
 pub type Event =
   events.Event
@@ -44,6 +49,60 @@ pub fn start_worker_blocking(worker: Worker) {
 
 pub fn start_worker(worker: Worker) {
   client.start_worker(worker)
+}
+
+/// Stop a running worker gracefully.
+pub fn stop_worker(worker: Worker) {
+  client.stop_worker(worker)
+}
+
+// ============================================================================
+// Context Functions (new context module)
+// ============================================================================
+
+/// Get the input data for the current task.
+pub fn context_input(ctx: Context) {
+  context.input(ctx)
+}
+
+/// Get output from a parent task by name.
+pub fn context_step_output(ctx: Context, step_name: String) {
+  context.step_output(ctx, step_name)
+}
+
+/// Get all parent task outputs.
+pub fn context_all_parent_outputs(ctx: Context) {
+  context.all_parent_outputs(ctx)
+}
+
+/// Get the current retry count (0 for first attempt).
+pub fn context_retry_count(ctx: Context) {
+  context.retry_count(ctx)
+}
+
+/// Get the workflow run ID.
+pub fn context_workflow_run_id(ctx: Context) {
+  context.workflow_run_id(ctx)
+}
+
+/// Get the step run ID.
+pub fn context_step_run_id(ctx: Context) {
+  context.step_run_id(ctx)
+}
+
+/// Get additional metadata.
+pub fn context_metadata(ctx: Context) {
+  context.metadata(ctx)
+}
+
+/// Get a specific metadata value.
+pub fn context_get_metadata(ctx: Context, key: String) {
+  context.get_metadata(ctx, key)
+}
+
+/// Log a message to the Hatchet workflow run logs.
+pub fn context_log(ctx: Context, message: String) {
+  context.log(ctx, message)
 }
 
 pub fn workflow_new(name: String) {
