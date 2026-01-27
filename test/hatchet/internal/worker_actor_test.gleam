@@ -168,7 +168,7 @@ pub fn task_handler_type_test() {
   let handler = worker_actor.TaskHandler(
     workflow_name: "my-workflow",
     task_name: "my-task",
-    handler: fn(_ctx) { Ok(dynamic.from("result")) },
+    handler: fn(_ctx) { Ok(dynamic.string("result")) },
     retries: 3,
     timeout_ms: 60_000,
     skip_if: None,
@@ -199,7 +199,7 @@ pub fn task_handler_with_retries_test() {
   let handler = worker_actor.TaskHandler(
     workflow_name: "order-workflow",
     task_name: "charge-payment",
-    handler: fn(_ctx) { Ok(dynamic.from("success")) },
+    handler: fn(_ctx) { Ok(dynamic.string("success")) },
     retries: 5,
     timeout_ms: 30_000,
     skip_if: None,
@@ -214,7 +214,7 @@ pub fn task_handler_no_retries_test() {
   let handler = worker_actor.TaskHandler(
     workflow_name: "simple-workflow",
     task_name: "one-shot-task",
-    handler: fn(_ctx) { Ok(dynamic.from("done")) },
+    handler: fn(_ctx) { Ok(dynamic.string("done")) },
     retries: 0,
     timeout_ms: 60_000,
     skip_if: None,
@@ -234,7 +234,7 @@ pub fn task_handler_with_skip_if_test() {
   let handler = worker_actor.TaskHandler(
     workflow_name: "conditional-workflow",
     task_name: "maybe-skip-task",
-    handler: fn(_ctx) { Ok(dynamic.from("executed")) },
+    handler: fn(_ctx) { Ok(dynamic.string("executed")) },
     retries: 0,
     timeout_ms: 60_000,
     skip_if: Some(skip_condition),
@@ -252,7 +252,7 @@ pub fn task_handler_without_skip_if_test() {
   let handler = worker_actor.TaskHandler(
     workflow_name: "simple-workflow",
     task_name: "always-run-task",
-    handler: fn(_ctx) { Ok(dynamic.from("executed")) },
+    handler: fn(_ctx) { Ok(dynamic.string("executed")) },
     retries: 0,
     timeout_ms: 60_000,
     skip_if: None,

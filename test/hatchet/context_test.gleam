@@ -19,7 +19,7 @@ pub fn main() {
 // ============================================================================
 
 pub fn mock_context_creation_test() {
-  let input = dynamic.from(42)
+  let input = dynamic.int(42)
   let parent_outputs = dict.new()
   let ctx = context.mock(input, parent_outputs)
 
@@ -29,7 +29,7 @@ pub fn mock_context_creation_test() {
 }
 
 pub fn mock_context_with_retry_test() {
-  let input = dynamic.from("test")
+  let input = dynamic.string("test")
   let parent_outputs = dict.new()
   let ctx = context.mock_with_retry(input, parent_outputs, 3)
 
@@ -41,7 +41,7 @@ pub fn mock_context_with_retry_test() {
 // ============================================================================
 
 pub fn context_input_test() {
-  let input = dynamic.from([1, 2, 3])
+  let input = dynamic.list([dynamic.int(1), dynamic.int(2), dynamic.int(3)])
   let ctx = context.mock(input, dict.new())
 
   let result = context.input(ctx)
@@ -50,9 +50,9 @@ pub fn context_input_test() {
 }
 
 pub fn context_step_output_found_test() {
-  let parent_output = dynamic.from("parent result")
+  let parent_output = dynamic.string("parent result")
   let parent_outputs = dict.from_list([#("parent_task", parent_output)])
-  let ctx = context.mock(dynamic.from(Nil), parent_outputs)
+  let ctx = context.mock(dynamic.nil(), parent_outputs)
 
   case context.step_output(ctx, "parent_task") {
     Some(_) -> should.be_true(True)
@@ -61,7 +61,7 @@ pub fn context_step_output_found_test() {
 }
 
 pub fn context_step_output_not_found_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
 
   case context.step_output(ctx, "nonexistent_task") {
     Some(_) -> should.fail()
@@ -71,22 +71,22 @@ pub fn context_step_output_not_found_test() {
 
 pub fn context_all_parent_outputs_test() {
   let outputs = dict.from_list([
-    #("task1", dynamic.from("output1")),
-    #("task2", dynamic.from("output2")),
+    #("task1", dynamic.string("output1")),
+    #("task2", dynamic.string("output2")),
   ])
-  let ctx = context.mock(dynamic.from(Nil), outputs)
+  let ctx = context.mock(dynamic.nil(), outputs)
 
   let result = context.all_parent_outputs(ctx)
   dict.size(result) |> should.equal(2)
 }
 
 pub fn context_retry_count_zero_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
   context.retry_count(ctx) |> should.equal(0)
 }
 
 pub fn context_retry_count_multiple_test() {
-  let ctx = context.mock_with_retry(dynamic.from(Nil), dict.new(), 5)
+  let ctx = context.mock_with_retry(dynamic.nil(), dict.new(), 5)
   context.retry_count(ctx) |> should.equal(5)
 }
 
@@ -95,7 +95,7 @@ pub fn context_retry_count_multiple_test() {
 // ============================================================================
 
 pub fn context_log_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
   // Should not crash
   context.log(ctx, "Test log message")
   should.be_true(True)
@@ -163,7 +163,7 @@ pub fn context_from_assigned_action_with_parent_outputs_test() {
   )
 
   let parent_outputs = dict.from_list([
-    #("validate", dynamic.from(True)),
+    #("validate", dynamic.bool(True)),
   ])
 
   let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
@@ -180,13 +180,13 @@ pub fn context_from_assigned_action_with_parent_outputs_test() {
 // ============================================================================
 
 pub fn context_metadata_empty_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
   let metadata = context.metadata(ctx)
   dict.size(metadata) |> should.equal(0)
 }
 
 pub fn context_get_metadata_not_found_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
   case context.get_metadata(ctx, "missing_key") {
     Some(_) -> should.fail()
     None -> should.be_true(True)
@@ -296,7 +296,7 @@ pub fn context_additional_outputs_override_payload_test() {
 
   // Pass additional outputs that should override the payload ones
   let additional_outputs = dict.from_list([
-    #("validate", dynamic.from(dict.from_list([#("from_additional", True)]))),
+    #("validate", dynamic.int(dict.from_list([#("from_additional", True)]))),
   ])
 
   let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
@@ -328,9 +328,9 @@ import hatchet/types.{TaskContext}
 
 pub fn context_to_task_context_test() {
   // Test conversion from Context to TaskContext
-  let input = dynamic.from(42)
+  let input = dynamic.int(42)
   let parent_outputs = dict.from_list([
-    #("parent_task", dynamic.from("parent_result")),
+    #("parent_task", dynamic.string("parent_result")),
   ])
   let ctx = context.mock(input, parent_outputs)
 
@@ -345,11 +345,11 @@ pub fn context_to_task_context_test() {
 pub fn context_to_task_context_preserves_parent_outputs_test() {
   // Test that parent outputs are preserved in conversion
   let outputs = dict.from_list([
-    #("task1", dynamic.from("output1")),
-    #("task2", dynamic.from("output2")),
-    #("task3", dynamic.from("output3")),
+    #("task1", dynamic.string("output1")),
+    #("task2", dynamic.string("output2")),
+    #("task3", dynamic.string("output3")),
   ])
-  let ctx = context.mock(dynamic.from(Nil), outputs)
+  let ctx = context.mock(dynamic.nil(), outputs)
 
   let task_ctx = context.to_task_context(ctx)
 
@@ -362,15 +362,15 @@ pub fn context_to_task_context_preserves_parent_outputs_test() {
 // ============================================================================
 
 pub fn context_put_stream_default_returns_error_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
-  case context.put_stream(ctx, dynamic.from("data")) {
+  let ctx = context.mock(dynamic.nil(), dict.new())
+  case context.put_stream(ctx, dynamic.string("data")) {
     Error(_) -> should.be_true(True)
     Ok(_) -> should.fail()
   }
 }
 
 pub fn context_release_slot_default_returns_error_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
   case context.release_slot(ctx) {
     Error(_) -> should.be_true(True)
     Ok(_) -> should.fail()
@@ -378,7 +378,7 @@ pub fn context_release_slot_default_returns_error_test() {
 }
 
 pub fn context_refresh_timeout_default_returns_error_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
   case context.refresh_timeout(ctx, 5000) {
     Error(_) -> should.be_true(True)
     Ok(_) -> should.fail()
@@ -386,7 +386,7 @@ pub fn context_refresh_timeout_default_returns_error_test() {
 }
 
 pub fn context_cancel_default_returns_error_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  let ctx = context.mock(dynamic.nil(), dict.new())
   case context.cancel(ctx) {
     Error(_) -> should.be_true(True)
     Ok(_) -> should.fail()
@@ -394,8 +394,8 @@ pub fn context_cancel_default_returns_error_test() {
 }
 
 pub fn context_spawn_workflow_default_returns_error_test() {
-  let ctx = context.mock(dynamic.from(Nil), dict.new())
-  case context.spawn_workflow(ctx, "child_workflow", dynamic.from("input")) {
+  let ctx = context.mock(dynamic.nil(), dict.new())
+  case context.spawn_workflow(ctx, "child_workflow", dynamic.string("input")) {
     Error(_) -> should.be_true(True)
     Ok(_) -> should.fail()
   }
@@ -428,9 +428,9 @@ pub fn context_callbacks_wired_test() {
   let ctx = context.from_assigned_action(action, "w", dict.new(), callbacks)
 
   // All methods should succeed with custom callbacks
-  context.put_stream(ctx, dynamic.from("data")) |> should.be_ok()
+  context.put_stream(ctx, dynamic.string("data")) |> should.be_ok()
   context.release_slot(ctx) |> should.be_ok()
   context.refresh_timeout(ctx, 5000) |> should.be_ok()
   context.cancel(ctx) |> should.be_ok()
-  context.spawn_workflow(ctx, "child", dynamic.from(Nil)) |> should.be_ok()
+  context.spawn_workflow(ctx, "child", dynamic.nil()) |> should.be_ok()
 }

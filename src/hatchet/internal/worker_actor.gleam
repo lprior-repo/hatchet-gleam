@@ -15,6 +15,7 @@
 import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/erlang/process.{type Pid, type Subject}
 import gleam/io
 import gleam/json
@@ -239,7 +240,7 @@ fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler)
                   input: task_ctx.input,
                 )
               case failure_fn(failure_ctx) {
-                Ok(_) -> Ok(dynamic.from("on_failure completed"))
+                Ok(_) -> Ok(dynamic.string("on_failure completed"))
                 Error(e) -> Error(e)
               }
             },
@@ -704,7 +705,7 @@ fn execute_task_in_process(
   // Convert local parent outputs from JSON strings to Dynamic
   let parent_outputs_dynamic =
     dict.fold(local_parent_outputs, dict.new(), fn(acc, step_name, output_json) {
-      case json.decode(output_json, dynamic.dynamic) {
+      case json.parse(output_json, decode.dynamic) {
         Ok(value) -> dict.insert(acc, step_name, value)
         Error(_) -> acc
       }

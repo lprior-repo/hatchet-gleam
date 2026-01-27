@@ -28,6 +28,7 @@
 
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/json
 import gleam/option.{type Option, None, Some}
 import hatchet/internal/ffi/protobuf
@@ -291,15 +292,14 @@ pub fn from_assigned_action(
 fn parse_action_payload_with_parents(
   payload: String,
 ) -> #(Dynamic, Dict(String, Dynamic)) {
-  case json.decode(payload, dynamic.dynamic) {
+  case json.parse(payload, decode.dynamic) {
     Ok(value) -> {
       // Try to extract structured payload with input and parents
-      let input_result =
-        dynamic.field("input", dynamic.dynamic)(value)
-      let parents_result =
-        dynamic.field("parents", dynamic.dict(dynamic.string, dynamic.dynamic))(
-          value,
-        )
+      let input_decoder = decode.field("input", decode.dynamic)
+      let parents_decoder = decode.field("parents", decode.dict(decode.string, decode.dynamic))
+
+      let input_result = decode.run(value, input_decoder)
+      let parents_result = decode.run(value, parents_decoder)
 
       case input_result, parents_result {
         Ok(input), Ok(parents) -> #(input, parents)
@@ -310,13 +310,17 @@ fn parse_action_payload_with_parents(
         }
       }
     }
-    Error(_) -> #(dynamic.from(payload), dict.new())
+    Error(_) -> {
+      // If JSON parsing fails, treat the payload as a raw string value
+      // Convert to Dynamic using the dynamic.string constructor
+      #(dynamic.string(payload), dict.new())
+    }
   }
 }
 
 /// Parse the JSON metadata into a Dict.
 fn parse_metadata(meta_json: String) -> Dict(String, String) {
-  case json.decode(meta_json, dynamic.dict(dynamic.string, dynamic.string)) {
+  case json.parse(meta_json, decode.dict(decode.string, decode.string)) {
     Ok(meta) -> meta
     Error(_) -> dict.new()
   }

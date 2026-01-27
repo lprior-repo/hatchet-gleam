@@ -203,7 +203,11 @@ pub fn create_worker(id: String) -> Worker {
 /// The caller (client.gleam) is responsible for using the correct
 /// message type when sending to this worker.
 pub fn create_worker_with_subject(subject: process.Subject(a)) -> Worker {
-  Worker(pid: Some(process.subject_owner(subject)), id: "active-worker")
+  let pid = case process.subject_owner(subject) {
+    Ok(owner_pid) -> Some(owner_pid)
+    Error(Nil) -> None
+  }
+  Worker(pid: pid, id: "active-worker")
 }
 
 /// Get the worker's process ID if available.
