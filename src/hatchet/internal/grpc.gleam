@@ -377,11 +377,7 @@ pub fn send_heartbeat(
   }
 }
 
-@external(erlang, "erlang", "system_time")
-fn erlang_system_time(unit: atom) -> Int
-
 fn current_time_ms() -> Int {
-  // Call erlang:system_time(millisecond)
   do_current_time_ms()
 }
 

@@ -79,7 +79,10 @@ pub fn input(ctx: Context) -> Dynamic {
 /// Returns `Some(output)` if the parent task completed successfully,
 /// or `None` if the parent doesn't exist or hasn't completed.
 pub fn step_output(ctx: Context, step_name: String) -> Option(Dynamic) {
-  dict.get(ctx.parent_outputs, step_name)
+  case dict.get(ctx.parent_outputs, step_name) {
+    Ok(value) -> Some(value)
+    Error(_) -> None
+  }
 }
 
 /// Get all parent task outputs.
@@ -114,7 +117,10 @@ pub fn metadata(ctx: Context) -> Dict(String, String) {
 
 /// Get a specific metadata value.
 pub fn get_metadata(ctx: Context, key: String) -> Option(String) {
-  dict.get(ctx.additional_metadata, key)
+  case dict.get(ctx.additional_metadata, key) {
+    Ok(value) -> Some(value)
+    Error(_) -> None
+  }
 }
 
 /// Log a message to the Hatchet workflow run logs.

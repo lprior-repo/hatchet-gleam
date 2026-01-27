@@ -83,8 +83,8 @@ unary(dummy, _Service, _Rpc, _Request, _Opts) ->
     {error, <<"Mock channel">>};
 unary(Channel, Service, Rpc, Request, Opts) ->
     {gun_channel, GunPid, _Host, _Port, _IsSecure} = Channel,
-    Timeout = proplists:get_value(timeout, Opts, 5000),
-    Metadata = proplists:get_value(metadata, Opts, []),
+    %% Opts is a Gleam RpcOptions record: {timeout_ms, metadata}
+    {Timeout, Metadata} = extract_rpc_opts(Opts),
 
     %% Build gRPC path: /package.service/method
     Path = "/" ++ binary_to_list(Service) ++ "/" ++ binary_to_list(Rpc),
@@ -143,8 +143,20 @@ grpc_frame_decode(_) ->
     {error, <<"Invalid gRPC frame">>}.
 
 %% Convert metadata list to gun headers
+%% Gleam strings are already binaries, so ensure we handle both
 metadata_to_headers(Metadata) ->
-    [{list_to_binary(K), list_to_binary(V)} || {K, V} <- Metadata].
+    [{ensure_binary(K), ensure_binary(V)} || {K, V} <- Metadata].
+
+ensure_binary(V) when is_binary(V) -> V;
+ensure_binary(V) when is_list(V) -> list_to_binary(V);
+ensure_binary(V) -> iolist_to_binary(io_lib:format("~p", [V])).
+
+%% Extract options from Gleam RpcOptions record
+%% Gleam records compile to Erlang tuples: {rpc_options, TimeoutMs, Metadata}
+extract_rpc_opts({rpc_options, TimeoutMs, Metadata}) ->
+    {TimeoutMs, Metadata};
+extract_rpc_opts(_) ->
+    {5000, []}.
 
 %% ==============================================================================
 %% Bidirectional Streaming
@@ -170,7 +182,9 @@ start_stream(Channel, Service, Rpc, Metadata) ->
     %% Start stream
     StreamRef = gun:request(GunPid, <<"POST">>, list_to_binary(Path), Headers, <<>>),
 
-    {ok, {gun_stream, GunPid, StreamRef}}.
+    %% Return as 2-tuple matching Gleam's #(Stream, StreamRef)
+    Stream = {gun_stream, GunPid, StreamRef},
+    {ok, {Stream, StreamRef}}.
 
 %% Send data on a stream
 send(Stream, Data) when is_tuple(Stream) ->

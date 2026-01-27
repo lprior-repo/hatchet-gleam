@@ -240,24 +240,19 @@ fn actor_error_to_string(error: actor.StartError) -> String {
 /// ```
 pub fn start_worker_blocking(worker: Worker) -> Result(Nil, String) {
   // The worker is already running when created
-  // This function just waits for it to complete
+  // This function monitors it and blocks until it exits
   case types.get_worker_pid(worker) {
-    Some(_pid) -> {
-      // Block by selecting on the worker process
-      // In a real implementation, we'd monitor the process
-      // For now, just sleep indefinitely (the actor handles everything)
-      block_forever()
+    Some(pid) -> {
+      // Monitor the worker process and block until it exits
+      let monitor = process.monitor_process(pid)
+      let selector =
+        process.new_selector()
+        |> process.selecting_process_down(monitor, fn(_down) { Nil })
+      process.select_forever(selector)
       Ok(Nil)
     }
     None -> Error("Worker not properly initialized")
   }
-}
-
-fn block_forever() -> Nil {
-  // Sleep for a long time (effectively forever for demo purposes)
-  // In production, this would monitor the worker process
-  process.sleep(1_000_000_000)
-  Nil
 }
 
 /// Start the worker in the background and return a shutdown function.

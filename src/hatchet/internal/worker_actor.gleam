@@ -22,9 +22,9 @@ import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import gleam/result
 import gleam/string
+
 import hatchet/context.{type Context}
 import hatchet/internal/ffi/protobuf
-import hatchet/internal/ffi/timer
 import hatchet/internal/grpc
 import hatchet/internal/tls.{type TLSConfig, Insecure}
 import hatchet/types.{type Client, type TaskDef, type Workflow, type WorkerConfig}
@@ -178,7 +178,12 @@ pub fn start(
       let state =
         WorkerState(..initial_state, self: Some(self), is_running: True)
 
-      actor.Ready(state, process.new_selector())
+      // Build selector that receives messages on our subject
+      let selector =
+        process.new_selector()
+        |> process.selecting(self, fn(msg) { msg })
+
+      actor.Ready(state, selector)
     },
     init_timeout: 30_000,
     loop: handle_message,
@@ -317,7 +322,8 @@ fn handle_reconnect(
       actor.Stop(process.Normal)
     }
     False -> {
-      // Exponential backoff: 1s, 2s, 4s, 8s... up to 30s
+      // Non-blocking exponential backoff: schedule Connect after delay
+      // This avoids blocking the actor process during backoff
       let delay_ms = min(1000 * pow(2, attempt - 1), 30_000)
       log_info(
         "Reconnecting in "
@@ -329,10 +335,10 @@ fn handle_reconnect(
         <> ")",
       )
 
-      timer.sleep_ms(delay_ms)
+      schedule_message(state, Connect, delay_ms)
 
       let new_state = WorkerState(..state, reconnect_attempts: attempt)
-      handle_connect(new_state)
+      actor.continue(new_state)
     }
   }
 }
@@ -473,6 +479,11 @@ fn handle_listener_stopped(
 }
 
 fn cleanup_connections(state: WorkerState) -> Nil {
+  // Kill the listener process first to stop it sending messages
+  case state.listener_pid {
+    Some(pid) -> process.kill(pid)
+    None -> Nil
+  }
   case state.stream {
     Some(stream) -> grpc.close_stream(stream)
     None -> Nil
@@ -556,8 +567,8 @@ fn find_handler(
   registry: Dict(String, TaskHandler),
 ) -> Option(TaskHandler) {
   case dict.get(registry, step_name) {
-    Some(h) -> Some(h)
-    None -> {
+    Ok(h) -> Some(h)
+    Error(_) -> {
       // Try to find by task name part (after colon)
       dict.fold(registry, None, fn(acc, _key, handler) {
         case acc {
@@ -589,7 +600,7 @@ fn spawn_task_process(
   // Get local parent outputs for this workflow run if available
   let local_parent_outputs =
     dict.get(state.completed_outputs, action.workflow_run_id)
-    |> option.unwrap(dict.new())
+    |> result.unwrap(dict.new())
 
   process.start(
     fn() {
@@ -733,14 +744,15 @@ fn execute_task_in_process(
               ]),
             )
 
-          // Send FAILED event
-          send_event_from_task(
+          // Send FAILED event with should_not_retry flag
+          send_event_from_task_with_retry(
             channel,
             token,
             action,
             worker_id,
             protobuf.StepEventTypeFailed,
             error_json,
+            Some(!should_retry),
           )
 
           // Notify parent with retry decision
@@ -759,6 +771,20 @@ fn send_event_from_task(
   event_type: protobuf.StepActionEventType,
   payload: String,
 ) -> Nil {
+  send_event_from_task_with_retry(
+    channel, token, action, worker_id, event_type, payload, None,
+  )
+}
+
+fn send_event_from_task_with_retry(
+  channel: Option(grpc.Channel),
+  token: String,
+  action: protobuf.AssignedAction,
+  worker_id: String,
+  event_type: protobuf.StepActionEventType,
+  payload: String,
+  should_not_retry: Option(Bool),
+) -> Nil {
   case channel {
     Some(ch) -> {
       let event =
@@ -773,7 +799,7 @@ fn send_event_from_task(
           event_type: event_type,
           event_payload: payload,
           retry_count: Some(action.retry_count),
-          should_not_retry: None,
+          should_not_retry: should_not_retry,
         )
 
       case grpc.send_step_action_event(ch, event, token) {
@@ -802,14 +828,14 @@ fn handle_task_completed(
 
   // Get the running task info to store output
   let new_completed_outputs = case dict.get(state.running_tasks, step_run_id) {
-    Some(running_task) -> {
+    Ok(running_task) -> {
       let workflow_run_id = running_task.action.workflow_run_id
       let step_name = running_task.action.step_name
 
       // Get or create the outputs dict for this workflow run
       let workflow_outputs =
         dict.get(state.completed_outputs, workflow_run_id)
-        |> option.unwrap(dict.new())
+        |> result.unwrap(dict.new())
 
       // Store this task's output
       let updated_workflow_outputs =
@@ -818,16 +844,21 @@ fn handle_task_completed(
       // Update the completed outputs
       dict.insert(state.completed_outputs, workflow_run_id, updated_workflow_outputs)
     }
-    None -> state.completed_outputs
+    Error(_) -> state.completed_outputs
   }
 
   // Remove from running tasks and free slot
   let new_running = dict.delete(state.running_tasks, step_run_id)
+
+  // Clean up completed_outputs for workflow runs with no remaining tasks
+  let final_completed_outputs =
+    cleanup_stale_outputs(new_running, new_completed_outputs)
+
   actor.continue(
     WorkerState(
       ..state,
       running_tasks: new_running,
-      completed_outputs: new_completed_outputs,
+      completed_outputs: final_completed_outputs,
       available_slots: state.available_slots + 1,
     ),
   )
@@ -863,7 +894,7 @@ fn handle_task_timeout(
 ) -> actor.Next(WorkerMessage, WorkerState) {
   // Check if task is still running
   case dict.get(state.running_tasks, step_run_id) {
-    Some(running_task) -> {
+    Ok(running_task) -> {
       let action = running_task.action
       let handler = running_task.handler
 
@@ -899,7 +930,7 @@ fn handle_task_timeout(
         ),
       )
     }
-    None -> {
+    Error(_) -> {
       // Task already completed, ignore timeout
       actor.continue(state)
     }
@@ -1058,6 +1089,31 @@ fn handle_shutdown(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState)
   cleanup_connections(state)
 
   actor.Stop(process.Normal)
+}
+
+// ============================================================================
+// Output Cleanup
+// ============================================================================
+
+/// Remove completed_outputs entries for workflow runs that have no remaining
+/// running tasks. This prevents unbounded memory growth for long-running workers.
+fn cleanup_stale_outputs(
+  running_tasks: Dict(String, RunningTask),
+  completed_outputs: Dict(String, Dict(String, String)),
+) -> Dict(String, Dict(String, String)) {
+  // Build set of workflow_run_ids that still have running tasks
+  let active_workflow_runs =
+    dict.fold(running_tasks, dict.new(), fn(acc, _id, task) {
+      dict.insert(acc, task.action.workflow_run_id, True)
+    })
+
+  // Remove entries for workflow runs with no active tasks
+  dict.fold(completed_outputs, dict.new(), fn(acc, wf_run_id, outputs) {
+    case dict.get(active_workflow_runs, wf_run_id) {
+      Ok(_) -> dict.insert(acc, wf_run_id, outputs)
+      Error(_) -> acc
+    }
+  })
 }
 
 // ============================================================================
