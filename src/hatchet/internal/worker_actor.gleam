@@ -170,27 +170,26 @@ pub fn start(
       self: None,
     )
 
-  actor.start_spec(actor.Spec(
-    init: fn() {
-      // Get our own subject for scheduling
-      let self = process.new_subject()
+  actor.new_with_initialiser(30_000, fn(subject) {
+    // Schedule initial connection
+    process.send(subject, Connect)
 
-      // Schedule initial connection
-      process.send(self, Connect)
+    let state =
+      WorkerState(..initial_state, self: Some(subject), is_running: True)
 
-      let state =
-        WorkerState(..initial_state, self: Some(self), is_running: True)
+    // Build selector that receives messages on our subject
+    let selector =
+      process.new_selector()
+      |> process.select(subject)
 
-      // Build selector that receives messages on our subject
-      let selector =
-        process.new_selector()
-        |> process.selecting(self, fn(msg) { msg })
-
-      actor.Ready(state, selector)
-    },
-    init_timeout: 30_000,
-    loop: handle_message,
-  ))
+    actor.initialised(state)
+    |> actor.selecting(selector)
+    |> actor.returning(subject)
+    |> Ok
+  })
+  |> actor.on_message(handle_message)
+  |> actor.start
+  |> result.map(fn(started) { started.data })
 }
 
 /// Build the action registry from workflow definitions
@@ -262,9 +261,9 @@ fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler)
 // ============================================================================
 
 fn handle_message(
-  msg: WorkerMessage,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+  msg: WorkerMessage,
+) -> actor.Next(WorkerState, WorkerMessage) {
   case msg {
     Connect -> handle_connect(state)
     Reconnect(attempt) -> handle_reconnect(attempt, state)
@@ -296,7 +295,7 @@ fn handle_message(
 // Connection Handling
 // ============================================================================
 
-fn handle_connect(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState) {
+fn handle_connect(state: WorkerState) -> actor.Next(WorkerState, WorkerMessage) {
   log_info(
     "Connecting to Hatchet dispatcher at "
     <> state.host
@@ -362,11 +361,11 @@ fn handle_connect(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState) 
 fn handle_reconnect(
   attempt: Int,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   case attempt > max_reconnect_attempts {
     True -> {
       log_error("Max reconnection attempts reached, shutting down")
-      actor.Stop(process.Normal)
+      actor.stop()
     }
     False -> {
       // Non-blocking exponential backoff: schedule Connect after delay
@@ -392,7 +391,7 @@ fn handle_reconnect(
 
 fn schedule_reconnect(
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   let attempt = state.reconnect_attempts + 1
   schedule_message(state, Reconnect(attempt), 100)
   actor.continue(WorkerState(..state, reconnect_attempts: attempt))
@@ -464,10 +463,7 @@ fn start_listener_process(
   }
 
   // Spawn a process that loops receiving from the stream
-  process.start(
-    fn() { listener_loop(stream, parent) },
-    True,
-  )
+  process.spawn(fn() { listener_loop(stream, parent) })
 }
 
 fn listener_loop(stream: grpc.Stream, parent: Subject(WorkerMessage)) -> Nil {
@@ -495,7 +491,7 @@ fn listener_loop(stream: grpc.Stream, parent: Subject(WorkerMessage)) -> Nil {
 fn handle_listener_error(
   error: String,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   log_error("Listener error: " <> error)
   cleanup_connections(state)
   schedule_reconnect(
@@ -511,7 +507,7 @@ fn handle_listener_error(
 
 fn handle_listener_stopped(
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   log_warning("Listener stopped, reconnecting...")
   cleanup_connections(state)
   schedule_reconnect(
@@ -549,7 +545,7 @@ fn cleanup_connections(state: WorkerState) -> Nil {
 fn handle_task_assigned(
   action: protobuf.AssignedAction,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   // Check if we have capacity
   case state.available_slots > 0 {
     True -> {
@@ -649,20 +645,17 @@ fn spawn_task_process(
     dict.get(state.completed_outputs, action.workflow_run_id)
     |> result.unwrap(dict.new())
 
-  process.start(
-    fn() {
-      execute_task_in_process(
-        action,
-        handler,
-        worker_id,
-        channel,
-        token,
-        local_parent_outputs,
-        parent,
-      )
-    },
-    True,
-  )
+  process.spawn(fn() {
+    execute_task_in_process(
+      action,
+      handler,
+      worker_id,
+      channel,
+      token,
+      local_parent_outputs,
+      parent,
+    )
+  })
 }
 
 fn execute_task_in_process(
@@ -916,7 +909,7 @@ fn send_event_from_task_with_retry(
 fn handle_task_started(
   step_run_id: String,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   log_info("Task started: " <> step_run_id)
   actor.continue(state)
 }
@@ -925,7 +918,7 @@ fn handle_task_completed(
   step_run_id: String,
   output: String,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   log_info("Task completed: " <> step_run_id)
 
   // Get the running task info to store output
@@ -971,7 +964,7 @@ fn handle_task_failed(
   error: String,
   should_retry: Bool,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   // Log with retry information
   let retry_info = case should_retry {
     True -> " (will be retried by server)"
@@ -993,7 +986,7 @@ fn handle_task_failed(
 fn handle_task_timeout(
   step_run_id: String,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   // Check if task is still running
   case dict.get(state.running_tasks, step_run_id) {
     Ok(running_task) -> {
@@ -1124,7 +1117,7 @@ fn send_task_failed_event(
 
 fn handle_send_heartbeat(
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> actor.Next(WorkerState, WorkerMessage) {
   case state.channel, state.worker_id {
     Some(channel), Some(worker_id) -> {
       case grpc.send_heartbeat(channel, worker_id, state.token) {
@@ -1181,16 +1174,16 @@ fn schedule_heartbeat(state: WorkerState) -> Nil {
 // Shutdown
 // ============================================================================
 
-fn handle_shutdown(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState) {
+fn handle_shutdown(state: WorkerState) -> actor.Next(WorkerState, WorkerMessage) {
   log_info("Shutting down worker...")
 
   // Kill any running tasks
-  dict.each(state.running_tasks, fn(_id, task) { process.kill(task.pid) })
+  let _ = dict.each(state.running_tasks, fn(_id, task) { process.kill(task.pid) })
 
   // Close connections
   cleanup_connections(state)
 
-  actor.Stop(process.Normal)
+  actor.stop()
 }
 
 // ============================================================================

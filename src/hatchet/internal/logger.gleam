@@ -20,7 +20,7 @@ pub type LogLevel {
   Debug
   Info
   Warning
-  Error
+  ErrorLevel
 }
 
 /// Convert a log level to its string representation.
@@ -29,7 +29,7 @@ pub fn level_to_string(level: LogLevel) -> String {
     Debug -> "DEBUG"
     Info -> "INFO"
     Warning -> "WARN"
-    Error -> "ERROR"
+    ErrorLevel -> "ERROR"
   }
 }
 
@@ -39,7 +39,7 @@ pub fn level_from_string(s: String) -> Result(LogLevel, Nil) {
     "debug" -> Ok(Debug)
     "info" -> Ok(Info)
     "warn" | "warning" -> Ok(Warning)
-    "error" -> Ok(Error)
+    "error" -> Ok(ErrorLevel)
     _ -> Error(Nil)
   }
 }
@@ -50,7 +50,7 @@ pub fn level_value(level: LogLevel) -> Int {
     Debug -> 0
     Info -> 1
     Warning -> 2
-    Error -> 3
+    ErrorLevel -> 3
   }
 }
 
@@ -189,7 +189,7 @@ pub fn warning_with(
 
 /// Log an error message.
 pub fn error(logger: Logger, message: String) -> Nil {
-  log(logger, Error, message, dict.new())
+  log(logger, ErrorLevel, message, dict.new())
 }
 
 /// Log an error message with additional context.
@@ -198,7 +198,7 @@ pub fn error_with(
   message: String,
   extra: Dict(String, String),
 ) -> Nil {
-  log(logger, Error, message, extra)
+  log(logger, ErrorLevel, message, extra)
 }
 
 /// Core logging function.

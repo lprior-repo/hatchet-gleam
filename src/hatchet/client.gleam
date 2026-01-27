@@ -217,7 +217,7 @@ fn actor_error_to_string(error: actor.StartError) -> String {
   case error {
     actor.InitTimeout -> "Init timeout"
     actor.InitFailed(_) -> "Init failed"
-    actor.InitCrashed(_) -> "Init crashed"
+    actor.InitExited(_) -> "Init exited"
   }
 }
 
@@ -244,11 +244,11 @@ pub fn start_worker_blocking(worker: Worker) -> Result(Nil, String) {
   case types.get_worker_pid(worker) {
     Some(pid) -> {
       // Monitor the worker process and block until it exits
-      let monitor = process.monitor_process(pid)
+      let monitor = process.monitor(pid)
       let selector =
         process.new_selector()
-        |> process.selecting_process_down(monitor, fn(_down) { Nil })
-      process.select_forever(selector)
+        |> process.select_specific_monitor(monitor, fn(_down) { Nil })
+      process.selector_receive_forever(selector)
       Ok(Nil)
     }
     None -> Error("Worker not properly initialized")

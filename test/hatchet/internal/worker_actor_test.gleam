@@ -6,7 +6,7 @@
 import gleeunit
 import gleeunit/should
 import gleam/dynamic
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import hatchet/internal/worker_actor
 import hatchet/internal/ffi/protobuf
 

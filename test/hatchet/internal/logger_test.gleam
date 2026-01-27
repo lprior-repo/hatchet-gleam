@@ -5,7 +5,7 @@ import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import hatchet/internal/logger.{
-  Debug, Error, Info, Logger, LoggerConfig, Warning,
+  Debug, ErrorLevel, Info, Logger, LoggerConfig, Warning,
 }
 
 pub fn main() {
@@ -29,7 +29,7 @@ pub fn level_to_string_warning_test() {
 }
 
 pub fn level_to_string_error_test() {
-  logger.level_to_string(Error) |> should.equal("ERROR")
+  logger.level_to_string(ErrorLevel) |> should.equal("ERROR")
 }
 
 pub fn level_from_string_debug_test() {
@@ -49,8 +49,8 @@ pub fn level_from_string_warning_test() {
 }
 
 pub fn level_from_string_error_test() {
-  logger.level_from_string("error") |> should.equal(Ok(Error))
-  logger.level_from_string("ERROR") |> should.equal(Ok(Error))
+  logger.level_from_string("error") |> should.equal(Ok(ErrorLevel))
+  logger.level_from_string("ERROR") |> should.equal(Ok(ErrorLevel))
 }
 
 pub fn level_from_string_invalid_test() {
@@ -59,10 +59,10 @@ pub fn level_from_string_invalid_test() {
 }
 
 pub fn level_value_ordering_test() {
-  // Debug < Info < Warning < Error
+  // Debug < Info < Warning < ErrorLevel
   should.be_true(logger.level_value(Debug) < logger.level_value(Info))
   should.be_true(logger.level_value(Info) < logger.level_value(Warning))
-  should.be_true(logger.level_value(Warning) < logger.level_value(Error))
+  should.be_true(logger.level_value(Warning) < logger.level_value(ErrorLevel))
 }
 
 // ============================================================================
@@ -89,8 +89,8 @@ pub fn production_config_test() {
 pub fn with_min_level_test() {
   let config =
     logger.default_config()
-    |> logger.with_min_level(Error)
-  config.min_level |> should.equal(Error)
+    |> logger.with_min_level(ErrorLevel)
+  config.min_level |> should.equal(ErrorLevel)
 }
 
 pub fn with_timestamp_test() {
@@ -172,7 +172,7 @@ pub fn log_functions_exist_test() {
   logger.debug(log, "Debug message")
   logger.info(log, "Info message")
   logger.warning(log, "Warning message")
-  logger.error(log, "Error message")
+  logger.error(log, "ErrorLevel message")
 
   should.be_true(True)
 }
@@ -197,7 +197,7 @@ pub fn simple_log_functions_test() {
   logger.log_debug("Debug message")
   logger.log_info("Info message")
   logger.log_warning("Warning message")
-  logger.log_error("Error message")
+  logger.log_error("ErrorLevel message")
 
   should.be_true(True)
 }

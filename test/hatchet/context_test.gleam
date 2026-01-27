@@ -6,6 +6,7 @@ import gleeunit
 import gleeunit/should
 import gleam/dict
 import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/option.{None, Some}
 import hatchet/context
 import hatchet/internal/ffi/protobuf
@@ -224,9 +225,9 @@ pub fn context_parent_outputs_from_payload_test() {
     workflow_version_id: None,
   )
 
-  let log_fn = fn(_msg: String) { Nil }
+  let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
   // Pass empty additional outputs - should still get parents from payload
-  let ctx = context.from_assigned_action(action, "worker-id", dict.new(), log_fn)
+  let ctx = context.from_assigned_action(action, "worker-id", dict.new(), callbacks)
 
   // Should have parent output from the payload
   case context.step_output(ctx, "validate") {
@@ -296,7 +297,7 @@ pub fn context_additional_outputs_override_payload_test() {
 
   // Pass additional outputs that should override the payload ones
   let additional_outputs = dict.from_list([
-    #("validate", dynamic.int(dict.from_list([#("from_additional", True)]))),
+    #("validate", dynamic.properties([#(dynamic.string("from_additional"), dynamic.bool(True))])),
   ])
 
   let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
@@ -306,10 +307,10 @@ pub fn context_additional_outputs_override_payload_test() {
   case context.step_output(ctx, "validate") {
     Some(output) -> {
       // The additional output should take precedence
-      case dynamic.dict(dynamic.string, dynamic.bool)(output) {
+      case decode.run(output, decode.dict(decode.string, decode.bool)) {
         Ok(d) -> {
           case dict.get(d, "from_additional") {
-            Some(True) -> should.be_true(True)
+            Ok(True) -> should.be_true(True)
             _ -> should.be_true(True)  // Accept either since merge behavior may vary
           }
         }

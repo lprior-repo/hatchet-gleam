@@ -7,7 +7,7 @@ import hatchet/errors.{
   AuthenticationFailed, ConfigError, ConnectionError, ConnectionFailed,
   ConnectionReset, ConnectionTimeout, DecodeError, EncodeError,
   EnvironmentError, EventSendFailed, GenericError, GrpcError, HandlerError,
-  HatchetError, InputDecodeError, InvalidConfig, JsonError, MaxReconnectsExceeded,
+  type HatchetError, InputDecodeError, InvalidConfig, JsonError, MaxReconnectsExceeded,
   MaxRetriesExceeded, MissingConfig, NoHandlerFound, ProtocolError, TaskCancelled,
   TaskError, TaskTimeout, TlsError, UnexpectedResponse,
 }
