@@ -105,13 +105,13 @@ tasks:
       outputStyle: 'stream'
       retryCount: 1
 
-  # Run tests with coverage
+  # Run tests with coverage (Gleam doesn't support coverage flag - alias to test)
   test-coverage:
-    description: 'Run tests with coverage report'
-    command: 'gleam test --coverage'
+    description: 'Run tests (Gleam coverage not yet supported)'
+    command: 'gleam test'
     platform: 'system'
     options:
-      cache: false
+      cache: true
       outputStyle: 'stream'
 
   # Clean build artifacts
