@@ -1224,19 +1224,19 @@ fn cleanup_stale_outputs(
 
 fn encode_dynamic_to_json(value: Dynamic) -> String {
   // Try to decode as common types and encode properly
-  case dynamic.string(value) {
+  case decode.run(value, decode.string) {
     Ok(s) -> json.to_string(json.string(s))
     Error(_) ->
-      case dynamic.int(value) {
+      case decode.run(value, decode.int) {
         Ok(i) -> json.to_string(json.int(i))
         Error(_) ->
-          case dynamic.float(value) {
+          case decode.run(value, decode.float) {
             Ok(f) -> json.to_string(json.float(f))
             Error(_) ->
-              case dynamic.bool(value) {
+              case decode.run(value, decode.bool) {
                 Ok(b) -> json.to_string(json.bool(b))
                 Error(_) ->
-                  case dynamic.list(dynamic.dynamic)(value) {
+                  case decode.run(value, decode.list(decode.dynamic)) {
                     Ok(list) -> {
                       let items = list.map(list, encode_dynamic_to_json_value)
                       json.to_string(json.array(items, fn(x) { x }))
@@ -1253,16 +1253,16 @@ fn encode_dynamic_to_json(value: Dynamic) -> String {
 }
 
 fn encode_dynamic_to_json_value(value: Dynamic) -> json.Json {
-  case dynamic.string(value) {
+  case decode.run(value, decode.string) {
     Ok(s) -> json.string(s)
     Error(_) ->
-      case dynamic.int(value) {
+      case decode.run(value, decode.int) {
         Ok(i) -> json.int(i)
         Error(_) ->
-          case dynamic.float(value) {
+          case decode.run(value, decode.float) {
             Ok(f) -> json.float(f)
             Error(_) ->
-              case dynamic.bool(value) {
+              case decode.run(value, decode.bool) {
                 Ok(b) -> json.bool(b)
                 Error(_) -> json.string(string.inspect(value))
               }

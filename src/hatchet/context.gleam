@@ -294,19 +294,28 @@ fn parse_action_payload_with_parents(
 ) -> #(Dynamic, Dict(String, Dynamic)) {
   case json.parse(payload, decode.dynamic) {
     Ok(value) -> {
-      // Try to extract structured payload with input and parents
-      let input_decoder = decode.field("input", decode.dynamic)
-      let parents_decoder = decode.field("parents", decode.dict(decode.string, decode.dynamic))
+      // Try to extract structured payload with input and parents using builder pattern
+      let decoder = {
+        use input <- decode.field("input", decode.dynamic)
+        use parents <- decode.field("parents", decode.dict(decode.string, decode.dynamic))
+        decode.success(#(input, parents))
+      }
 
-      let input_result = decode.run(value, input_decoder)
-      let parents_result = decode.run(value, parents_decoder)
-
-      case input_result, parents_result {
-        Ok(input), Ok(parents) -> #(input, parents)
-        Ok(input), Error(_) -> #(input, dict.new())
-        Error(_), _ -> {
-          // Payload is just the input data itself
-          #(value, dict.new())
+      case decode.run(value, decoder) {
+        Ok(#(input, parents)) -> #(input, parents)
+        Error(_) -> {
+          // If structured decode fails, try just extracting input
+          let input_decoder = {
+            use input <- decode.field("input", decode.dynamic)
+            decode.success(input)
+          }
+          case decode.run(value, input_decoder) {
+            Ok(input) -> #(input, dict.new())
+            Error(_) -> {
+              // Payload is just the input data itself
+              #(value, dict.new())
+            }
+          }
         }
       }
     }
