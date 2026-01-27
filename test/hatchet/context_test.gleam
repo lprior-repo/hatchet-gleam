@@ -319,3 +319,40 @@ pub fn context_additional_outputs_override_payload_test() {
     None -> should.fail()
   }
 }
+
+// ============================================================================
+// Context to TaskContext Conversion Tests
+// ============================================================================
+
+import hatchet/types.{TaskContext}
+
+pub fn context_to_task_context_test() {
+  // Test conversion from Context to TaskContext
+  let input = dynamic.from(42)
+  let parent_outputs = dict.from_list([
+    #("parent_task", dynamic.from("parent_result")),
+  ])
+  let ctx = context.mock(input, parent_outputs)
+
+  let task_ctx = context.to_task_context(ctx)
+
+  // Verify the TaskContext has the expected values
+  task_ctx.workflow_run_id |> should.equal("test-workflow-run-id")
+  task_ctx.task_run_id |> should.equal("test-step-run-id")
+  dict.size(task_ctx.parent_outputs) |> should.equal(1)
+}
+
+pub fn context_to_task_context_preserves_parent_outputs_test() {
+  // Test that parent outputs are preserved in conversion
+  let outputs = dict.from_list([
+    #("task1", dynamic.from("output1")),
+    #("task2", dynamic.from("output2")),
+    #("task3", dynamic.from("output3")),
+  ])
+  let ctx = context.mock(dynamic.from(Nil), outputs)
+
+  let task_ctx = context.to_task_context(ctx)
+
+  // All parent outputs should be preserved
+  dict.size(task_ctx.parent_outputs) |> should.equal(3)
+}

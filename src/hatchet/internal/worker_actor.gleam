@@ -112,9 +112,10 @@ pub type TaskHandler {
   TaskHandler(
     workflow_name: String,
     task_name: String,
-    handler: fn(Context) -> Result(Dynamic, String),
+    handler: fn(types.TaskContext) -> Result(Dynamic, String),
     retries: Int,
     timeout_ms: Int,
+    skip_if: Option(fn(types.TaskContext) -> Bool),
   )
 }
 
@@ -201,6 +202,7 @@ fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler)
           handler: task.handler,
           retries: task.retries,
           timeout_ms: timeout,
+          skip_if: task.skip_if,
         )
       // Register both formats for matching
       reg
@@ -659,54 +661,92 @@ fn execute_task_in_process(
       log_fn,
     )
 
-  // Execute the handler
-  case handler.handler(ctx) {
-    Ok(output) -> {
-      // Encode output as proper JSON
-      let output_json = encode_dynamic_to_json(output)
+  // Convert to TaskContext for handler and skip_if evaluation
+  let task_ctx = context.to_task_context(ctx)
 
-      // Send COMPLETED event
+  // Check skip_if condition before executing
+  let should_skip = case handler.skip_if {
+    Some(skip_fn) -> skip_fn(task_ctx)
+    None -> False
+  }
+
+  case should_skip {
+    True -> {
+      // Task should be skipped - send COMPLETED with skip marker
+      log_info("Skipping task: " <> action.step_name <> " (skip_if condition met)")
+
+      let skip_output_json =
+        json.to_string(
+          json.object([
+            #("skipped", json.bool(True)),
+            #("reason", json.string("skip_if condition evaluated to true")),
+          ]),
+        )
+
+      // Send COMPLETED event with skip indicator
       send_event_from_task(
         channel,
         token,
         action,
         worker_id,
         protobuf.StepEventTypeCompleted,
-        output_json,
+        skip_output_json,
       )
 
-      // Notify parent with output (for local tracking)
-      process.send(parent, TaskCompleted(action.step_run_id, output_json))
+      // Notify parent
+      process.send(parent, TaskCompleted(action.step_run_id, skip_output_json))
     }
-    Error(error) -> {
-      // Determine if we should retry based on handler config and retry count
-      // The server handles retries by re-assigning the task with incremented retry_count
-      // We report should_retry=True if we haven't exceeded max retries
-      let should_retry = action.retry_count < handler.retries
+    False -> {
+      // Execute the handler normally
+      case handler.handler(task_ctx) {
+        Ok(output) -> {
+          // Encode output as proper JSON
+          let output_json = encode_dynamic_to_json(output)
 
-      // Encode error with retry info
-      let error_json =
-        json.to_string(
-          json.object([
-            #("error", json.string(error)),
-            #("retry_count", json.int(action.retry_count)),
-            #("max_retries", json.int(handler.retries)),
-            #("should_retry", json.bool(should_retry)),
-          ]),
-        )
+          // Send COMPLETED event
+          send_event_from_task(
+            channel,
+            token,
+            action,
+            worker_id,
+            protobuf.StepEventTypeCompleted,
+            output_json,
+          )
 
-      // Send FAILED event
-      send_event_from_task(
-        channel,
-        token,
-        action,
-        worker_id,
-        protobuf.StepEventTypeFailed,
-        error_json,
-      )
+          // Notify parent with output (for local tracking)
+          process.send(parent, TaskCompleted(action.step_run_id, output_json))
+        }
+        Error(error) -> {
+          // Determine if we should retry based on handler config and retry count
+          // The server handles retries by re-assigning the task with incremented retry_count
+          // We report should_retry=True if we haven't exceeded max retries
+          let should_retry = action.retry_count < handler.retries
 
-      // Notify parent with retry decision
-      process.send(parent, TaskFailed(action.step_run_id, error, should_retry))
+          // Encode error with retry info
+          let error_json =
+            json.to_string(
+              json.object([
+                #("error", json.string(error)),
+                #("retry_count", json.int(action.retry_count)),
+                #("max_retries", json.int(handler.retries)),
+                #("should_retry", json.bool(should_retry)),
+              ]),
+            )
+
+          // Send FAILED event
+          send_event_from_task(
+            channel,
+            token,
+            action,
+            worker_id,
+            protobuf.StepEventTypeFailed,
+            error_json,
+          )
+
+          // Notify parent with retry decision
+          process.send(parent, TaskFailed(action.step_run_id, error, should_retry))
+        }
+      }
     }
   }
 }

@@ -162,6 +162,7 @@ pub fn task_handler_type_test() {
     handler: fn(_ctx) { Ok(dynamic.from("result")) },
     retries: 3,
     timeout_ms: 60_000,
+    skip_if: None,
   )
 
   handler.workflow_name |> should.equal("my-workflow")
@@ -192,6 +193,7 @@ pub fn task_handler_with_retries_test() {
     handler: fn(_ctx) { Ok(dynamic.from("success")) },
     retries: 5,
     timeout_ms: 30_000,
+    skip_if: None,
   )
 
   handler.retries |> should.equal(5)
@@ -206,9 +208,52 @@ pub fn task_handler_no_retries_test() {
     handler: fn(_ctx) { Ok(dynamic.from("done")) },
     retries: 0,
     timeout_ms: 60_000,
+    skip_if: None,
   )
 
   handler.retries |> should.equal(0)
+}
+
+// ============================================================================
+// Skip If Tests
+// ============================================================================
+
+pub fn task_handler_with_skip_if_test() {
+  // Test that TaskHandler can have a skip_if condition
+  let skip_condition = fn(_ctx) { True }
+
+  let handler = worker_actor.TaskHandler(
+    workflow_name: "conditional-workflow",
+    task_name: "maybe-skip-task",
+    handler: fn(_ctx) { Ok(dynamic.from("executed")) },
+    retries: 0,
+    timeout_ms: 60_000,
+    skip_if: Some(skip_condition),
+  )
+
+  // Verify skip_if is set
+  case handler.skip_if {
+    Some(_) -> should.be_true(True)
+    None -> should.fail()
+  }
+}
+
+pub fn task_handler_without_skip_if_test() {
+  // Test that TaskHandler can have no skip_if condition
+  let handler = worker_actor.TaskHandler(
+    workflow_name: "simple-workflow",
+    task_name: "always-run-task",
+    handler: fn(_ctx) { Ok(dynamic.from("executed")) },
+    retries: 0,
+    timeout_ms: 60_000,
+    skip_if: None,
+  )
+
+  // Verify skip_if is not set
+  case handler.skip_if {
+    Some(_) -> should.fail()
+    None -> should.be_true(True)
+  }
 }
 
 // ============================================================================

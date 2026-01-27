@@ -262,3 +262,25 @@ pub fn mock_with_retry(
     log_fn: fn(_msg) { Nil },
   )
 }
+
+// ============================================================================
+// TaskContext Conversion
+// ============================================================================
+
+import hatchet/types.{type TaskContext, TaskContext as TypesTaskContext}
+
+/// Convert a Context to a TaskContext for use with skip_if conditions
+/// and handler functions that expect TaskContext.
+///
+/// TaskContext is a simpler type used in workflow definitions,
+/// while Context is the richer type used during execution.
+pub fn to_task_context(ctx: Context) -> TaskContext {
+  TypesTaskContext(
+    workflow_run_id: ctx.workflow_run_id,
+    task_run_id: ctx.step_run_id,
+    input: ctx.input,
+    parent_outputs: ctx.parent_outputs,
+    metadata: ctx.additional_metadata,
+    logger: ctx.log_fn,
+  )
+}
