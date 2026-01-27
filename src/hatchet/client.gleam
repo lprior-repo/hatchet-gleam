@@ -241,8 +241,8 @@ fn actor_error_to_string(error: actor.StartError) -> String {
 pub fn start_worker_blocking(worker: Worker) -> Result(Nil, String) {
   // The worker is already running when created
   // This function just waits for it to complete
-  case types.get_worker_subject(worker) {
-    Some(subject) -> {
+  case types.get_worker_pid(worker) {
+    Some(_pid) -> {
       // Block by selecting on the worker process
       // In a real implementation, we'd monitor the process
       // For now, just sleep indefinitely (the actor handles everything)
@@ -269,11 +269,11 @@ fn block_forever() -> Nil {
 ///
 /// **Returns:** `Ok(shutdown_fn)` where `shutdown_fn` stops the worker
 pub fn start_worker(worker: Worker) -> Result(fn() -> Nil, String) {
-  case types.get_worker_subject(worker) {
-    Some(subject) -> {
+  case types.get_worker_pid(worker) {
+    Some(pid) -> {
       // Return a shutdown function
       Ok(fn() {
-        process.send(subject, worker_actor.Shutdown)
+        send_to_pid(pid, worker_actor.Shutdown)
         Nil
       })
     }
@@ -286,11 +286,17 @@ pub fn start_worker(worker: Worker) -> Result(fn() -> Nil, String) {
 /// This sends a shutdown signal to the worker, allowing it to
 /// complete any in-flight tasks before terminating.
 pub fn stop_worker(worker: Worker) -> Nil {
-  case types.get_worker_subject(worker) {
-    Some(subject) -> {
-      process.send(subject, worker_actor.Shutdown)
+  case types.get_worker_pid(worker) {
+    Some(pid) -> {
+      send_to_pid(pid, worker_actor.Shutdown)
       Nil
     }
     None -> Nil
   }
 }
+
+/// Send a message to a process by Pid.
+/// This is used to avoid circular type dependencies between types.gleam
+/// and worker_actor.gleam. The message type is erased at runtime on BEAM.
+@external(erlang, "erlang", "send")
+fn send_to_pid(pid: process.Pid, message: a) -> a

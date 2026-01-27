@@ -1,6 +1,6 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
-import gleam/erlang/process.{type Subject}
+import gleam/erlang/process
 import gleam/option.{type Option, None, Some}
 
 pub opaque type Client {
@@ -177,48 +177,40 @@ pub type RunStatus {
 /// - Connection to the Hatchet dispatcher
 /// - Task assignment and execution
 /// - Heartbeat and health monitoring
+///
+/// Internally stores a process ID (Pid) that can receive WorkerMessage
+/// from worker_actor.gleam. We store Pid instead of Subject to avoid
+/// circular type dependencies between types.gleam and worker_actor.gleam.
 pub opaque type Worker {
-  Worker(subject: Option(Subject(WorkerActorMessage)), id: String)
+  Worker(pid: Option(process.Pid), id: String)
 }
-
-/// Internal message type for the worker actor (re-exported from worker_actor).
-/// This is an opaque placeholder - the real type is in worker_actor.gleam.
-pub type WorkerActorMessage
 
 /// Create a worker with just an ID (for testing/backwards compatibility).
 pub fn create_worker(id: String) -> Worker {
-  Worker(subject: None, id: id)
+  Worker(pid: None, id: id)
 }
 
 /// Create a worker with an actor subject (internal use).
-pub fn create_worker_with_subject(subject: Subject(a)) -> Worker {
-  // We cast the subject type since it's opaque anyway
-  Worker(subject: Some(coerce_subject(subject)), id: "active-worker")
+///
+/// This extracts the Pid from the Subject to store in Worker.
+/// The caller (client.gleam) is responsible for using the correct
+/// message type when sending to this worker.
+pub fn create_worker_with_subject(subject: process.Subject(a)) -> Worker {
+  Worker(pid: Some(process.subject_owner(subject)), id: "active-worker")
 }
 
-/// Get the worker's actor subject if available.
-pub fn get_worker_subject(worker: Worker) -> Option(Subject(WorkerActorMessage)) {
-  worker.subject
+/// Get the worker's process ID if available.
+///
+/// Used by client.gleam to send messages to the worker actor.
+/// The caller must ensure they send the correct message type (WorkerMessage).
+pub fn get_worker_pid(worker: Worker) -> Option(process.Pid) {
+  worker.pid
 }
 
 /// Get the worker ID.
 pub fn get_worker_id(worker: Worker) -> String {
   worker.id
 }
-
-// Coerce a Subject of any type to our opaque WorkerActorMessage type
-// This is safe because we only use it internally and the subject operations
-// are type-erased at runtime on the BEAM
-@external(erlang, "erlang", "element")
-fn do_element(n: Int, tuple: a) -> b
-
-fn coerce_subject(subject: Subject(a)) -> Subject(WorkerActorMessage) {
-  // Subject is just a wrapper around a Pid, so this is safe
-  do_coerce_subject(subject)
-}
-
-@external(erlang, "hatchet_types_ffi", "identity")
-fn do_coerce_subject(subject: Subject(a)) -> Subject(WorkerActorMessage)
 
 // Legacy types kept for backwards compatibility
 pub type ProcessHandle {

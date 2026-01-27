@@ -3,18 +3,18 @@
 //// This module implements the main worker process that:
 //// 1. Registers with the Hatchet dispatcher
 //// 2. Listens for task assignments via gRPC streaming
-//// 3. Executes task handlers
+//// 3. Executes task handlers in isolated processes
 //// 4. Reports task status (started/completed/failed)
 //// 5. Sends heartbeats to maintain the connection
 ////
-//// The worker follows the Python SDK's architecture with:
-//// - A main actor for coordination
-//// - Separate processes for task execution
-//// - Automatic reconnection with exponential backoff
+//// Architecture:
+//// - Main actor: Coordinates state, handles messages
+//// - Listener process: Separate process for gRPC recv (non-blocking)
+//// - Task processes: Each task runs in isolated process with timeout
 
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
-import gleam/erlang/process.{type Subject}
+import gleam/erlang/process.{type Pid, type Subject}
 import gleam/io
 import gleam/json
 import gleam/list
@@ -27,9 +27,7 @@ import hatchet/internal/ffi/protobuf
 import hatchet/internal/ffi/timer
 import hatchet/internal/grpc
 import hatchet/internal/tls.{type TLSConfig, Insecure}
-import hatchet/types.{
-  type Client, type TaskDef, type Workflow, type WorkerConfig,
-}
+import hatchet/types.{type Client, type TaskDef, type Workflow, type WorkerConfig}
 
 // ============================================================================
 // Constants (matching Python SDK)
@@ -41,7 +39,9 @@ const max_heartbeat_failures: Int = 3
 
 const max_reconnect_attempts: Int = 15
 
-const recv_timeout_ms: Int = 30_000
+const default_task_timeout_ms: Int = 300_000
+
+// 5 minutes
 
 const sdk_version: String = "0.1.0"
 
@@ -57,19 +57,19 @@ pub type WorkerMessage {
   Reconnect(attempt: Int)
   Shutdown
 
-  // Task handling
-  TaskReceived(protobuf.AssignedAction)
-  TaskCompleted(step_run_id: String, output: Dynamic)
+  // From listener process
+  TaskAssigned(protobuf.AssignedAction)
+  ListenerError(String)
+  ListenerStopped
+
+  // From task processes
+  TaskStarted(step_run_id: String)
+  TaskCompleted(step_run_id: String, output: String)
   TaskFailed(step_run_id: String, error: String, should_retry: Bool)
+  TaskTimeout(step_run_id: String)
 
   // Heartbeat
   SendHeartbeat
-  HeartbeatSuccess
-  HeartbeatFailed
-
-  // Internal
-  ListenLoop
-  ListenError(String)
 }
 
 // ============================================================================
@@ -89,10 +89,12 @@ pub type WorkerState {
     channel: Option(grpc.Channel),
     stream: Option(grpc.Stream),
     worker_id: Option(String),
+    // Listener process
+    listener_pid: Option(Pid),
     // Workflow registry - maps action names to handlers
     action_registry: Dict(String, TaskHandler),
-    // Running tasks
-    running_tasks: Dict(String, Subject(TaskMessage)),
+    // Running tasks - maps step_run_id to task info
+    running_tasks: Dict(String, RunningTask),
     available_slots: Int,
     // Health tracking
     heartbeat_failures: Int,
@@ -109,12 +111,16 @@ pub type TaskHandler {
     task_name: String,
     handler: fn(Context) -> Result(Dynamic, String),
     retries: Int,
+    timeout_ms: Int,
   )
 }
 
-pub type TaskMessage {
-  Execute
-  Cancel
+pub type RunningTask {
+  RunningTask(
+    action: protobuf.AssignedAction,
+    pid: Pid,
+    started_at: Int,
+  )
 }
 
 // ============================================================================
@@ -145,6 +151,7 @@ pub fn start(
       channel: None,
       stream: None,
       worker_id: None,
+      listener_pid: None,
       action_registry: action_registry,
       running_tasks: dict.new(),
       available_slots: config.slots,
@@ -162,7 +169,8 @@ pub fn start(
       // Schedule initial connection
       process.send(self, Connect)
 
-      let state = WorkerState(..initial_state, self: Some(self), is_running: True)
+      let state =
+        WorkerState(..initial_state, self: Some(self), is_running: True)
 
       actor.Ready(state, process.new_selector())
     },
@@ -177,14 +185,22 @@ fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler)
     list.fold(workflow.tasks, registry, fn(reg, task) {
       // Action name format: workflow_name:task_name
       let action_name = workflow.name <> ":" <> task.name
+      let timeout = case task.execution_timeout_ms {
+        Some(t) -> t
+        None -> default_task_timeout_ms
+      }
       let handler =
         TaskHandler(
           workflow_name: workflow.name,
           task_name: task.name,
           handler: task.handler,
           retries: task.retries,
+          timeout_ms: timeout,
         )
-      dict.insert(reg, action_name, handler)
+      // Register both formats for matching
+      reg
+      |> dict.insert(action_name, handler)
+      |> dict.insert(task.name, handler)
     })
   })
 }
@@ -201,16 +217,19 @@ fn handle_message(
     Connect -> handle_connect(state)
     Reconnect(attempt) -> handle_reconnect(attempt, state)
     Shutdown -> handle_shutdown(state)
-    TaskReceived(action) -> handle_task_received(action, state)
+
+    TaskAssigned(action) -> handle_task_assigned(action, state)
+    ListenerError(err) -> handle_listener_error(err, state)
+    ListenerStopped -> handle_listener_stopped(state)
+
+    TaskStarted(step_run_id) -> handle_task_started(step_run_id, state)
     TaskCompleted(step_run_id, output) ->
       handle_task_completed(step_run_id, output, state)
     TaskFailed(step_run_id, error, should_retry) ->
       handle_task_failed(step_run_id, error, should_retry, state)
+    TaskTimeout(step_run_id) -> handle_task_timeout(step_run_id, state)
+
     SendHeartbeat -> handle_send_heartbeat(state)
-    HeartbeatSuccess -> handle_heartbeat_success(state)
-    HeartbeatFailed -> handle_heartbeat_failed(state)
-    ListenLoop -> handle_listen_loop(state)
-    ListenError(err) -> handle_listen_error(err, state)
   }
 }
 
@@ -219,7 +238,12 @@ fn handle_message(
 // ============================================================================
 
 fn handle_connect(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState) {
-  log_info("Connecting to Hatchet dispatcher at " <> state.host <> ":" <> int_to_string(state.grpc_port))
+  log_info(
+    "Connecting to Hatchet dispatcher at "
+    <> state.host
+    <> ":"
+    <> int_to_string(state.grpc_port),
+  )
 
   // Connect to gRPC server
   case grpc.connect(state.host, state.grpc_port, state.tls_config, 30_000) {
@@ -236,9 +260,11 @@ fn handle_connect(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState) 
             Ok(stream) -> {
               log_info("Started listening for task assignments")
 
-              // Schedule heartbeat and listen loop
-              schedule_message(state, SendHeartbeat, heartbeat_interval_ms)
-              schedule_message(state, ListenLoop, 0)
+              // Start listener process
+              let listener_pid = start_listener_process(stream, state)
+
+              // Schedule heartbeat
+              schedule_heartbeat(state)
 
               let new_state =
                 WorkerState(
@@ -246,6 +272,7 @@ fn handle_connect(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState) 
                   channel: Some(channel),
                   stream: Some(stream),
                   worker_id: Some(worker_id),
+                  listener_pid: Some(listener_pid),
                   reconnect_attempts: 0,
                   heartbeat_failures: 0,
                 )
@@ -328,6 +355,12 @@ fn register_worker(
       extra: None,
     )
 
+  // Convert string labels to WorkerLabel type
+  let labels =
+    dict.fold(state.config.labels, dict.new(), fn(acc, key, value) {
+      dict.insert(acc, key, protobuf.StringLabel(value))
+    })
+
   // Build registration request
   let request =
     protobuf.WorkerRegisterRequest(
@@ -335,7 +368,7 @@ fn register_worker(
       actions: actions,
       services: [],
       max_runs: Some(state.config.slots),
-      labels: dict.new(),
+      labels: labels,
       webhook_id: None,
       runtime_info: Some(runtime_info),
     )
@@ -358,50 +391,81 @@ fn register_worker(
 }
 
 // ============================================================================
-// Task Handling
+// Listener Process (runs in separate process to avoid blocking)
 // ============================================================================
 
-fn handle_listen_loop(
+fn start_listener_process(
+  stream: grpc.Stream,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
-  case state.stream {
-    Some(stream) -> {
-      case grpc.recv_assigned_action(stream, recv_timeout_ms) {
-        Ok(action) -> {
-          // Process the received action
-          case state.self {
-            Some(self) -> process.send(self, TaskReceived(action))
-            None -> Nil
-          }
+) -> Pid {
+  let parent = case state.self {
+    Some(s) -> s
+    None -> panic as "Worker self not set"
+  }
 
-          // Continue listening
-          schedule_message(state, ListenLoop, 0)
-          actor.continue(state)
-        }
-        Error("timeout") -> {
-          // Timeout is normal, continue listening
-          schedule_message(state, ListenLoop, 0)
-          actor.continue(state)
-        }
-        Error(e) -> {
-          log_error("Listen error: " <> e)
-          schedule_message(state, ListenError(e), 0)
-          actor.continue(state)
-        }
-      }
+  // Spawn a process that loops receiving from the stream
+  process.start(
+    fn() { listener_loop(stream, parent) },
+    True,
+  )
+}
+
+fn listener_loop(stream: grpc.Stream, parent: Subject(WorkerMessage)) -> Nil {
+  // Short timeout so we can check for shutdown
+  case grpc.recv_assigned_action(stream, 5000) {
+    Ok(action) -> {
+      process.send(parent, TaskAssigned(action))
+      listener_loop(stream, parent)
     }
-    None -> {
-      // No stream, try to reconnect
-      schedule_reconnect(state)
+    Error("timeout") -> {
+      // Normal timeout, continue listening
+      listener_loop(stream, parent)
+    }
+    Error("stream_closed") -> {
+      process.send(parent, ListenerStopped)
+      Nil
+    }
+    Error(e) -> {
+      process.send(parent, ListenerError(e))
+      Nil
     }
   }
 }
 
-fn handle_listen_error(
-  _error: String,
+fn handle_listener_error(
+  error: String,
   state: WorkerState,
 ) -> actor.Next(WorkerMessage, WorkerState) {
-  // Close existing connections and reconnect
+  log_error("Listener error: " <> error)
+  cleanup_connections(state)
+  schedule_reconnect(
+    WorkerState(
+      ..state,
+      channel: None,
+      stream: None,
+      worker_id: None,
+      listener_pid: None,
+    ),
+  )
+}
+
+fn handle_listener_stopped(
+  state: WorkerState,
+) -> actor.Next(WorkerMessage, WorkerState) {
+  log_warning("Listener stopped, reconnecting...")
+  cleanup_connections(state)
+  schedule_reconnect(
+    WorkerState(
+      ..state,
+      channel: None,
+      stream: None,
+      worker_id: None,
+      listener_pid: None,
+    ),
+  )
+}
+
+fn cleanup_connections(state: WorkerState) -> Nil {
   case state.stream {
     Some(stream) -> grpc.close_stream(stream)
     None -> Nil
@@ -410,13 +474,14 @@ fn handle_listen_error(
     Some(channel) -> grpc.close(channel)
     None -> Nil
   }
-
-  let new_state =
-    WorkerState(..state, channel: None, stream: None, worker_id: None)
-  schedule_reconnect(new_state)
+  Nil
 }
 
-fn handle_task_received(
+// ============================================================================
+// Task Handling
+// ============================================================================
+
+fn handle_task_assigned(
   action: protobuf.AssignedAction,
   state: WorkerState,
 ) -> actor.Next(WorkerMessage, WorkerState) {
@@ -424,76 +489,133 @@ fn handle_task_received(
   case state.available_slots > 0 {
     True -> {
       // Find the handler for this action
-      let action_name = action.step_name
-
-      case dict.get(state.action_registry, action_name) {
+      case find_handler(action.step_name, state.action_registry) {
         Some(handler) -> {
-          log_info("Received task: " <> action_name)
+          log_info("Received task: " <> action.step_name)
 
-          // Send ACKNOWLEDGED event
-          send_task_event(
+          // Spawn task in separate process
+          let task_pid =
+            spawn_task_process(action, handler, state)
+
+          // Track the running task
+          let running_task =
+            RunningTask(
+              action: action,
+              pid: task_pid,
+              started_at: current_time_ms(),
+            )
+
+          let new_running =
+            dict.insert(state.running_tasks, action.step_run_id, running_task)
+
+          // Schedule timeout
+          schedule_message(
             state,
-            action,
-            protobuf.StepEventTypeAcknowledged,
-            "{}",
+            TaskTimeout(action.step_run_id),
+            handler.timeout_ms,
           )
 
-          // Execute the task (in the current process for now)
-          // In production, this should spawn a separate process
-          execute_task(action, handler, state)
+          actor.continue(
+            WorkerState(
+              ..state,
+              running_tasks: new_running,
+              available_slots: state.available_slots - 1,
+            ),
+          )
         }
         None -> {
-          // Also try with workflow:task format
-          case find_handler_by_step(action.step_name, state.action_registry) {
-            Some(handler) -> {
-              log_info("Received task: " <> action.step_name)
-              send_task_event(
-                state,
-                action,
-                protobuf.StepEventTypeAcknowledged,
-                "{}",
-              )
-              execute_task(action, handler, state)
-            }
-            None -> {
-              log_error("No handler for action: " <> action_name)
-              actor.continue(state)
-            }
-          }
+          log_error("No handler for action: " <> action.step_name)
+          // Send failed event for unknown action
+          send_task_failed_event(state, action, "No handler registered")
+          actor.continue(state)
         }
       }
     }
     False -> {
-      log_warning("No available slots, task will be requeued")
+      log_warning(
+        "No available slots for task: "
+        <> action.step_name
+        <> " (task will be requeued by dispatcher)",
+      )
+      // Don't ACK - let dispatcher reassign
       actor.continue(state)
     }
   }
 }
 
-fn find_handler_by_step(
+fn find_handler(
   step_name: String,
   registry: Dict(String, TaskHandler),
 ) -> Option(TaskHandler) {
-  // Search through registry for a matching task name
-  dict.fold(registry, None, fn(acc, _key, handler) {
-    case acc {
-      Some(_) -> acc
-      None ->
-        case handler.task_name == step_name {
-          True -> Some(handler)
-          False -> None
+  case dict.get(registry, step_name) {
+    Some(h) -> Some(h)
+    None -> {
+      // Try to find by task name part (after colon)
+      dict.fold(registry, None, fn(acc, _key, handler) {
+        case acc {
+          Some(_) -> acc
+          None ->
+            case handler.task_name == step_name {
+              True -> Some(handler)
+              False -> None
+            }
         }
+      })
     }
-  })
+  }
 }
 
-fn execute_task(
+fn spawn_task_process(
   action: protobuf.AssignedAction,
   handler: TaskHandler,
   state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
+) -> Pid {
+  let parent = case state.self {
+    Some(s) -> s
+    None -> panic as "Worker self not set"
+  }
+  let worker_id = option.unwrap(state.worker_id, "")
+  let channel = state.channel
+  let token = state.token
+
+  process.start(
+    fn() {
+      execute_task_in_process(action, handler, worker_id, channel, token, parent)
+    },
+    True,
+  )
+}
+
+fn execute_task_in_process(
+  action: protobuf.AssignedAction,
+  handler: TaskHandler,
+  worker_id: String,
+  channel: Option(grpc.Channel),
+  token: String,
+  parent: Subject(WorkerMessage),
+) -> Nil {
+  // Send ACKNOWLEDGED
+  send_event_from_task(
+    channel,
+    token,
+    action,
+    worker_id,
+    protobuf.StepEventTypeAcknowledged,
+    "{}",
+  )
+
+  // Notify parent we started
+  process.send(parent, TaskStarted(action.step_run_id))
+
   // Send STARTED event
-  send_task_event(state, action, protobuf.StepEventTypeStarted, "{}")
+  send_event_from_task(
+    channel,
+    token,
+    action,
+    worker_id,
+    protobuf.StepEventTypeStarted,
+    "{}",
+  )
 
   // Create context
   let log_fn = fn(msg: String) {
@@ -501,49 +623,61 @@ fn execute_task(
   }
 
   let ctx =
-    context.from_assigned_action(
-      action,
-      option.unwrap(state.worker_id, ""),
-      dict.new(),
-      log_fn,
-    )
+    context.from_assigned_action(action, worker_id, dict.new(), log_fn)
 
   // Execute the handler
   case handler.handler(ctx) {
     Ok(output) -> {
-      // Encode output as JSON
-      let output_json = encode_output(output)
+      // Encode output as proper JSON
+      let output_json = encode_dynamic_to_json(output)
 
       // Send COMPLETED event
-      send_task_event(state, action, protobuf.StepEventTypeCompleted, output_json)
+      send_event_from_task(
+        channel,
+        token,
+        action,
+        worker_id,
+        protobuf.StepEventTypeCompleted,
+        output_json,
+      )
 
-      log_info("Task completed: " <> action.step_name)
-      actor.continue(state)
+      // Notify parent
+      process.send(parent, TaskCompleted(action.step_run_id, output_json))
     }
     Error(error) -> {
       // Encode error
-      let error_json = json.to_string(json.object([#("error", json.string(error))]))
+      let error_json =
+        json.to_string(json.object([#("error", json.string(error))]))
 
       // Send FAILED event
-      send_task_event(state, action, protobuf.StepEventTypeFailed, error_json)
+      send_event_from_task(
+        channel,
+        token,
+        action,
+        worker_id,
+        protobuf.StepEventTypeFailed,
+        error_json,
+      )
 
-      log_error("Task failed: " <> action.step_name <> " - " <> error)
-      actor.continue(state)
+      // Notify parent
+      process.send(parent, TaskFailed(action.step_run_id, error, True))
     }
   }
 }
 
-fn send_task_event(
-  state: WorkerState,
+fn send_event_from_task(
+  channel: Option(grpc.Channel),
+  token: String,
   action: protobuf.AssignedAction,
+  worker_id: String,
   event_type: protobuf.StepActionEventType,
   payload: String,
 ) -> Nil {
-  case state.channel {
-    Some(channel) -> {
+  case channel {
+    Some(ch) -> {
       let event =
         protobuf.StepActionEvent(
-          worker_id: option.unwrap(state.worker_id, ""),
+          worker_id: worker_id,
           job_id: action.job_id,
           job_run_id: action.job_run_id,
           step_id: action.step_id,
@@ -556,7 +690,7 @@ fn send_task_event(
           should_not_retry: None,
         )
 
-      case grpc.send_step_action_event(channel, event, state.token) {
+      case grpc.send_step_action_event(ch, event, token) {
         Ok(_) -> Nil
         Error(e) -> log_error("Failed to send event: " <> e)
       }
@@ -565,37 +699,115 @@ fn send_task_event(
   }
 }
 
-fn handle_task_completed(
+fn handle_task_started(
   step_run_id: String,
-  _output: Dynamic,
   state: WorkerState,
 ) -> actor.Next(WorkerMessage, WorkerState) {
-  // Remove from running tasks and free up a slot
+  log_info("Task started: " <> step_run_id)
+  actor.continue(state)
+}
+
+fn handle_task_completed(
+  step_run_id: String,
+  _output: String,
+  state: WorkerState,
+) -> actor.Next(WorkerMessage, WorkerState) {
+  log_info("Task completed: " <> step_run_id)
+
+  // Remove from running tasks and free slot
   let new_running = dict.delete(state.running_tasks, step_run_id)
-  let new_state =
+  actor.continue(
     WorkerState(
       ..state,
       running_tasks: new_running,
       available_slots: state.available_slots + 1,
-    )
-  actor.continue(new_state)
+    ),
+  )
 }
 
 fn handle_task_failed(
   step_run_id: String,
-  _error: String,
+  error: String,
   _should_retry: Bool,
   state: WorkerState,
 ) -> actor.Next(WorkerMessage, WorkerState) {
-  // Remove from running tasks and free up a slot
+  log_error("Task failed: " <> step_run_id <> " - " <> error)
+
+  // Remove from running tasks and free slot
   let new_running = dict.delete(state.running_tasks, step_run_id)
-  let new_state =
+  actor.continue(
     WorkerState(
       ..state,
       running_tasks: new_running,
       available_slots: state.available_slots + 1,
-    )
-  actor.continue(new_state)
+    ),
+  )
+}
+
+fn handle_task_timeout(
+  step_run_id: String,
+  state: WorkerState,
+) -> actor.Next(WorkerMessage, WorkerState) {
+  // Check if task is still running
+  case dict.get(state.running_tasks, step_run_id) {
+    Some(running_task) -> {
+      log_error("Task timeout: " <> step_run_id)
+
+      // Kill the task process
+      process.kill(running_task.pid)
+
+      // Send FAILED event for timeout
+      send_task_failed_event(state, running_task.action, "Task execution timeout")
+
+      // Remove from running tasks and free slot
+      let new_running = dict.delete(state.running_tasks, step_run_id)
+      actor.continue(
+        WorkerState(
+          ..state,
+          running_tasks: new_running,
+          available_slots: state.available_slots + 1,
+        ),
+      )
+    }
+    None -> {
+      // Task already completed, ignore timeout
+      actor.continue(state)
+    }
+  }
+}
+
+fn send_task_failed_event(
+  state: WorkerState,
+  action: protobuf.AssignedAction,
+  error: String,
+) -> Nil {
+  case state.channel {
+    Some(channel) -> {
+      let error_json =
+        json.to_string(json.object([#("error", json.string(error))]))
+
+      let event =
+        protobuf.StepActionEvent(
+          worker_id: option.unwrap(state.worker_id, ""),
+          job_id: action.job_id,
+          job_run_id: action.job_run_id,
+          step_id: action.step_id,
+          step_run_id: action.step_run_id,
+          action_id: action.action_id,
+          event_timestamp: current_time_ms(),
+          event_type: protobuf.StepEventTypeFailed,
+          event_payload: error_json,
+          retry_count: Some(action.retry_count),
+          should_not_retry: None,
+        )
+
+      case grpc.send_step_action_event(channel, event, state.token) {
+        Ok(_) -> Nil
+        Error(e) -> log_error("Failed to send failed event: " <> e)
+      }
+    }
+    None -> Nil
+  }
 }
 
 // ============================================================================
@@ -609,12 +821,40 @@ fn handle_send_heartbeat(
     Some(channel), Some(worker_id) -> {
       case grpc.send_heartbeat(channel, worker_id, state.token) {
         Ok(_) -> {
-          schedule_message(state, HeartbeatSuccess, 0)
-          actor.continue(state)
+          // Reset failure count and schedule next heartbeat
+          schedule_heartbeat(state)
+          actor.continue(WorkerState(..state, heartbeat_failures: 0))
         }
         Error(_) -> {
-          schedule_message(state, HeartbeatFailed, 0)
-          actor.continue(state)
+          let failures = state.heartbeat_failures + 1
+          log_warning(
+            "Heartbeat failed ("
+            <> int_to_string(failures)
+            <> "/"
+            <> int_to_string(max_heartbeat_failures)
+            <> ")",
+          )
+
+          case failures >= max_heartbeat_failures {
+            True -> {
+              log_error("Max heartbeat failures, reconnecting...")
+              cleanup_connections(state)
+              schedule_reconnect(
+                WorkerState(
+                  ..state,
+                  channel: None,
+                  stream: None,
+                  worker_id: None,
+                  listener_pid: None,
+                  heartbeat_failures: failures,
+                ),
+              )
+            }
+            False -> {
+              schedule_heartbeat(state)
+              actor.continue(WorkerState(..state, heartbeat_failures: failures))
+            }
+          }
         }
       }
     }
@@ -625,38 +865,8 @@ fn handle_send_heartbeat(
   }
 }
 
-fn handle_heartbeat_success(
-  state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
-  // Reset failure count and schedule next heartbeat
-  let new_state = WorkerState(..state, heartbeat_failures: 0)
-  schedule_message(new_state, SendHeartbeat, heartbeat_interval_ms)
-  actor.continue(new_state)
-}
-
-fn handle_heartbeat_failed(
-  state: WorkerState,
-) -> actor.Next(WorkerMessage, WorkerState) {
-  let failures = state.heartbeat_failures + 1
-  log_warning(
-    "Heartbeat failed ("
-    <> int_to_string(failures)
-    <> "/"
-    <> int_to_string(max_heartbeat_failures)
-    <> ")",
-  )
-
-  case failures >= max_heartbeat_failures {
-    True -> {
-      log_error("Max heartbeat failures, reconnecting...")
-      schedule_message(state, ListenError("heartbeat timeout"), 0)
-      actor.continue(WorkerState(..state, heartbeat_failures: failures))
-    }
-    False -> {
-      schedule_message(state, SendHeartbeat, heartbeat_interval_ms)
-      actor.continue(WorkerState(..state, heartbeat_failures: failures))
-    }
-  }
+fn schedule_heartbeat(state: WorkerState) -> Nil {
+  schedule_message(state, SendHeartbeat, heartbeat_interval_ms)
 }
 
 // ============================================================================
@@ -666,29 +876,81 @@ fn handle_heartbeat_failed(
 fn handle_shutdown(state: WorkerState) -> actor.Next(WorkerMessage, WorkerState) {
   log_info("Shutting down worker...")
 
-  // Close stream and channel
-  case state.stream {
-    Some(stream) -> grpc.close_stream(stream)
-    None -> Nil
-  }
-  case state.channel {
-    Some(channel) -> grpc.close(channel)
-    None -> Nil
-  }
+  // Kill any running tasks
+  dict.each(state.running_tasks, fn(_id, task) { process.kill(task.pid) })
+
+  // Close connections
+  cleanup_connections(state)
 
   actor.Stop(process.Normal)
+}
+
+// ============================================================================
+// JSON Encoding for Dynamic Values
+// ============================================================================
+
+fn encode_dynamic_to_json(value: Dynamic) -> String {
+  // Try to decode as common types and encode properly
+  case dynamic.string(value) {
+    Ok(s) -> json.to_string(json.string(s))
+    Error(_) ->
+      case dynamic.int(value) {
+        Ok(i) -> json.to_string(json.int(i))
+        Error(_) ->
+          case dynamic.float(value) {
+            Ok(f) -> json.to_string(json.float(f))
+            Error(_) ->
+              case dynamic.bool(value) {
+                Ok(b) -> json.to_string(json.bool(b))
+                Error(_) ->
+                  case dynamic.list(dynamic.dynamic)(value) {
+                    Ok(list) -> {
+                      let items = list.map(list, encode_dynamic_to_json_value)
+                      json.to_string(json.array(items, fn(x) { x }))
+                    }
+                    Error(_) -> {
+                      // Fall back to string representation for complex types
+                      json.to_string(json.string(string.inspect(value)))
+                    }
+                  }
+              }
+          }
+      }
+  }
+}
+
+fn encode_dynamic_to_json_value(value: Dynamic) -> json.Json {
+  case dynamic.string(value) {
+    Ok(s) -> json.string(s)
+    Error(_) ->
+      case dynamic.int(value) {
+        Ok(i) -> json.int(i)
+        Error(_) ->
+          case dynamic.float(value) {
+            Ok(f) -> json.float(f)
+            Error(_) ->
+              case dynamic.bool(value) {
+                Ok(b) -> json.bool(b)
+                Error(_) -> json.string(string.inspect(value))
+              }
+          }
+      }
+  }
 }
 
 // ============================================================================
 // Utility Functions
 // ============================================================================
 
-fn schedule_message(state: WorkerState, msg: WorkerMessage, delay_ms: Int) -> Nil {
+fn schedule_message(
+  state: WorkerState,
+  msg: WorkerMessage,
+  delay_ms: Int,
+) -> Nil {
   case state.self {
     Some(self) -> {
       case delay_ms > 0 {
         True -> {
-          // Use process.send_after for delayed messages
           process.send_after(self, delay_ms, msg)
           Nil
         }
@@ -700,11 +962,6 @@ fn schedule_message(state: WorkerState, msg: WorkerMessage, delay_ms: Int) -> Ni
     }
     None -> Nil
   }
-}
-
-fn encode_output(output: Dynamic) -> String {
-  // Try to encode as JSON, fall back to string representation
-  json.to_string(json.string(string.inspect(output)))
 }
 
 fn current_time_ms() -> Int {

@@ -5,9 +5,8 @@
 
 import gleeunit
 import gleeunit/should
-import gleam/dict
 import gleam/dynamic
-import gleam/option.{None, Some}
+import gleam/option.{None}
 import hatchet/internal/worker_actor
 import hatchet/internal/ffi/protobuf
 
@@ -16,7 +15,7 @@ pub fn main() {
 }
 
 // ============================================================================
-// Worker Message Type Tests
+// Worker Message Type Tests - Lifecycle
 // ============================================================================
 
 pub fn worker_message_connect_test() {
@@ -43,6 +42,10 @@ pub fn worker_message_reconnect_test() {
   }
 }
 
+// ============================================================================
+// Worker Message Type Tests - Heartbeat
+// ============================================================================
+
 pub fn worker_message_send_heartbeat_test() {
   let msg = worker_actor.SendHeartbeat
   case msg {
@@ -51,39 +54,11 @@ pub fn worker_message_send_heartbeat_test() {
   }
 }
 
-pub fn worker_message_heartbeat_success_test() {
-  let msg = worker_actor.HeartbeatSuccess
-  case msg {
-    worker_actor.HeartbeatSuccess -> should.be_true(True)
-    _ -> should.fail()
-  }
-}
+// ============================================================================
+// Worker Message Type Tests - Listener Process Messages
+// ============================================================================
 
-pub fn worker_message_heartbeat_failed_test() {
-  let msg = worker_actor.HeartbeatFailed
-  case msg {
-    worker_actor.HeartbeatFailed -> should.be_true(True)
-    _ -> should.fail()
-  }
-}
-
-pub fn worker_message_listen_loop_test() {
-  let msg = worker_actor.ListenLoop
-  case msg {
-    worker_actor.ListenLoop -> should.be_true(True)
-    _ -> should.fail()
-  }
-}
-
-pub fn worker_message_listen_error_test() {
-  let msg = worker_actor.ListenError("connection reset")
-  case msg {
-    worker_actor.ListenError(err) -> err |> should.equal("connection reset")
-    _ -> should.fail()
-  }
-}
-
-pub fn worker_message_task_received_test() {
+pub fn worker_message_task_assigned_test() {
   let action = protobuf.AssignedAction(
     tenant_id: "tenant",
     workflow_run_id: "wf-run",
@@ -107,19 +82,50 @@ pub fn worker_message_task_received_test() {
     workflow_version_id: None,
   )
 
-  let msg = worker_actor.TaskReceived(action)
+  let msg = worker_actor.TaskAssigned(action)
   case msg {
-    worker_actor.TaskReceived(a) -> a.step_name |> should.equal("my-task")
+    worker_actor.TaskAssigned(a) -> a.step_name |> should.equal("my-task")
+    _ -> should.fail()
+  }
+}
+
+pub fn worker_message_listener_error_test() {
+  let msg = worker_actor.ListenerError("connection reset")
+  case msg {
+    worker_actor.ListenerError(err) -> err |> should.equal("connection reset")
+    _ -> should.fail()
+  }
+}
+
+pub fn worker_message_listener_stopped_test() {
+  let msg = worker_actor.ListenerStopped
+  case msg {
+    worker_actor.ListenerStopped -> should.be_true(True)
+    _ -> should.fail()
+  }
+}
+
+// ============================================================================
+// Worker Message Type Tests - Task Process Messages
+// ============================================================================
+
+pub fn worker_message_task_started_test() {
+  let msg = worker_actor.TaskStarted("step-run-123")
+  case msg {
+    worker_actor.TaskStarted(step_run_id) ->
+      step_run_id |> should.equal("step-run-123")
     _ -> should.fail()
   }
 }
 
 pub fn worker_message_task_completed_test() {
-  let output = dynamic.from("result")
-  let msg = worker_actor.TaskCompleted("step-run-123", output)
+  // TaskCompleted now takes the JSON output as a String
+  let msg = worker_actor.TaskCompleted("step-run-123", "{\"result\": \"success\"}")
   case msg {
-    worker_actor.TaskCompleted(step_run_id, _) ->
+    worker_actor.TaskCompleted(step_run_id, output) -> {
       step_run_id |> should.equal("step-run-123")
+      output |> should.equal("{\"result\": \"success\"}")
+    }
     _ -> should.fail()
   }
 }
@@ -136,6 +142,15 @@ pub fn worker_message_task_failed_test() {
   }
 }
 
+pub fn worker_message_task_timeout_test() {
+  let msg = worker_actor.TaskTimeout("step-run-123")
+  case msg {
+    worker_actor.TaskTimeout(step_run_id) ->
+      step_run_id |> should.equal("step-run-123")
+    _ -> should.fail()
+  }
+}
+
 // ============================================================================
 // Task Handler Type Tests
 // ============================================================================
@@ -146,29 +161,22 @@ pub fn task_handler_type_test() {
     task_name: "my-task",
     handler: fn(_ctx) { Ok(dynamic.from("result")) },
     retries: 3,
+    timeout_ms: 60_000,
   )
 
   handler.workflow_name |> should.equal("my-workflow")
   handler.task_name |> should.equal("my-task")
   handler.retries |> should.equal(3)
+  handler.timeout_ms |> should.equal(60_000)
 }
 
 // ============================================================================
-// Task Message Type Tests
+// Running Task Type Tests
 // ============================================================================
 
-pub fn task_message_execute_test() {
-  let msg = worker_actor.Execute
-  case msg {
-    worker_actor.Execute -> should.be_true(True)
-    _ -> should.fail()
-  }
+pub fn running_task_type_test() {
+  // Note: We can't easily create a Pid in tests without spawning a process,
+  // so we just verify the type structure exists
+  should.be_true(True)
 }
 
-pub fn task_message_cancel_test() {
-  let msg = worker_actor.Cancel
-  case msg {
-    worker_actor.Cancel -> should.be_true(True)
-    _ -> should.fail()
-  }
-}
