@@ -8,7 +8,6 @@
 
 import gleam/dict
 import gleam/dynamic
-import gleam/erlang/process
 import gleam/io
 import gleam/option.{None, Some}
 import hatchet/client
@@ -19,8 +18,8 @@ fn example_task(ctx: types.TaskContext) -> Result(dynamic.Dynamic, String) {
   // Log the task execution
   ctx.logger("Starting example task")
 
-  // Access input data
-  let input = ctx.input
+  // Access input data (available as ctx.input)
+  let _input = ctx.input
 
   // Log workflow and task IDs
   ctx.logger("Workflow Run ID: " <> ctx.workflow_run_id)
