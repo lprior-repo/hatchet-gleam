@@ -1,0 +1,155 @@
+# Moon project configuration for hatchet-gleam
+# https://moonrepo.dev/docs/config/project
+
+$schema: 'https://moonrepo.dev/schemas/project.json'
+
+# Project metadata
+project:
+  name: 'hatchet-gleam'
+  description: 'Gleam SDK for Hatchet workflow orchestration platform'
+  owner: 'hatchet'
+  maintainers: ['lewis']
+
+# Project type
+type: 'library'
+stack: 'backend'
+
+# Language is Gleam (not natively supported, so we use unknown with custom tasks)
+language: 'gleam'
+
+# File groups for the project
+fileGroups:
+  # Gleam source files
+  sources:
+    - 'src/**/*.gleam'
+    - 'test/**/*.gleam'
+
+  # Configuration files
+  configs:
+    - 'gleam.toml'
+    - 'manifest.toml'
+
+  # Build outputs
+  outputs:
+    - 'build/**/*.gleam'
+    - 'build/**/*.erl'
+    - 'build/**/*.beam'
+    - 'build/*.module'
+
+  # Documentation
+  docs:
+    - 'docs/**/*.md'
+    - '*.md'
+
+  # Test files
+  tests:
+    - 'test/**/*.gleam'
+
+# Project-level environment variables
+env:
+  GLEAM_LOG: 'info'
+
+# Tasks - defined for Gleam workflow
+tasks:
+  # Quick format check (runs in pre-push hook)
+  quick:
+    description: 'Check Gleam code formatting'
+    command: 'gleam format --check src test'
+    platform: 'system'
+    options:
+      cache: true
+      outputStyle: 'buffer'
+
+  # Fix formatting
+  fmt-fix:
+    description: 'Format Gleam code'
+    command: 'gleam format src test'
+    platform: 'system'
+    options:
+      cache: false
+
+  # Compilation check
+  check:
+    description: 'Compile Gleam code (check only)'
+    command: 'gleam check'
+    platform: 'system'
+    options:
+      cache: true
+      outputStyle: 'buffer'
+
+  # Full build
+  build:
+    description: 'Build the Gleam project'
+    command: 'gleam build'
+    platform: 'system'
+    inputs:
+      - '@group(sources)'
+      - '@group(configs)'
+    outputs:
+      - '@group(outputs)'
+    options:
+      cache: true
+      outputStyle: 'stream'
+
+  # Run tests
+  test:
+    description: 'Run Gleam tests'
+    command: 'gleam test'
+    platform: 'system'
+    inputs:
+      - '@group(sources)'
+      - '@group(tests)'
+      - '@group(configs)'
+    options:
+      cache: true
+      outputStyle: 'stream'
+      retryCount: 1
+
+  # Run tests with coverage
+  test-coverage:
+    description: 'Run tests with coverage report'
+    command: 'gleam test --coverage'
+    platform: 'system'
+    options:
+      cache: false
+      outputStyle: 'stream'
+
+  # Clean build artifacts
+  clean:
+    description: 'Clean build artifacts'
+    command: 'rm -rf build .gleam'
+    platform: 'system'
+    options:
+      cache: false
+
+  # Generate documentation
+  docs:
+    description: 'Build documentation'
+    command: 'gleam docs build'
+    platform: 'system'
+    options:
+      cache: true
+
+  # Open documentation in browser
+  docs-serve:
+    description: 'Open documentation in browser'
+    command: 'gleam docs open'
+    platform: 'system'
+    options:
+      cache: false
+      persistent: true
+
+  # Full CI pipeline (runs all quality gates)
+  ci:
+    description: 'Run full CI pipeline'
+    command: 'moon run quick check test'
+    platform: 'system'
+    options:
+      cache: false
+
+# Workspace settings
+# No inherited tasks - all tasks are defined locally
+
+# Toolchain configuration
+toolchain:
+  default: 'system'

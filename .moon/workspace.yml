@@ -1,0 +1,78 @@
+# Moon workspace configuration for hatchet-gleam
+# https://moonrepo.dev/docs/config/workspace
+
+$schema: 'https://moonrepo.dev/schemas/workspace.json'
+
+# Version constraint for moon
+versionConstraint: '>=1.40.0'
+
+# VCS configuration
+vcs:
+  manager: 'git'
+  defaultBranch: 'master'
+  provider: 'github'
+
+# Projects in this workspace
+projects:
+  # Root project (Gleam package)
+  hatchet-port: '.'
+
+# Remote caching configuration (Bazel Remote)
+# bazel-remote is running locally with:
+#   - gRPC: 127.0.0.1:9092
+#   - HTTP: 127.0.0.1:9090
+#   - Storage: zstd compression
+unstable_remote:
+  # Use the HTTP cache endpoint
+  host: 'http://127.0.0.1:9090'
+
+  # API format - Bazel Remote uses HTTP cache API
+  api: 'http'
+
+  cache:
+    # Instance name for this workspace (helps partition cache)
+    instanceName: 'hatchet-gleam'
+
+    # Compression - bazel-remote supports zstd
+    compression: 'zstd'
+
+# Pipeline configuration
+pipeline:
+  # Automatically clean old cache entries
+  autoCleanCache: true
+
+  # Cache lifetime - keep artifacts for 7 days by default
+  cacheLifetime: '7 days'
+
+  # Automatically install dependencies when needed
+  installDependencies: false
+
+  # Run workspace sync on every run
+  syncWorkspace: true
+
+# Hasher configuration
+hasher:
+  # Optimize for performance over absolute accuracy
+  optimization: 'performance'
+
+  # Walk strategy - use VCS for faster file discovery
+  walkStrategy: 'vcs'
+
+  # Warn on missing inputs
+  warnOnMissingInputs: true
+
+  # Ignore patterns for hashing
+  ignorePatterns:
+    - '**/*.beam'
+    - '**/*.o'
+    - '**/erl_crash.dump'
+    - '**/build/**'
+    - '**/.gleam/**'
+
+# Notifier configuration
+notifier:
+  # Terminal notifications for pipeline events
+  terminalNotifications: 'failure'
+
+# Telemetry - help improve moon
+telemetry: true
