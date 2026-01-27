@@ -1,11 +1,11 @@
 import gleam/dict
-import gleam/erlang/process.{type Subject}
+import gleam/erlang/process
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import hatchet/internal/config.{
   type Config, MissingTokenError, from_environment_checked,
 }
-import hatchet/internal/worker_actor.{type WorkerMessage}
+import hatchet/internal/worker_actor
 import hatchet/types.{type Client, type Worker, type WorkerConfig, type Workflow}
 
 /// Create a new Hatchet client with the given host and token.

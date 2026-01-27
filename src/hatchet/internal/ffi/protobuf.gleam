@@ -47,16 +47,6 @@ fn sdk_language_to_int(lang: SdkLanguage) -> Int {
   }
 }
 
-fn int_to_sdk_language(i: Int) -> SdkLanguage {
-  case i {
-    1 -> Go
-    2 -> Python
-    3 -> TypeScript
-    4 -> Gleam
-    _ -> Unknown
-  }
-}
-
 // ============================================================================
 // Action Type Enum (matches ActionType enum in proto)
 // ============================================================================
@@ -72,14 +62,6 @@ fn int_to_action_type(i: Int) -> ActionType {
     1 -> CancelStepRun
     2 -> StartGetGroupKey
     _ -> StartStepRun
-  }
-}
-
-fn action_type_to_int(action: ActionType) -> Int {
-  case action {
-    StartStepRun -> 0
-    CancelStepRun -> 1
-    StartGetGroupKey -> 2
   }
 }
 
@@ -108,19 +90,6 @@ pub fn step_event_type_to_int(event_type: StepActionEventType) -> Int {
     StepEventTypeStream -> 5
     StepEventTypeRefreshTimeout -> 6
     StepEventTypeCancelled -> 7
-  }
-}
-
-fn int_to_step_event_type(i: Int) -> StepActionEventType {
-  case i {
-    1 -> StepEventTypeStarted
-    2 -> StepEventTypeCompleted
-    3 -> StepEventTypeFailed
-    4 -> StepEventTypeAcknowledged
-    5 -> StepEventTypeStream
-    6 -> StepEventTypeRefreshTimeout
-    7 -> StepEventTypeCancelled
-    _ -> StepEventTypeUnknown
   }
 }
 
@@ -514,9 +483,6 @@ fn erlang_map_get_string_default(
 
 @external(erlang, "dispatcher_pb_helper", "get_string_option")
 fn erlang_map_get_string_option(map: ErlangMap, key: String) -> Option(String)
-
-@external(erlang, "dispatcher_pb_helper", "get_int")
-fn erlang_map_get_int(map: ErlangMap, key: String) -> Result(Int, Nil)
 
 @external(erlang, "dispatcher_pb_helper", "get_int_default")
 fn erlang_map_get_int_default(map: ErlangMap, key: String, default: Int) -> Int

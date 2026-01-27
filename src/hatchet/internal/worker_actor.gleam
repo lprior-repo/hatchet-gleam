@@ -25,13 +25,11 @@ import gleam/otp/actor
 import gleam/result
 import gleam/string
 
-import hatchet/context.{type Context}
+import hatchet/context
 import hatchet/internal/ffi/protobuf
 import hatchet/internal/grpc
 import hatchet/internal/tls.{type TLSConfig, Insecure}
-import hatchet/types.{
-  type Client, type TaskDef, type WorkerConfig, type Workflow,
-}
+import hatchet/types.{type Client, type WorkerConfig, type Workflow}
 
 // ============================================================================
 // Constants (matching Python SDK)

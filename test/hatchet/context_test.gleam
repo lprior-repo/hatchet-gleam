@@ -45,7 +45,7 @@ pub fn context_input_test() {
   let input = dynamic.list([dynamic.int(1), dynamic.int(2), dynamic.int(3)])
   let ctx = context.mock(input, dict.new())
 
-  let result = context.input(ctx)
+  let _result = context.input(ctx)
   // Input should be the same dynamic value
   should.be_true(True)
 }
@@ -349,8 +349,6 @@ pub fn context_additional_outputs_override_payload_test() {
 // ============================================================================
 // Context to TaskContext Conversion Tests
 // ============================================================================
-
-import hatchet/types.{TaskContext}
 
 pub fn context_to_task_context_test() {
   // Test conversion from Context to TaskContext

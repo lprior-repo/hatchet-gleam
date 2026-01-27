@@ -3,12 +3,12 @@
 import gleam/option.{None, Some}
 import gleeunit/should
 import hatchet/errors.{
-  type HatchetError, AuthenticationFailed, ConfigError, ConnectionError,
-  ConnectionFailed, ConnectionReset, ConnectionTimeout, DecodeError, EncodeError,
-  EnvironmentError, EventSendFailed, GenericError, GrpcError, HandlerError,
-  InputDecodeError, InvalidConfig, JsonError, MaxReconnectsExceeded,
-  MaxRetriesExceeded, MissingConfig, NoHandlerFound, ProtocolError,
-  TaskCancelled, TaskError, TaskTimeout, TlsError, UnexpectedResponse,
+  AuthenticationFailed, ConfigError, ConnectionError, ConnectionFailed,
+  ConnectionReset, ConnectionTimeout, DecodeError, EncodeError, EnvironmentError,
+  EventSendFailed, GenericError, GrpcError, HandlerError, InputDecodeError,
+  InvalidConfig, JsonError, MaxReconnectsExceeded, MaxRetriesExceeded,
+  MissingConfig, NoHandlerFound, ProtocolError, TaskCancelled, TaskError,
+  TaskTimeout, TlsError, UnexpectedResponse,
 }
 
 // ============================================================================

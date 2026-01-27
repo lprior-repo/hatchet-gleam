@@ -4,9 +4,7 @@ import gleam/dict
 import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
-import hatchet/internal/logger.{
-  Debug, ErrorLevel, Info, Logger, LoggerConfig, Warning,
-}
+import hatchet/internal/logger.{Debug, ErrorLevel, Info, Warning}
 
 pub fn main() {
   gleeunit.main()
