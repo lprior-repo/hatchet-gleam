@@ -9,7 +9,7 @@ versionConstraint: '>=1.40.0'
 # VCS configuration
 vcs:
   manager: 'git'
-  defaultBranch: 'master'
+  defaultBranch: 'main'
   provider: 'github'
 
 # Projects in this workspace
