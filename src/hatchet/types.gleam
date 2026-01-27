@@ -1,6 +1,7 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
-import gleam/option.{type Option}
+import gleam/erlang/process
+import gleam/option.{type Option, None, Some}
 
 pub opaque type Client {
   Client(host: String, port: Int, token: String, namespace: Option(String))
@@ -82,6 +83,13 @@ pub type TaskContext {
     parent_outputs: Dict(String, Dynamic),
     metadata: Dict(String, String),
     logger: fn(String) -> Nil,
+    // Callbacks to the orchestrator
+    stream_fn: fn(Dynamic) -> Result(Nil, String),
+    release_slot_fn: fn() -> Result(Nil, String),
+    refresh_timeout_fn: fn(Int) -> Result(Nil, String),
+    cancel_fn: fn() -> Result(Nil, String),
+    spawn_workflow_fn: fn(String, Dynamic, Dict(String, String)) ->
+      Result(String, String),
   )
 }
 
@@ -170,26 +178,60 @@ pub type RunStatus {
   Cancelled
 }
 
+/// Worker handle for the background worker process.
+///
+/// The worker process manages:
+/// - Connection to the Hatchet dispatcher
+/// - Task assignment and execution
+/// - Heartbeat and health monitoring
+///
+/// Internally stores a process ID (Pid) that can receive WorkerMessage
+/// from worker_actor.gleam. We store Pid instead of Subject to avoid
+/// circular type dependencies between types.gleam and worker_actor.gleam.
 pub opaque type Worker {
-  Worker(process: ProcessHandle)
+  Worker(pid: Option(process.Pid), id: String)
 }
 
+/// Create a worker with just an ID (for testing/backwards compatibility).
 pub fn create_worker(id: String) -> Worker {
-  Worker(ProcessHandle(id))
+  Worker(pid: None, id: id)
 }
 
+/// Create a worker with an actor subject (internal use).
+///
+/// This extracts the Pid from the Subject to store in Worker.
+/// The caller (client.gleam) is responsible for using the correct
+/// message type when sending to this worker.
+pub fn create_worker_with_subject(subject: process.Subject(a)) -> Worker {
+  Worker(pid: Some(process.subject_owner(subject)), id: "active-worker")
+}
+
+/// Get the worker's process ID if available.
+///
+/// Used by client.gleam to send messages to the worker actor.
+/// The caller must ensure they send the correct message type (WorkerMessage).
+pub fn get_worker_pid(worker: Worker) -> Option(process.Pid) {
+  worker.pid
+}
+
+/// Get the worker ID.
+pub fn get_worker_id(worker: Worker) -> String {
+  worker.id
+}
+
+// Legacy types kept for backwards compatibility
 pub type ProcessHandle {
   ProcessHandle(id: String)
 }
 
-pub type WorkerMessage {
+pub type LegacyWorkerMessage {
   Start
   Stop
   AddWorkflows(List(Workflow))
 }
 
-pub type WorkerState {
-  WorkerState(
+pub type LegacyWorkerState {
+  LegacyWorkerState(
     client: Client,
     config: WorkerConfig,
     workflows: List(Workflow),

@@ -82,3 +82,27 @@ pub fn worker_config_with_values_test() {
   config.durable_slots
   |> should.equal(5)
 }
+
+// ============================================================================
+// Worker Config Helper Tests
+// ============================================================================
+
+pub fn worker_config_helper_test() {
+  let config = client.worker_config(option.Some("my-worker"), 15)
+
+  config.name
+  |> should.equal(option.Some("my-worker"))
+
+  config.slots
+  |> should.equal(15)
+}
+
+pub fn default_worker_config_test() {
+  let config = client.default_worker_config()
+
+  config.name
+  |> should.equal(option.None)
+
+  config.slots
+  |> should.equal(10)
+}

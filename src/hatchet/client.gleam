@@ -1,7 +1,11 @@
-import gleam/option.{None, Some}
+import gleam/dict
+import gleam/erlang/process.{type Subject}
+import gleam/option.{type Option, None, Some}
+import gleam/otp/actor
 import hatchet/internal/config.{
   type Config, MissingTokenError, from_environment_checked,
 }
+import hatchet/internal/worker_actor.{type WorkerMessage}
 import hatchet/types.{type Client, type Worker, type WorkerConfig, type Workflow}
 
 /// Create a new Hatchet client with the given host and token.
@@ -144,18 +148,150 @@ pub fn with_namespace(client: Client, namespace: String) -> Client {
   )
 }
 
+/// Create a new worker configuration with sensible defaults.
+///
+/// **Parameters:**
+///   - `name`: Optional worker name (defaults to auto-generated)
+///   - `slots`: Number of concurrent task slots (default: 10)
+///
+/// **Returns:** A `WorkerConfig` ready for use with `new_worker`
+pub fn worker_config(name: Option(String), slots: Int) -> WorkerConfig {
+  types.WorkerConfig(
+    name: name,
+    slots: slots,
+    durable_slots: 0,
+    labels: dict.new(),
+  )
+}
+
+/// Default worker configuration with 10 slots.
+pub fn default_worker_config() -> WorkerConfig {
+  worker_config(None, 10)
+}
+
+/// Create a new worker that will process tasks for the given workflows.
+///
+/// The worker connects to the Hatchet dispatcher via gRPC and listens
+/// for task assignments. When a task is received, the appropriate
+/// handler from the registered workflows is invoked.
+///
+/// **Parameters:**
+///   - `client`: The Hatchet client
+///   - `config`: Worker configuration (slots, name, etc.)
+///   - `workflows`: List of workflows this worker can process
+///
+/// **Returns:** `Ok(Worker)` on success, `Error(String)` on failure
+///
+/// **Example:**
+/// ```gleam
+/// let config = client.worker_config(Some("my-worker"), 5)
+/// case client.new_worker(client, config, [my_workflow]) {
+///   Ok(worker) -> client.start_worker_blocking(worker)
+///   Error(e) -> io.println("Failed: " <> e)
+/// }
+/// ```
 pub fn new_worker(
   client: Client,
-  _config: WorkerConfig,
-  _workflows: List(Workflow),
+  config: WorkerConfig,
+  workflows: List(Workflow),
 ) -> Result(Worker, String) {
-  Ok(types.create_worker("worker_" <> types.get_token(client)))
+  new_worker_with_grpc_port(client, config, workflows, 7077)
 }
 
-pub fn start_worker_blocking(_worker: Worker) -> Result(Nil, String) {
-  Ok(Nil)
+/// Create a new worker with a custom gRPC port.
+///
+/// Use this when the dispatcher is running on a non-standard port.
+pub fn new_worker_with_grpc_port(
+  client: Client,
+  config: WorkerConfig,
+  workflows: List(Workflow),
+  grpc_port: Int,
+) -> Result(Worker, String) {
+  case worker_actor.start(client, config, workflows, grpc_port) {
+    Ok(subject) -> Ok(types.create_worker_with_subject(subject))
+    Error(e) -> Error("Failed to start worker: " <> actor_error_to_string(e))
+  }
 }
 
-pub fn start_worker(_worker: Worker) -> Result(fn() -> Nil, String) {
-  Ok(fn() { Nil })
+fn actor_error_to_string(error: actor.StartError) -> String {
+  case error {
+    actor.InitTimeout -> "Init timeout"
+    actor.InitFailed(_) -> "Init failed"
+    actor.InitCrashed(_) -> "Init crashed"
+  }
 }
+
+/// Start the worker and block until it shuts down.
+///
+/// This is the main entry point for running a worker. The function
+/// will block indefinitely, processing tasks as they are assigned.
+///
+/// **Parameters:**
+///   - `worker`: The worker to start
+///
+/// **Returns:** `Ok(Nil)` when the worker shuts down gracefully
+///
+/// **Example:**
+/// ```gleam
+/// case client.start_worker_blocking(worker) {
+///   Ok(_) -> io.println("Worker shut down")
+///   Error(e) -> io.println("Worker error: " <> e)
+/// }
+/// ```
+pub fn start_worker_blocking(worker: Worker) -> Result(Nil, String) {
+  // The worker is already running when created
+  // This function monitors it and blocks until it exits
+  case types.get_worker_pid(worker) {
+    Some(pid) -> {
+      // Monitor the worker process and block until it exits
+      let monitor = process.monitor_process(pid)
+      let selector =
+        process.new_selector()
+        |> process.selecting_process_down(monitor, fn(_down) { Nil })
+      process.select_forever(selector)
+      Ok(Nil)
+    }
+    None -> Error("Worker not properly initialized")
+  }
+}
+
+/// Start the worker in the background and return a shutdown function.
+///
+/// Use this when you need to run the worker alongside other code.
+///
+/// **Parameters:**
+///   - `worker`: The worker to start
+///
+/// **Returns:** `Ok(shutdown_fn)` where `shutdown_fn` stops the worker
+pub fn start_worker(worker: Worker) -> Result(fn() -> Nil, String) {
+  case types.get_worker_pid(worker) {
+    Some(pid) -> {
+      // Return a shutdown function
+      Ok(fn() {
+        send_to_pid(pid, worker_actor.Shutdown)
+        Nil
+      })
+    }
+    None -> Error("Worker not properly initialized")
+  }
+}
+
+/// Stop a running worker gracefully.
+///
+/// This sends a shutdown signal to the worker, allowing it to
+/// complete any in-flight tasks before terminating.
+pub fn stop_worker(worker: Worker) -> Nil {
+  case types.get_worker_pid(worker) {
+    Some(pid) -> {
+      send_to_pid(pid, worker_actor.Shutdown)
+      Nil
+    }
+    None -> Nil
+  }
+}
+
+/// Send a message to a process by Pid.
+/// This is used to avoid circular type dependencies between types.gleam
+/// and worker_actor.gleam. The message type is erased at runtime on BEAM.
+@external(erlang, "erlang", "send")
+fn send_to_pid(pid: process.Pid, message: a) -> a
