@@ -1,9 +1,7 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
-import gleam/dynamic/decode.{type DecodeError}
-import gleam/list
 import gleam/option
-import gleam/result
+import hatchet/constants
 import hatchet/standalone
 import hatchet/types.{
   type BackoffConfig, type DurableTaskDef, type LimitStrategy,
@@ -21,9 +19,7 @@ pub fn with_schedule_timeout(task: TaskDef, timeout_ms: Int) -> TaskDef {
 }
 
 pub fn with_rate_limit(task: TaskDef, config: RateLimitConfig) -> TaskDef {
-  let existing = task.rate_limits
-  let new_list = list.append(existing, [config])
-  TaskDef(..task, rate_limits: new_list)
+  TaskDef(..task, rate_limits: [config, ..task.rate_limits])
 }
 
 pub fn with_task_concurrency(
@@ -72,15 +68,21 @@ pub fn wait_for_expression(cel: String) -> WaitCondition {
 }
 
 pub fn exponential_backoff_default() -> BackoffConfig {
-  exponential_backoff(1000, 60_000)
+  exponential_backoff(
+    constants.default_base_backoff_ms,
+    constants.default_max_backoff_ms,
+  )
 }
 
 pub fn linear_backoff_default() -> BackoffConfig {
-  linear_backoff(2000, 60_000)
+  linear_backoff(
+    constants.default_linear_backoff_step_ms,
+    constants.default_max_backoff_ms,
+  )
 }
 
 pub fn constant_backoff_default() -> BackoffConfig {
-  constant_backoff(5000)
+  constant_backoff(constants.default_constant_backoff_ms)
 }
 
 pub fn get_input(ctx: TaskContext) -> Dynamic {

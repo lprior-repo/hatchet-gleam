@@ -1,6 +1,5 @@
 import gleam/dict
 import gleam/dynamic
-import gleam/dynamic/decode
 import gleam/json as gleam_json
 import gleam/option
 import gleam/string

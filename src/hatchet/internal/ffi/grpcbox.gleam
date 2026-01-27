@@ -33,9 +33,7 @@
 
 /// grpcbox FFI Module for Hatchet gRPC Client
 ///
-import gleam/bit_array
-import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{type Option}
 
 pub type GrpcError {
   GrpcConnectionError(String)
@@ -43,11 +41,11 @@ pub type GrpcError {
   GrpcStreamError(String)
 }
 
-pub opaque type Channel
+pub type Channel
 
-pub opaque type Stream
+pub type Stream
 
-pub opaque type StreamRef
+pub type StreamRef
 
 pub type ConnectionOptions {
   ConnectionOptions(

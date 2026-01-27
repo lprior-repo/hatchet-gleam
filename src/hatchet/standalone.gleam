@@ -2,8 +2,7 @@ import gleam/dynamic.{type Dynamic}
 import gleam/list
 import gleam/option
 import hatchet/types.{
-  type StandaloneTask, type TaskContext, type TaskDef, type Workflow,
-  StandaloneTask,
+  type StandaloneTask, type TaskContext, type Workflow, StandaloneTask,
 }
 import hatchet/workflow
 

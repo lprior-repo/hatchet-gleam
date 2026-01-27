@@ -5,9 +5,7 @@ import gleam/option
 import gleeunit/should
 import hatchet/task
 import hatchet/types.{
-  type BackoffConfig, type LimitStrategy, type RateLimitConfig,
-  type StandaloneTask, type WaitCondition, CancelInProgress, Constant, DropNew,
-  Exponential, Linear, QueueNew, TaskContext, TaskDef, WaitForEvent,
+  Constant, DropNew, Exponential, Linear, TaskContext, TaskDef, WaitForEvent,
   WaitForExpression, WaitForTime,
 }
 

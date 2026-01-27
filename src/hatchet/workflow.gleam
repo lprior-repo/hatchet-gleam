@@ -1,3 +1,4 @@
+import gleam/dict
 import gleam/dynamic.{type Dynamic}
 import gleam/list
 import gleam/option
@@ -33,7 +34,18 @@ pub fn with_cron(wf: Workflow, cron: String) -> Workflow {
 }
 
 pub fn with_events(wf: Workflow, events: List(String)) -> Workflow {
-  Workflow(..wf, events: list.append(wf.events, events))
+  let existing_set =
+    list.fold(wf.events, dict.new(), fn(acc, event) {
+      dict.insert(acc, event, True)
+    })
+  let new_unique_events =
+    list.filter(events, fn(event) {
+      case dict.get(existing_set, event) {
+        Ok(_) -> False
+        Error(_) -> True
+      }
+    })
+  Workflow(..wf, events: list.append(wf.events, new_unique_events))
 }
 
 pub fn with_concurrency(
@@ -90,14 +102,16 @@ pub fn task_after(
   Workflow(..wf, tasks: list.append(wf.tasks, [task_def]))
 }
 
-pub fn with_retries(wf: Workflow, retries: Int) -> Workflow {
+/// Helper function to modify the last task in a workflow.
+/// This is used internally by with_retries, with_timeout, with_retry_backoff, etc.
+fn modify_last_task(wf: Workflow, modifier: fn(TaskDef) -> TaskDef) -> Workflow {
   case wf.tasks {
     [] -> wf
     tasks -> {
       let reversed = list.reverse(tasks)
       case reversed {
         [last_task, ..rest] -> {
-          let updated_task = TaskDef(..last_task, retries: retries)
+          let updated_task = modifier(last_task)
           let updated_rest = list.reverse(rest)
           Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
         }
@@ -107,22 +121,14 @@ pub fn with_retries(wf: Workflow, retries: Int) -> Workflow {
   }
 }
 
+pub fn with_retries(wf: Workflow, retries: Int) -> Workflow {
+  modify_last_task(wf, fn(task) { TaskDef(..task, retries: retries) })
+}
+
 pub fn with_timeout(wf: Workflow, timeout_ms: Int) -> Workflow {
-  case wf.tasks {
-    [] -> wf
-    tasks -> {
-      let reversed = list.reverse(tasks)
-      case reversed {
-        [last_task, ..rest] -> {
-          let updated_task =
-            TaskDef(..last_task, execution_timeout_ms: option.Some(timeout_ms))
-          let updated_rest = list.reverse(rest)
-          Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
-        }
-        _ -> wf
-      }
-    }
-  }
+  modify_last_task(wf, fn(task) {
+    TaskDef(..task, execution_timeout_ms: option.Some(timeout_ms))
+  })
 }
 
 pub fn on_failure(
@@ -133,39 +139,15 @@ pub fn on_failure(
 }
 
 pub fn with_retry_backoff(wf: Workflow, backoff: BackoffConfig) -> Workflow {
-  case wf.tasks {
-    [] -> wf
-    tasks -> {
-      let reversed = list.reverse(tasks)
-      case reversed {
-        [last_task, ..rest] -> {
-          let updated_task =
-            TaskDef(..last_task, retry_backoff: option.Some(backoff))
-          let updated_rest = list.reverse(rest)
-          Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
-        }
-        _ -> wf
-      }
-    }
-  }
+  modify_last_task(wf, fn(task) {
+    TaskDef(..task, retry_backoff: option.Some(backoff))
+  })
 }
 
 pub fn with_schedule_timeout(wf: Workflow, timeout_ms: Int) -> Workflow {
-  case wf.tasks {
-    [] -> wf
-    tasks -> {
-      let reversed = list.reverse(tasks)
-      case reversed {
-        [last_task, ..rest] -> {
-          let updated_task =
-            TaskDef(..last_task, schedule_timeout_ms: option.Some(timeout_ms))
-          let updated_rest = list.reverse(rest)
-          Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
-        }
-        _ -> wf
-      }
-    }
-  }
+  modify_last_task(wf, fn(task) {
+    TaskDef(..task, schedule_timeout_ms: option.Some(timeout_ms))
+  })
 }
 
 pub fn with_rate_limit(
@@ -174,23 +156,11 @@ pub fn with_rate_limit(
   units: Int,
   duration_ms: Int,
 ) -> Workflow {
-  case wf.tasks {
-    [] -> wf
-    tasks -> {
-      let reversed = list.reverse(tasks)
-      case reversed {
-        [last_task, ..rest] -> {
-          let limit =
-            RateLimitConfig(key: key, units: units, duration_ms: duration_ms)
-          let updated_task =
-            TaskDef(..last_task, rate_limits: [limit, ..last_task.rate_limits])
-          let updated_rest = list.reverse(rest)
-          Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
-        }
-        _ -> wf
-      }
-    }
-  }
+  modify_last_task(wf, fn(task) {
+    let limit =
+      RateLimitConfig(key: key, units: units, duration_ms: duration_ms)
+    TaskDef(..task, rate_limits: [limit, ..task.rate_limits])
+  })
 }
 
 pub fn with_task_concurrency(
@@ -198,60 +168,24 @@ pub fn with_task_concurrency(
   max: Int,
   strategy: LimitStrategy,
 ) -> Workflow {
-  case wf.tasks {
-    [] -> wf
-    tasks -> {
-      let reversed = list.reverse(tasks)
-      case reversed {
-        [last_task, ..rest] -> {
-          let config =
-            ConcurrencyConfig(max_concurrent: max, limit_strategy: strategy)
-          let updated_task =
-            TaskDef(..last_task, concurrency: option.Some(config))
-          let updated_rest = list.reverse(rest)
-          Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
-        }
-        _ -> wf
-      }
-    }
-  }
+  modify_last_task(wf, fn(task) {
+    let config =
+      ConcurrencyConfig(max_concurrent: max, limit_strategy: strategy)
+    TaskDef(..task, concurrency: option.Some(config))
+  })
 }
 
 pub fn with_skip_if(
   wf: Workflow,
   predicate: fn(TaskContext) -> Bool,
 ) -> Workflow {
-  case wf.tasks {
-    [] -> wf
-    tasks -> {
-      let reversed = list.reverse(tasks)
-      case reversed {
-        [last_task, ..rest] -> {
-          let updated_task =
-            TaskDef(..last_task, skip_if: option.Some(predicate))
-          let updated_rest = list.reverse(rest)
-          Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
-        }
-        _ -> wf
-      }
-    }
-  }
+  modify_last_task(wf, fn(task) {
+    TaskDef(..task, skip_if: option.Some(predicate))
+  })
 }
 
 pub fn with_wait_for(wf: Workflow, condition: WaitCondition) -> Workflow {
-  case wf.tasks {
-    [] -> wf
-    tasks -> {
-      let reversed = list.reverse(tasks)
-      case reversed {
-        [last_task, ..rest] -> {
-          let updated_task =
-            TaskDef(..last_task, wait_for: option.Some(condition))
-          let updated_rest = list.reverse(rest)
-          Workflow(..wf, tasks: list.append(updated_rest, [updated_task]))
-        }
-        _ -> wf
-      }
-    }
-  }
+  modify_last_task(wf, fn(task) {
+    TaskDef(..task, wait_for: option.Some(condition))
+  })
 }

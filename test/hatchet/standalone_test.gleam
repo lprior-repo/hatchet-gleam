@@ -1,11 +1,8 @@
-import gleam/dict
 import gleam/dynamic
 import gleam/list
 import gleam/option
 import gleeunit/should
 import hatchet/standalone
-import hatchet/types.{type StandaloneTask}
-import hatchet/workflow
 
 pub fn new_standalone_test() {
   let handler = fn(_ctx) { Ok(dynamic.string("result")) }

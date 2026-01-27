@@ -75,7 +75,7 @@ pub fn protobuf_message_to_bits(msg: ProtobufMessage) -> BitArray {
   bits
 }
 
-pub opaque type ErlangMap
+pub type ErlangMap
 
 pub fn encode_worker_register_request(
   req: WorkerRegisterRequest,

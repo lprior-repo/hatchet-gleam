@@ -2,7 +2,7 @@ import gleam/dict
 import gleam/option
 import gleeunit/should
 import hatchet/client
-import hatchet/types.{type Client, type WorkerConfig}
+import hatchet/types
 
 pub fn client_new_test() {
   let assert Ok(client) = client.new("localhost", "test-token")

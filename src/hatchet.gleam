@@ -8,11 +8,10 @@ import hatchet/run
 import hatchet/standalone
 import hatchet/task
 import hatchet/types.{
-  type BackoffConfig, type Client, type ConcurrencyConfig, type DurableTaskDef,
-  type FailureContext, type LimitStrategy, type RateLimitConfig, type RunOptions,
-  type RunStatus, type StandaloneTask, type TaskContext, type TaskDef,
-  type TaskResult, type WaitCondition, type Worker, type WorkerConfig,
-  type Workflow, type WorkflowResult, type WorkflowRunRef,
+  type BackoffConfig, type Client, type FailureContext, type LimitStrategy,
+  type RateLimitConfig, type RunOptions, type StandaloneTask, type TaskContext,
+  type TaskDef, type WaitCondition, type Worker, type WorkerConfig,
+  type Workflow, type WorkflowRunRef,
 }
 import hatchet/workflow
 

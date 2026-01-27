@@ -1,4 +1,5 @@
 ////!
+
 ///
 /// gRPC Module Tests
 ///
@@ -7,7 +8,7 @@ import gleam/dict
 import gleam/option
 import gleeunit
 import gleeunit/should
-import hatchet/internal/ffi/protobuf as protobuf
+import hatchet/internal/ffi/protobuf
 import hatchet/internal/grpc
 import hatchet/internal/tls
 
@@ -91,14 +92,15 @@ pub fn register_worker_with_protobuf_test() {
 
   let channel = grpc.mock_channel(12_345)
 
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker-1",
-    actions: ["action1", "action2", "action3"],
-    services: [],
-    max_runs: option.Some(10),
-    labels: dict.new(),
-    webhook_id: option.None,
-  )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker-1",
+      actions: ["action1", "action2", "action3"],
+      services: [],
+      max_runs: option.Some(10),
+      labels: dict.new(),
+      webhook_id: option.None,
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
@@ -124,14 +126,15 @@ pub fn register_worker_with_empty_actions_test() {
 
   let channel = grpc.mock_channel(12_345)
 
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker-empty",
-    actions: [],
-    services: [],
-    max_runs: option.None,
-    labels: dict.new(),
-    webhook_id: option.None,
-  )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker-empty",
+      actions: [],
+      services: [],
+      max_runs: option.None,
+      labels: dict.new(),
+      webhook_id: option.None,
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
@@ -162,11 +165,11 @@ pub fn listen_v2_not_yet_implemented_test() {
     Ok(_) -> should.fail()
     Error(msg) -> should.equal("Not yet implemented", msg)
   }
-// ============================================================================
-// STEP EVENT TESTS
-// ============================================================================
-
+  // ============================================================================
+  // STEP EVENT TESTS
+  // ============================================================================
 }
+
 pub fn send_step_event_with_protobuf_test() {
   // CONTRACT: Sending step event uses protobuf encoding
   // GIVEN: A valid stream and step action event
@@ -175,17 +178,19 @@ pub fn send_step_event_with_protobuf_test() {
 
   let stream = grpc.mock_stream(12_346)
 
-  let event = protobuf.StepActionEvent(
-    worker_id: "worker-123",
-    job_id: "job-456",
-    job_run_id: "job-run-789",
-    step_id: "step-abc",
-    step_run_id: "step-run-123",
-    action_id: "action-456",
-    event_timestamp: 1_700_000_000_000,
-    event_type: 1,  // Started
-    event_payload: "{}",
-  )
+  let event =
+    protobuf.StepActionEvent(
+      worker_id: "worker-123",
+      job_id: "job-456",
+      job_run_id: "job-run-789",
+      step_id: "step-abc",
+      step_run_id: "step-run-123",
+      action_id: "action-456",
+      event_timestamp: 1_700_000_000_000,
+      event_type: 1,
+      // Started
+      event_payload: "{}",
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_step_action_event(event)
 
@@ -209,10 +214,11 @@ pub fn heartbeat_with_protobuf_test() {
 
   let stream = grpc.mock_stream(12_346)
 
-  let req = protobuf.HeartbeatRequest(
-    worker_id: "test-worker-1",
-    heartbeat_at: 1_700_000_000_000,
-  )
+  let req =
+    protobuf.HeartbeatRequest(
+      worker_id: "test-worker-1",
+      heartbeat_at: 1_700_000_000_000,
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_heartbeat_request(req)
 
