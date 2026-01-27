@@ -129,8 +129,8 @@ pub fn context_from_assigned_action_test() {
     workflow_version_id: Some("wf-v1"),
   )
 
-  let log_fn = fn(_msg: String) { Nil }
-  let ctx = context.from_assigned_action(action, "worker-id", dict.new(), log_fn)
+  let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
+  let ctx = context.from_assigned_action(action, "worker-id", dict.new(), callbacks)
 
   context.workflow_run_id(ctx) |> should.equal("wf-run-456")
   context.step_run_id(ctx) |> should.equal("step-run-ghi")
@@ -166,8 +166,8 @@ pub fn context_from_assigned_action_with_parent_outputs_test() {
     #("validate", dynamic.from(True)),
   ])
 
-  let log_fn = fn(_msg: String) { Nil }
-  let ctx = context.from_assigned_action(action, "worker-id", parent_outputs, log_fn)
+  let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
+  let ctx = context.from_assigned_action(action, "worker-id", parent_outputs, callbacks)
 
   case context.step_output(ctx, "validate") {
     Some(_) -> should.be_true(True)
@@ -261,8 +261,8 @@ pub fn context_simple_payload_no_parents_test() {
     workflow_version_id: None,
   )
 
-  let log_fn = fn(_msg: String) { Nil }
-  let ctx = context.from_assigned_action(action, "worker-id", dict.new(), log_fn)
+  let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
+  let ctx = context.from_assigned_action(action, "worker-id", dict.new(), callbacks)
 
   // Should have no parent outputs
   dict.size(context.all_parent_outputs(ctx)) |> should.equal(0)
@@ -299,8 +299,8 @@ pub fn context_additional_outputs_override_payload_test() {
     #("validate", dynamic.from(dict.from_list([#("from_additional", True)]))),
   ])
 
-  let log_fn = fn(_msg: String) { Nil }
-  let ctx = context.from_assigned_action(action, "worker-id", additional_outputs, log_fn)
+  let callbacks = context.default_callbacks(fn(_msg: String) { Nil })
+  let ctx = context.from_assigned_action(action, "worker-id", additional_outputs, callbacks)
 
   // Should have the parent output (either from payload or additional)
   case context.step_output(ctx, "validate") {
@@ -355,4 +355,82 @@ pub fn context_to_task_context_preserves_parent_outputs_test() {
 
   // All parent outputs should be preserved
   dict.size(task_ctx.parent_outputs) |> should.equal(3)
+}
+
+// ============================================================================
+// New Context Methods Tests (put_stream, release_slot, etc.)
+// ============================================================================
+
+pub fn context_put_stream_default_returns_error_test() {
+  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  case context.put_stream(ctx, dynamic.from("data")) {
+    Error(_) -> should.be_true(True)
+    Ok(_) -> should.fail()
+  }
+}
+
+pub fn context_release_slot_default_returns_error_test() {
+  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  case context.release_slot(ctx) {
+    Error(_) -> should.be_true(True)
+    Ok(_) -> should.fail()
+  }
+}
+
+pub fn context_refresh_timeout_default_returns_error_test() {
+  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  case context.refresh_timeout(ctx, 5000) {
+    Error(_) -> should.be_true(True)
+    Ok(_) -> should.fail()
+  }
+}
+
+pub fn context_cancel_default_returns_error_test() {
+  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  case context.cancel(ctx) {
+    Error(_) -> should.be_true(True)
+    Ok(_) -> should.fail()
+  }
+}
+
+pub fn context_spawn_workflow_default_returns_error_test() {
+  let ctx = context.mock(dynamic.from(Nil), dict.new())
+  case context.spawn_workflow(ctx, "child_workflow", dynamic.from("input")) {
+    Error(_) -> should.be_true(True)
+    Ok(_) -> should.fail()
+  }
+}
+
+pub fn context_callbacks_wired_test() {
+  // Test that custom callbacks are properly called
+  let callbacks = context.ContextCallbacks(
+    log_fn: fn(_msg) { Nil },
+    stream_fn: fn(_data) { Ok(Nil) },
+    release_slot_fn: fn() { Ok(Nil) },
+    refresh_timeout_fn: fn(_ms) { Ok(Nil) },
+    cancel_fn: fn() { Ok(Nil) },
+    spawn_workflow_fn: fn(_name, _input, _meta) { Ok("child-run-id") },
+  )
+
+  let action = protobuf.AssignedAction(
+    tenant_id: "t", workflow_run_id: "wf",
+    get_group_key_run_id: "", job_id: "j",
+    job_name: "jn", job_run_id: "jr",
+    step_id: "s", step_run_id: "sr",
+    action_id: "a", action_type: protobuf.StartStepRun,
+    action_payload: "{}", step_name: "test",
+    retry_count: 0, additional_metadata: None,
+    child_workflow_index: None, child_workflow_key: None,
+    parent_workflow_run_id: None, priority: 1,
+    workflow_id: None, workflow_version_id: None,
+  )
+
+  let ctx = context.from_assigned_action(action, "w", dict.new(), callbacks)
+
+  // All methods should succeed with custom callbacks
+  context.put_stream(ctx, dynamic.from("data")) |> should.be_ok()
+  context.release_slot(ctx) |> should.be_ok()
+  context.refresh_timeout(ctx, 5000) |> should.be_ok()
+  context.cancel(ctx) |> should.be_ok()
+  context.spawn_workflow(ctx, "child", dynamic.from(Nil)) |> should.be_ok()
 }

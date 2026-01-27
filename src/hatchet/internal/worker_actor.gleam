@@ -12,6 +12,7 @@
 //// - Listener process: Separate process for gRPC recv (non-blocking)
 //// - Task processes: Each task runs in isolated process with timeout
 
+import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang/process.{type Pid, type Subject}
@@ -67,6 +68,7 @@ pub type WorkerMessage {
   TaskCompleted(step_run_id: String, output: String)
   TaskFailed(step_run_id: String, error: String, should_retry: Bool)
   TaskTimeout(step_run_id: String)
+  TaskSlotReleased(step_run_id: String)
 
   // Heartbeat
   SendHeartbeat
@@ -193,27 +195,64 @@ pub fn start(
 /// Build the action registry from workflow definitions
 fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler) {
   list.fold(workflows, dict.new(), fn(registry, workflow) {
-    list.fold(workflow.tasks, registry, fn(reg, task) {
-      // Action name format: workflow_name:task_name
-      let action_name = workflow.name <> ":" <> task.name
-      let timeout = case task.execution_timeout_ms {
-        Some(t) -> t
-        None -> default_task_timeout_ms
+    // Register regular task handlers
+    let reg_with_tasks =
+      list.fold(workflow.tasks, registry, fn(reg, task) {
+        // Action name format: workflow_name:task_name
+        let action_name = workflow.name <> ":" <> task.name
+        let timeout = case task.execution_timeout_ms {
+          Some(t) -> t
+          None -> default_task_timeout_ms
+        }
+        let handler =
+          TaskHandler(
+            workflow_name: workflow.name,
+            task_name: task.name,
+            handler: task.handler,
+            retries: task.retries,
+            timeout_ms: timeout,
+            skip_if: task.skip_if,
+          )
+        // Register both formats for matching
+        reg
+        |> dict.insert(action_name, handler)
+        |> dict.insert(task.name, handler)
+      })
+
+    // Register on_failure handler if present
+    // The server sends this with action name: workflow_name:on_failure
+    case workflow.on_failure {
+      Some(failure_fn) -> {
+        let failure_action = workflow.name <> ":on_failure"
+        let failure_handler =
+          TaskHandler(
+            workflow_name: workflow.name,
+            task_name: "on_failure",
+            handler: fn(task_ctx) {
+              // Convert TaskContext to FailureContext
+              // The input contains the failure info from the server
+              let failure_ctx =
+                types.FailureContext(
+                  workflow_run_id: task_ctx.workflow_run_id,
+                  failed_task: "",
+                  error: "",
+                  input: task_ctx.input,
+                )
+              case failure_fn(failure_ctx) {
+                Ok(_) -> Ok(dynamic.from("on_failure completed"))
+                Error(e) -> Error(e)
+              }
+            },
+            retries: 0,
+            timeout_ms: default_task_timeout_ms,
+            skip_if: None,
+          )
+        reg_with_tasks
+        |> dict.insert(failure_action, failure_handler)
+        |> dict.insert("on_failure", failure_handler)
       }
-      let handler =
-        TaskHandler(
-          workflow_name: workflow.name,
-          task_name: task.name,
-          handler: task.handler,
-          retries: task.retries,
-          timeout_ms: timeout,
-          skip_if: task.skip_if,
-        )
-      // Register both formats for matching
-      reg
-      |> dict.insert(action_name, handler)
-      |> dict.insert(task.name, handler)
-    })
+      None -> reg_with_tasks
+    }
   })
 }
 
@@ -240,6 +279,13 @@ fn handle_message(
     TaskFailed(step_run_id, error, should_retry) ->
       handle_task_failed(step_run_id, error, should_retry, state)
     TaskTimeout(step_run_id) -> handle_task_timeout(step_run_id, state)
+    TaskSlotReleased(_step_run_id) -> {
+      // Task released its slot - free one slot without removing the task
+      // (task is still running, just not counting against concurrency)
+      actor.continue(
+        WorkerState(..state, available_slots: state.available_slots + 1),
+      )
+    }
 
     SendHeartbeat -> handle_send_heartbeat(state)
   }
@@ -664,12 +710,67 @@ fn execute_task_in_process(
       }
     })
 
+  // Build context callbacks for interacting with the server
+  let callbacks =
+    context.ContextCallbacks(
+      log_fn: log_fn,
+      stream_fn: fn(data) {
+        // Send streaming data via gRPC
+        let payload = encode_dynamic_to_json(data)
+        send_event_from_task(
+          channel,
+          token,
+          action,
+          worker_id,
+          protobuf.StepEventTypeStream,
+          payload,
+        )
+        Ok(Nil)
+      },
+      release_slot_fn: fn() {
+        // Notify the worker actor to free a slot
+        process.send(parent, TaskSlotReleased(action.step_run_id))
+        Ok(Nil)
+      },
+      refresh_timeout_fn: fn(increment_ms) {
+        // Send timeout refresh via gRPC event
+        let payload =
+          "{\"increment_ms\":" <> int_to_string(increment_ms) <> "}"
+        send_event_from_task(
+          channel,
+          token,
+          action,
+          worker_id,
+          protobuf.StepEventTypeRefreshTimeout,
+          payload,
+        )
+        Ok(Nil)
+      },
+      cancel_fn: fn() {
+        // Send cancel request via gRPC
+        send_event_from_task(
+          channel,
+          token,
+          action,
+          worker_id,
+          protobuf.StepEventTypeCancelled,
+          "{}",
+        )
+        Ok(Nil)
+      },
+      spawn_workflow_fn: fn(_workflow_name, _input, _metadata) {
+        // Child workflow spawning is handled server-side via REST API
+        // This requires the REST client which is separate from the gRPC worker
+        Error("Child workflow spawning requires REST API client")
+      },
+    )
+
   let ctx =
     context.from_assigned_action(
       action,
       worker_id,
       parent_outputs_dynamic,
-      log_fn,
+      callbacks,
     )
 
   // Convert to TaskContext for handler and skip_if evaluation
@@ -752,7 +853,7 @@ fn execute_task_in_process(
             worker_id,
             protobuf.StepEventTypeFailed,
             error_json,
-            Some(!should_retry),
+            Some(bool.negate(should_retry)),
           )
 
           // Notify parent with retry decision
@@ -970,7 +1071,7 @@ fn send_task_timeout_event(
           event_payload: error_json,
           retry_count: Some(action.retry_count),
           // Tell server not to retry if we've exceeded max
-          should_not_retry: Some(!should_retry),
+          should_not_retry: Some(bool.negate(should_retry)),
         )
 
       case grpc.send_step_action_event(channel, event, state.token) {

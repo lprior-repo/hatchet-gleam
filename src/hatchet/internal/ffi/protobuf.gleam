@@ -93,6 +93,9 @@ pub type StepActionEventType {
   StepEventTypeCompleted
   StepEventTypeFailed
   StepEventTypeAcknowledged
+  StepEventTypeStream
+  StepEventTypeRefreshTimeout
+  StepEventTypeCancelled
 }
 
 pub fn step_event_type_to_int(event_type: StepActionEventType) -> Int {
@@ -102,6 +105,9 @@ pub fn step_event_type_to_int(event_type: StepActionEventType) -> Int {
     StepEventTypeCompleted -> 2
     StepEventTypeFailed -> 3
     StepEventTypeAcknowledged -> 4
+    StepEventTypeStream -> 5
+    StepEventTypeRefreshTimeout -> 6
+    StepEventTypeCancelled -> 7
   }
 }
 
@@ -111,6 +117,9 @@ fn int_to_step_event_type(i: Int) -> StepActionEventType {
     2 -> StepEventTypeCompleted
     3 -> StepEventTypeFailed
     4 -> StepEventTypeAcknowledged
+    5 -> StepEventTypeStream
+    6 -> StepEventTypeRefreshTimeout
+    7 -> StepEventTypeCancelled
     _ -> StepEventTypeUnknown
   }
 }

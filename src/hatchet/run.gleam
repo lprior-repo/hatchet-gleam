@@ -303,3 +303,67 @@ fn parse_status(resp: p.WorkflowStatusResponse) -> RunStatus {
 fn sleep_ms(ms: Int) -> Nil {
   timer.sleep_ms(ms)
 }
+
+// ============================================================================
+// Bulk Operations
+// ============================================================================
+
+/// Cancel multiple workflow runs at once.
+pub fn bulk_cancel(
+  client: Client,
+  run_ids: List(String),
+) -> Result(Nil, String) {
+  let body = j.encode_bulk_cancel(run_ids)
+  let url = build_base_url(client) <> "/api/v1/runs/bulk/cancel"
+
+  case request.to(url) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_body(body)
+        |> request.set_header("content-type", "application/json")
+        |> request.set_header(
+          "authorization",
+          "Bearer " <> types.get_token(client),
+        )
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 -> Ok(Nil)
+        Ok(resp) ->
+          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
+        Error(_) -> Error("Network error")
+      }
+    }
+    Error(_) -> Error("Invalid URL")
+  }
+}
+
+/// Replay (re-run) failed workflow runs.
+pub fn replay(
+  client: Client,
+  run_ids: List(String),
+) -> Result(Nil, String) {
+  let body = j.encode_bulk_replay(run_ids)
+  let url = build_base_url(client) <> "/api/v1/runs/bulk/replay"
+
+  case request.to(url) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_body(body)
+        |> request.set_header("content-type", "application/json")
+        |> request.set_header(
+          "authorization",
+          "Bearer " <> types.get_token(client),
+        )
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 -> Ok(Nil)
+        Ok(resp) ->
+          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
+        Error(_) -> Error("Network error")
+      }
+    }
+    Error(_) -> Error("Invalid URL")
+  }
+}

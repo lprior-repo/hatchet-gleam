@@ -138,3 +138,35 @@ pub type Error {
   DecodeError(reason: String)
   ValidationError(reason: String)
 }
+
+// ============================================================================
+// Cron Management
+// ============================================================================
+
+pub type CronCreateRequest {
+  CronCreateRequest(name: String, expression: String, input: Dynamic)
+}
+
+pub type CronResponse {
+  CronResponse(cron_id: String, name: String, expression: String)
+}
+
+// ============================================================================
+// Schedule Management
+// ============================================================================
+
+pub type ScheduleCreateRequest {
+  ScheduleCreateRequest(trigger_at: String, input: Dynamic)
+}
+
+pub type ScheduleResponse {
+  ScheduleResponse(schedule_id: String, trigger_at: String)
+}
+
+// ============================================================================
+// Rate Limit Management
+// ============================================================================
+
+pub type RateLimitUpsertRequest {
+  RateLimitUpsertRequest(key: String, limit: Int, duration: String)
+}

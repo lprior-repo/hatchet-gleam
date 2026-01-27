@@ -83,6 +83,13 @@ pub type TaskContext {
     parent_outputs: Dict(String, Dynamic),
     metadata: Dict(String, String),
     logger: fn(String) -> Nil,
+    // Callbacks to the orchestrator
+    stream_fn: fn(Dynamic) -> Result(Nil, String),
+    release_slot_fn: fn() -> Result(Nil, String),
+    refresh_timeout_fn: fn(Int) -> Result(Nil, String),
+    cancel_fn: fn() -> Result(Nil, String),
+    spawn_workflow_fn: fn(String, Dynamic, Dict(String, String)) ->
+      Result(String, String),
   )
 }
 

@@ -4,8 +4,11 @@ import gleam/dynamic/decode
 import gleam/option
 import hatchet/client
 import hatchet/context
+import hatchet/cron
 import hatchet/events
+import hatchet/rate_limits
 import hatchet/run
+import hatchet/schedule
 import hatchet/standalone
 import hatchet/task
 import hatchet/types.{
@@ -504,4 +507,140 @@ pub fn standalone_with_task_events(task: StandaloneTask, events: List(String)) {
 
 pub fn standalone_to_workflow(task: StandaloneTask) {
   standalone.to_workflow(task)
+}
+
+// ============================================================================
+// Context Orchestrator Methods
+// ============================================================================
+
+/// Push streaming data from within a task.
+pub fn context_put_stream(ctx: Context, data: dynamic.Dynamic) {
+  context.put_stream(ctx, data)
+}
+
+/// Release the worker slot while continuing execution.
+pub fn context_release_slot(ctx: Context) {
+  context.release_slot(ctx)
+}
+
+/// Extend the execution timeout by the given milliseconds.
+pub fn context_refresh_timeout(ctx: Context, increment_ms: Int) {
+  context.refresh_timeout(ctx, increment_ms)
+}
+
+/// Cancel the current workflow run.
+pub fn context_cancel(ctx: Context) {
+  context.cancel(ctx)
+}
+
+/// Spawn a child workflow from within a task handler.
+pub fn context_spawn_workflow(
+  ctx: Context,
+  workflow_name: String,
+  input: dynamic.Dynamic,
+) {
+  context.spawn_workflow(ctx, workflow_name, input)
+}
+
+// ============================================================================
+// TaskContext Orchestrator Methods
+// ============================================================================
+
+/// Push streaming data from TaskContext.
+pub fn put_stream(ctx: TaskContext, data: dynamic.Dynamic) {
+  task.put_stream(ctx, data)
+}
+
+/// Release the worker slot from TaskContext.
+pub fn release_slot(ctx: TaskContext) {
+  task.release_slot(ctx)
+}
+
+/// Extend the execution timeout from TaskContext.
+pub fn refresh_timeout(ctx: TaskContext, increment_ms: Int) {
+  task.refresh_timeout(ctx, increment_ms)
+}
+
+/// Cancel the current workflow run from TaskContext.
+pub fn task_cancel(ctx: TaskContext) {
+  task.cancel(ctx)
+}
+
+/// Spawn a child workflow from TaskContext.
+pub fn spawn_workflow(
+  ctx: TaskContext,
+  workflow_name: String,
+  input: dynamic.Dynamic,
+) {
+  task.spawn_workflow(ctx, workflow_name, input)
+}
+
+// ============================================================================
+// Bulk Run Management
+// ============================================================================
+
+/// Cancel multiple workflow runs at once.
+pub fn bulk_cancel(client: Client, run_ids: List(String)) {
+  run.bulk_cancel(client, run_ids)
+}
+
+/// Replay (re-run) failed workflow runs.
+pub fn replay(client: Client, run_ids: List(String)) {
+  run.replay(client, run_ids)
+}
+
+// ============================================================================
+// Cron Management
+// ============================================================================
+
+/// Create a named cron trigger for a workflow.
+pub fn cron_create(
+  client: Client,
+  workflow: Workflow,
+  name: String,
+  expression: String,
+  input: dynamic.Dynamic,
+) {
+  cron.create(client, workflow, name, expression, input)
+}
+
+/// Delete a cron trigger by its ID.
+pub fn cron_delete(client: Client, cron_id: String) {
+  cron.delete(client, cron_id)
+}
+
+// ============================================================================
+// Schedule Management
+// ============================================================================
+
+/// Schedule a one-time workflow run at a specific time.
+pub fn schedule_create(
+  client: Client,
+  workflow: Workflow,
+  trigger_at: String,
+  input: dynamic.Dynamic,
+) {
+  schedule.create(client, workflow, trigger_at, input)
+}
+
+/// Delete a scheduled run by its ID.
+pub fn schedule_delete(client: Client, schedule_id: String) {
+  schedule.delete(client, schedule_id)
+}
+
+// ============================================================================
+// Rate Limit Management
+// ============================================================================
+
+pub type RateLimitDuration =
+  rate_limits.RateLimitDuration
+
+/// Create or update a rate limit on the server.
+pub fn rate_limit_upsert(
+  client: Client,
+  key: String,
+  limit: Int,
+  duration: RateLimitDuration,
+) {
+  rate_limits.upsert(client, key, limit, duration)
 }

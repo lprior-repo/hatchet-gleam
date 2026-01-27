@@ -122,6 +122,48 @@ pub fn get_task_run_id(ctx: TaskContext) -> String {
   ctx.task_run_id
 }
 
+/// Push streaming data from within a task handler.
+pub fn put_stream(ctx: TaskContext, data: Dynamic) -> Result(Nil, String) {
+  ctx.stream_fn(data)
+}
+
+/// Release the worker slot while continuing execution.
+/// Useful for long-running tasks waiting on external resources.
+pub fn release_slot(ctx: TaskContext) -> Result(Nil, String) {
+  ctx.release_slot_fn()
+}
+
+/// Extend the execution timeout by the given milliseconds.
+pub fn refresh_timeout(ctx: TaskContext, increment_ms: Int) -> Result(Nil, String) {
+  ctx.refresh_timeout_fn(increment_ms)
+}
+
+/// Cancel the current workflow run.
+pub fn cancel(ctx: TaskContext) -> Result(Nil, String) {
+  ctx.cancel_fn()
+}
+
+/// Spawn a child workflow from within a task handler.
+/// Returns the child workflow run ID on success.
+pub fn spawn_workflow(
+  ctx: TaskContext,
+  workflow_name: String,
+  input: Dynamic,
+) -> Result(String, String) {
+  ctx.spawn_workflow_fn(workflow_name, input, ctx.metadata)
+}
+
+/// Spawn a child workflow with custom metadata.
+pub fn spawn_workflow_with_metadata(
+  ctx: TaskContext,
+  workflow_name: String,
+  input: Dynamic,
+  metadata: Dict(String, String),
+) -> Result(String, String) {
+  let merged = dict.merge(ctx.metadata, metadata)
+  ctx.spawn_workflow_fn(workflow_name, input, merged)
+}
+
 pub fn succeed(value: Dynamic) -> Result(Dynamic, String) {
   Ok(value)
 }

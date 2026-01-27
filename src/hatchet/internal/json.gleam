@@ -241,6 +241,100 @@ pub fn decode_cancel_response(
   }
 }
 
+// ============================================================================
+// Bulk Operation Encoders
+// ============================================================================
+
+pub fn encode_bulk_cancel(run_ids: List(String)) -> String {
+  json.object([#("run_ids", json.array(run_ids, json.string))])
+  |> json.to_string()
+}
+
+pub fn encode_bulk_replay(run_ids: List(String)) -> String {
+  json.object([#("run_ids", json.array(run_ids, json.string))])
+  |> json.to_string()
+}
+
+// ============================================================================
+// Cron Management Encoders/Decoders
+// ============================================================================
+
+pub fn encode_cron_create(req: p.CronCreateRequest) -> String {
+  json.object([
+    #("name", json.string(req.name)),
+    #("expression", json.string(req.expression)),
+    #("input", encode_dynamic(req.input)),
+  ])
+  |> json.to_string()
+}
+
+pub fn decode_cron_response(
+  body: String,
+) -> Result(p.CronResponse, String) {
+  let decoder = {
+    use cron_id <- decode.field("cron_id", decode.string)
+    use name <- decode.field("name", decode.string)
+    use expression <- decode.field("expression", decode.string)
+    decode.success(p.CronResponse(
+      cron_id: cron_id,
+      name: name,
+      expression: expression,
+    ))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+// ============================================================================
+// Schedule Management Encoders/Decoders
+// ============================================================================
+
+pub fn encode_schedule_create(req: p.ScheduleCreateRequest) -> String {
+  json.object([
+    #("trigger_at", json.string(req.trigger_at)),
+    #("input", encode_dynamic(req.input)),
+  ])
+  |> json.to_string()
+}
+
+pub fn decode_schedule_response(
+  body: String,
+) -> Result(p.ScheduleResponse, String) {
+  let decoder = {
+    use schedule_id <- decode.field("schedule_id", decode.string)
+    use trigger_at <- decode.field("trigger_at", decode.string)
+    decode.success(p.ScheduleResponse(
+      schedule_id: schedule_id,
+      trigger_at: trigger_at,
+    ))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+// ============================================================================
+// Rate Limit Management Encoders
+// ============================================================================
+
+pub fn encode_rate_limit_upsert(req: p.RateLimitUpsertRequest) -> String {
+  json.object([
+    #("key", json.string(req.key)),
+    #("limit", json.int(req.limit)),
+    #("duration", json.string(req.duration)),
+  ])
+  |> json.to_string()
+}
+
+// ============================================================================
+// Decode Helpers
+// ============================================================================
+
 fn decode_error_to_string(err: json.DecodeError) -> String {
   case err {
     json.UnexpectedEndOfInput -> "Unexpected end of input"

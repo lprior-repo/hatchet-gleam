@@ -151,6 +151,15 @@ pub fn worker_message_task_timeout_test() {
   }
 }
 
+pub fn worker_message_task_slot_released_test() {
+  let msg = worker_actor.TaskSlotReleased("step-run-123")
+  case msg {
+    worker_actor.TaskSlotReleased(step_run_id) ->
+      step_run_id |> should.equal("step-run-123")
+    _ -> should.fail()
+  }
+}
+
 // ============================================================================
 // Task Handler Type Tests
 // ============================================================================

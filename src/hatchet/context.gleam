@@ -39,7 +39,8 @@ import hatchet/internal/ffi/protobuf
 /// The execution context passed to task handlers.
 ///
 /// Contains all information needed to execute a task, including input data,
-/// parent outputs, and metadata.
+/// parent outputs, and metadata. Also provides methods for interacting with
+/// the Hatchet orchestrator (streaming, timeout refresh, cancellation).
 pub type Context {
   Context(
     // Identifiers
@@ -57,8 +58,15 @@ pub type Context {
     additional_metadata: Dict(String, String),
     // Retry info
     retry_count: Int,
-    // Logging (internal channel reference for sending logs)
+    // Callbacks to the worker/server
     log_fn: fn(String) -> Nil,
+    stream_fn: fn(Dynamic) -> Result(Nil, String),
+    release_slot_fn: fn() -> Result(Nil, String),
+    refresh_timeout_fn: fn(Int) -> Result(Nil, String),
+    cancel_fn: fn() -> Result(Nil, String),
+    // Child workflow spawning
+    spawn_workflow_fn: fn(String, Dynamic, Dict(String, String)) ->
+      Result(String, String),
   )
 }
 
@@ -130,9 +138,96 @@ pub fn log(ctx: Context, message: String) -> Nil {
   ctx.log_fn(message)
 }
 
+/// Push streaming data to the workflow run.
+///
+/// This allows tasks to emit intermediate results that can be consumed
+/// by clients via `run_ref.stream()`. Useful for progress updates,
+/// partial results, or real-time data.
+pub fn put_stream(ctx: Context, data: Dynamic) -> Result(Nil, String) {
+  ctx.stream_fn(data)
+}
+
+/// Release this task's worker slot while continuing execution.
+///
+/// Useful for long-running tasks that are waiting on external resources.
+/// After releasing the slot, another task can use it. The current task
+/// continues running but won't count against the worker's concurrency limit.
+pub fn release_slot(ctx: Context) -> Result(Nil, String) {
+  ctx.release_slot_fn()
+}
+
+/// Extend the execution timeout for this task.
+///
+/// Adds the specified number of milliseconds to the current timeout.
+/// Useful for tasks that discover they need more time (e.g., processing
+/// a larger-than-expected dataset).
+pub fn refresh_timeout(ctx: Context, increment_ms: Int) -> Result(Nil, String) {
+  ctx.refresh_timeout_fn(increment_ms)
+}
+
+/// Cancel the current workflow run.
+///
+/// Signals to the Hatchet orchestrator that this run should be cancelled.
+/// Other running tasks in the same workflow run will also be cancelled.
+pub fn cancel(ctx: Context) -> Result(Nil, String) {
+  ctx.cancel_fn()
+}
+
+/// Spawn a child workflow run from within a task handler.
+///
+/// Returns the child workflow run ID on success. The child run inherits
+/// metadata from the parent context. Hatchet tracks the parent-child
+/// relationship for observability.
+pub fn spawn_workflow(
+  ctx: Context,
+  workflow_name: String,
+  input: Dynamic,
+) -> Result(String, String) {
+  ctx.spawn_workflow_fn(workflow_name, input, ctx.additional_metadata)
+}
+
+/// Spawn a child workflow with custom metadata.
+pub fn spawn_workflow_with_metadata(
+  ctx: Context,
+  workflow_name: String,
+  input: Dynamic,
+  metadata: Dict(String, String),
+) -> Result(String, String) {
+  // Merge parent metadata with custom metadata (custom takes precedence)
+  let merged = dict.merge(ctx.additional_metadata, metadata)
+  ctx.spawn_workflow_fn(workflow_name, input, merged)
+}
+
 // ============================================================================
 // Context Construction (Internal)
 // ============================================================================
+
+/// Callbacks for Context to communicate with the worker/server.
+pub type ContextCallbacks {
+  ContextCallbacks(
+    log_fn: fn(String) -> Nil,
+    stream_fn: fn(Dynamic) -> Result(Nil, String),
+    release_slot_fn: fn() -> Result(Nil, String),
+    refresh_timeout_fn: fn(Int) -> Result(Nil, String),
+    cancel_fn: fn() -> Result(Nil, String),
+    spawn_workflow_fn: fn(String, Dynamic, Dict(String, String)) ->
+      Result(String, String),
+  )
+}
+
+/// Create default no-op callbacks (for testing or when features aren't available).
+pub fn default_callbacks(log_fn: fn(String) -> Nil) -> ContextCallbacks {
+  ContextCallbacks(
+    log_fn: log_fn,
+    stream_fn: fn(_) { Error("Streaming not available") },
+    release_slot_fn: fn() { Error("Release slot not available") },
+    refresh_timeout_fn: fn(_) { Error("Refresh timeout not available") },
+    cancel_fn: fn() { Error("Cancel not available") },
+    spawn_workflow_fn: fn(_, _, _) {
+      Error("Child workflow spawning not available")
+    },
+  )
+}
 
 /// Create a Context from an AssignedAction.
 ///
@@ -142,7 +237,7 @@ pub fn from_assigned_action(
   action: protobuf.AssignedAction,
   worker_id: String,
   additional_parent_outputs: Dict(String, Dynamic),
-  log_fn: fn(String) -> Nil,
+  callbacks: ContextCallbacks,
 ) -> Context {
   // Parse the action payload as JSON to get the input and parent outputs
   let #(input, payload_parent_outputs) =
@@ -171,7 +266,12 @@ pub fn from_assigned_action(
     parent_outputs: parent_outputs,
     additional_metadata: metadata,
     retry_count: action.retry_count,
-    log_fn: log_fn,
+    log_fn: callbacks.log_fn,
+    stream_fn: callbacks.stream_fn,
+    release_slot_fn: callbacks.release_slot_fn,
+    refresh_timeout_fn: callbacks.refresh_timeout_fn,
+    cancel_fn: callbacks.cancel_fn,
+    spawn_workflow_fn: callbacks.spawn_workflow_fn,
   )
 }
 
@@ -231,6 +331,7 @@ pub fn mock(
   input: Dynamic,
   parent_outputs: Dict(String, Dynamic),
 ) -> Context {
+  let noop_callbacks = default_callbacks(fn(_msg) { Nil })
   Context(
     workflow_run_id: "test-workflow-run-id",
     step_run_id: "test-step-run-id",
@@ -243,7 +344,12 @@ pub fn mock(
     parent_outputs: parent_outputs,
     additional_metadata: dict.new(),
     retry_count: 0,
-    log_fn: fn(_msg) { Nil },
+    log_fn: noop_callbacks.log_fn,
+    stream_fn: noop_callbacks.stream_fn,
+    release_slot_fn: noop_callbacks.release_slot_fn,
+    refresh_timeout_fn: noop_callbacks.refresh_timeout_fn,
+    cancel_fn: noop_callbacks.cancel_fn,
+    spawn_workflow_fn: noop_callbacks.spawn_workflow_fn,
   )
 }
 
@@ -253,6 +359,7 @@ pub fn mock_with_retry(
   parent_outputs: Dict(String, Dynamic),
   retry: Int,
 ) -> Context {
+  let noop_callbacks = default_callbacks(fn(_msg) { Nil })
   Context(
     workflow_run_id: "test-workflow-run-id",
     step_run_id: "test-step-run-id",
@@ -265,7 +372,12 @@ pub fn mock_with_retry(
     parent_outputs: parent_outputs,
     additional_metadata: dict.new(),
     retry_count: retry,
-    log_fn: fn(_msg) { Nil },
+    log_fn: noop_callbacks.log_fn,
+    stream_fn: noop_callbacks.stream_fn,
+    release_slot_fn: noop_callbacks.release_slot_fn,
+    refresh_timeout_fn: noop_callbacks.refresh_timeout_fn,
+    cancel_fn: noop_callbacks.cancel_fn,
+    spawn_workflow_fn: noop_callbacks.spawn_workflow_fn,
   )
 }
 
@@ -288,5 +400,10 @@ pub fn to_task_context(ctx: Context) -> TaskContext {
     parent_outputs: ctx.parent_outputs,
     metadata: ctx.additional_metadata,
     logger: ctx.log_fn,
+    stream_fn: ctx.stream_fn,
+    release_slot_fn: ctx.release_slot_fn,
+    refresh_timeout_fn: ctx.refresh_timeout_fn,
+    cancel_fn: ctx.cancel_fn,
+    spawn_workflow_fn: ctx.spawn_workflow_fn,
   )
 }
