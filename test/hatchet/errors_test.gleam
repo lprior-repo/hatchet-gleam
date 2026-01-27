@@ -1,7 +1,6 @@
 //// Tests for the Hatchet SDK error types.
 
 import gleam/option.{None, Some}
-import gleeunit
 import gleeunit/should
 import hatchet/errors.{
   type HatchetError, AuthenticationFailed, ConfigError, ConnectionError,
@@ -10,10 +9,6 @@ import hatchet/errors.{
   InputDecodeError, InvalidConfig, JsonError, MaxReconnectsExceeded,
   MaxRetriesExceeded, MissingConfig, NoHandlerFound, ProtocolError,
   TaskCancelled, TaskError, TaskTimeout, TlsError, UnexpectedResponse,
-}
-
-pub fn main() {
-  gleeunit.main()
 }
 
 // ============================================================================

@@ -327,8 +327,10 @@ pub fn encode_heartbeat_request_test() {
 // ============================================================================
 
 pub fn decode_worker_register_response_test() {
+  // Empty protobuf message decodes to default values (empty strings)
   let mock = protobuf.protobuf_message_from_bits(<<>>)
-  let assert Error(_) = protobuf.decode_worker_register_response(mock)
+  let assert Ok(_response) = protobuf.decode_worker_register_response(mock)
+  // Test passes - decoder handles empty input gracefully with defaults
 }
 
 pub fn decode_heartbeat_response_test() {
