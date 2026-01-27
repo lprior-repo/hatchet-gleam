@@ -134,7 +134,10 @@ pub fn release_slot(ctx: TaskContext) -> Result(Nil, String) {
 }
 
 /// Extend the execution timeout by the given milliseconds.
-pub fn refresh_timeout(ctx: TaskContext, increment_ms: Int) -> Result(Nil, String) {
+pub fn refresh_timeout(
+  ctx: TaskContext,
+  increment_ms: Int,
+) -> Result(Nil, String) {
   ctx.refresh_timeout_fn(increment_ms)
 }
 

@@ -297,7 +297,10 @@ fn parse_action_payload_with_parents(
       // Try to extract structured payload with input and parents using builder pattern
       let decoder = {
         use input <- decode.field("input", decode.dynamic)
-        use parents <- decode.field("parents", decode.dict(decode.string, decode.dynamic))
+        use parents <- decode.field(
+          "parents",
+          decode.dict(decode.string, decode.dynamic),
+        )
         decode.success(#(input, parents))
       }
 
@@ -340,10 +343,7 @@ fn parse_metadata(meta_json: String) -> Dict(String, String) {
 // ============================================================================
 
 /// Create a mock context for testing.
-pub fn mock(
-  input: Dynamic,
-  parent_outputs: Dict(String, Dynamic),
-) -> Context {
+pub fn mock(input: Dynamic, parent_outputs: Dict(String, Dynamic)) -> Context {
   let noop_callbacks = default_callbacks(fn(_msg) { Nil })
   Context(
     workflow_run_id: "test-workflow-run-id",

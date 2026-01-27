@@ -148,9 +148,7 @@ fn connection_error_to_string(kind: ConnectionErrorKind) -> String {
     ConnectionReset(reason) -> "Connection reset: " <> reason
     TlsError(reason) -> "TLS error: " <> reason
     MaxReconnectsExceeded(attempts) ->
-      "Max reconnection attempts ("
-      <> int_to_string(attempts)
-      <> ") exceeded"
+      "Max reconnection attempts (" <> int_to_string(attempts) <> ") exceeded"
   }
 }
 
@@ -158,11 +156,7 @@ fn task_error_to_string(kind: TaskErrorKind) -> String {
   case kind {
     HandlerError(step, error) -> "Task '" <> step <> "' failed: " <> error
     TaskTimeout(step, timeout) ->
-      "Task '"
-      <> step
-      <> "' timed out after "
-      <> int_to_string(timeout)
-      <> "ms"
+      "Task '" <> step <> "' timed out after " <> int_to_string(timeout) <> "ms"
     NoHandlerFound(action) -> "No handler found for action: " <> action
     TaskCancelled(step, reason) ->
       "Task '" <> step <> "' was cancelled: " <> reason

@@ -260,9 +260,7 @@ fn build_log_line(
 
 /// Format context as key=value pairs.
 fn format_context(context: Dict(String, String)) -> String {
-  dict.fold(context, [], fn(acc, key, value) {
-    [key <> "=" <> value, ..acc]
-  })
+  dict.fold(context, [], fn(acc, key, value) { [key <> "=" <> value, ..acc] })
   |> list.reverse
   |> string.join(" ")
 }

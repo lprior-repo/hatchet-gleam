@@ -29,7 +29,9 @@ import hatchet/context.{type Context}
 import hatchet/internal/ffi/protobuf
 import hatchet/internal/grpc
 import hatchet/internal/tls.{type TLSConfig, Insecure}
-import hatchet/types.{type Client, type TaskDef, type Workflow, type WorkerConfig}
+import hatchet/types.{
+  type Client, type TaskDef, type WorkerConfig, type Workflow,
+}
 
 // ============================================================================
 // Constants (matching Python SDK)
@@ -453,10 +455,7 @@ fn register_worker(
 // Listener Process (runs in separate process to avoid blocking)
 // ============================================================================
 
-fn start_listener_process(
-  stream: grpc.Stream,
-  state: WorkerState,
-) -> Pid {
+fn start_listener_process(stream: grpc.Stream, state: WorkerState) -> Pid {
   let parent = case state.self {
     Some(s) -> s
     None -> panic as "Worker self not set"
@@ -555,8 +554,7 @@ fn handle_task_assigned(
           log_info("Received task: " <> action.step_name)
 
           // Spawn task in separate process
-          let task_pid =
-            spawn_task_process(action, handler, state)
+          let task_pid = spawn_task_process(action, handler, state)
 
           // Track the running task with handler info for retry decisions
           let running_task =
@@ -728,8 +726,7 @@ fn execute_task_in_process(
       },
       refresh_timeout_fn: fn(increment_ms) {
         // Send timeout refresh via gRPC event
-        let payload =
-          "{\"increment_ms\":" <> int_to_string(increment_ms) <> "}"
+        let payload = "{\"increment_ms\":" <> int_to_string(increment_ms) <> "}"
         send_event_from_task(
           channel,
           token,
@@ -779,7 +776,9 @@ fn execute_task_in_process(
   case should_skip {
     True -> {
       // Task should be skipped - send COMPLETED with skip marker
-      log_info("Skipping task: " <> action.step_name <> " (skip_if condition met)")
+      log_info(
+        "Skipping task: " <> action.step_name <> " (skip_if condition met)",
+      )
 
       let skip_output_json =
         json.to_string(
@@ -851,7 +850,10 @@ fn execute_task_in_process(
           )
 
           // Notify parent with retry decision
-          process.send(parent, TaskFailed(action.step_run_id, error, should_retry))
+          process.send(
+            parent,
+            TaskFailed(action.step_run_id, error, should_retry),
+          )
         }
       }
     }
@@ -867,7 +869,13 @@ fn send_event_from_task(
   payload: String,
 ) -> Nil {
   send_event_from_task_with_retry(
-    channel, token, action, worker_id, event_type, payload, None,
+    channel,
+    token,
+    action,
+    worker_id,
+    event_type,
+    payload,
+    None,
   )
 }
 
@@ -937,7 +945,11 @@ fn handle_task_completed(
         dict.insert(workflow_outputs, step_name, output)
 
       // Update the completed outputs
-      dict.insert(state.completed_outputs, workflow_run_id, updated_workflow_outputs)
+      dict.insert(
+        state.completed_outputs,
+        workflow_run_id,
+        updated_workflow_outputs,
+      )
     }
     Error(_) -> state.completed_outputs
   }
@@ -1178,7 +1190,8 @@ fn handle_shutdown(state: WorkerState) -> actor.Next(WorkerState, WorkerMessage)
   log_info("Shutting down worker...")
 
   // Kill any running tasks
-  let _ = dict.each(state.running_tasks, fn(_id, task) { process.kill(task.pid) })
+  let _ =
+    dict.each(state.running_tasks, fn(_id, task) { process.kill(task.pid) })
 
   // Close connections
   cleanup_connections(state)

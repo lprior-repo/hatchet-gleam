@@ -81,13 +81,14 @@ pub fn step_event_type_to_int_test() {
 // ============================================================================
 
 pub fn runtime_info_type_test() {
-  let info = protobuf.RuntimeInfo(
-    sdk_version: "0.1.0",
-    language: protobuf.Gleam,
-    language_version: "1.0.0",
-    os: "linux/amd64",
-    extra: None,
-  )
+  let info =
+    protobuf.RuntimeInfo(
+      sdk_version: "0.1.0",
+      language: protobuf.Gleam,
+      language_version: "1.0.0",
+      os: "linux/amd64",
+      extra: None,
+    )
   info.sdk_version |> should.equal("0.1.0")
   case info.language {
     protobuf.Gleam -> should.be_true(True)
@@ -120,35 +121,38 @@ pub fn worker_label_int_test() {
 // ============================================================================
 
 pub fn worker_register_request_type_test() {
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker",
-    actions: ["action1", "action2"],
-    services: [],
-    max_runs: Some(10),
-    labels: dict.new(),
-    webhook_id: None,
-    runtime_info: None,
-  )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker",
+      actions: ["action1", "action2"],
+      services: [],
+      max_runs: Some(10),
+      labels: dict.new(),
+      webhook_id: None,
+      runtime_info: None,
+    )
   req.worker_name |> should.equal("test-worker")
 }
 
 pub fn worker_register_request_with_runtime_info_test() {
-  let info = protobuf.RuntimeInfo(
-    sdk_version: "0.1.0",
-    language: protobuf.Gleam,
-    language_version: "1.0.0",
-    os: "linux",
-    extra: None,
-  )
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker",
-    actions: ["workflow:task"],
-    services: [],
-    max_runs: Some(10),
-    labels: dict.new(),
-    webhook_id: None,
-    runtime_info: Some(info),
-  )
+  let info =
+    protobuf.RuntimeInfo(
+      sdk_version: "0.1.0",
+      language: protobuf.Gleam,
+      language_version: "1.0.0",
+      os: "linux",
+      extra: None,
+    )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker",
+      actions: ["workflow:task"],
+      services: [],
+      max_runs: Some(10),
+      labels: dict.new(),
+      webhook_id: None,
+      runtime_info: Some(info),
+    )
   case req.runtime_info {
     Some(ri) -> ri.sdk_version |> should.equal("0.1.0")
     None -> should.fail()
@@ -179,28 +183,29 @@ pub fn worker_listen_request_type_test() {
 // ============================================================================
 
 pub fn assigned_action_type_test() {
-  let action = protobuf.AssignedAction(
-    tenant_id: "tenant-123",
-    workflow_run_id: "wf-run-456",
-    get_group_key_run_id: "",
-    job_id: "job-789",
-    job_name: "process-order",
-    job_run_id: "job-run-abc",
-    step_id: "step-def",
-    step_run_id: "step-run-ghi",
-    action_id: "action-jkl",
-    action_type: protobuf.StartStepRun,
-    action_payload: "{\"order_id\": 123}",
-    step_name: "validate",
-    retry_count: 0,
-    additional_metadata: None,
-    child_workflow_index: None,
-    child_workflow_key: None,
-    parent_workflow_run_id: None,
-    priority: 1,
-    workflow_id: Some("wf-123"),
-    workflow_version_id: Some("wf-v1"),
-  )
+  let action =
+    protobuf.AssignedAction(
+      tenant_id: "tenant-123",
+      workflow_run_id: "wf-run-456",
+      get_group_key_run_id: "",
+      job_id: "job-789",
+      job_name: "process-order",
+      job_run_id: "job-run-abc",
+      step_id: "step-def",
+      step_run_id: "step-run-ghi",
+      action_id: "action-jkl",
+      action_type: protobuf.StartStepRun,
+      action_payload: "{\"order_id\": 123}",
+      step_name: "validate",
+      retry_count: 0,
+      additional_metadata: None,
+      child_workflow_index: None,
+      child_workflow_key: None,
+      parent_workflow_run_id: None,
+      priority: 1,
+      workflow_id: Some("wf-123"),
+      workflow_version_id: Some("wf-v1"),
+    )
   action.workflow_run_id |> should.equal("wf-run-456")
   action.step_name |> should.equal("validate")
   case action.action_type {
@@ -214,19 +219,20 @@ pub fn assigned_action_type_test() {
 // ============================================================================
 
 pub fn step_action_event_type_test() {
-  let event = protobuf.StepActionEvent(
-    worker_id: "worker-123",
-    job_id: "job-456",
-    job_run_id: "job-run-789",
-    step_id: "step-abc",
-    step_run_id: "step-run-123",
-    action_id: "action-456",
-    event_timestamp: 1_700_000_000_000,
-    event_type: protobuf.StepEventTypeStarted,
-    event_payload: "{}",
-    retry_count: Some(0),
-    should_not_retry: None,
-  )
+  let event =
+    protobuf.StepActionEvent(
+      worker_id: "worker-123",
+      job_id: "job-456",
+      job_run_id: "job-run-789",
+      step_id: "step-abc",
+      step_run_id: "step-run-123",
+      action_id: "action-456",
+      event_timestamp: 1_700_000_000_000,
+      event_type: protobuf.StepEventTypeStarted,
+      event_payload: "{}",
+      retry_count: Some(0),
+      should_not_retry: None,
+    )
   event.worker_id |> should.equal("worker-123")
   case event.event_type {
     protobuf.StepEventTypeStarted -> should.be_true(True)
@@ -239,10 +245,11 @@ pub fn step_action_event_type_test() {
 // ============================================================================
 
 pub fn action_event_response_type_test() {
-  let resp = protobuf.ActionEventResponse(
-    tenant_id: "tenant-123",
-    worker_id: "worker-456",
-  )
+  let resp =
+    protobuf.ActionEventResponse(
+      tenant_id: "tenant-123",
+      worker_id: "worker-456",
+    )
   resp.tenant_id |> should.equal("tenant-123")
   resp.worker_id |> should.equal("worker-456")
 }
@@ -252,15 +259,16 @@ pub fn action_event_response_type_test() {
 // ============================================================================
 
 pub fn encode_worker_register_request_test() {
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker",
-    actions: ["action1"],
-    services: [],
-    max_runs: Some(5),
-    labels: dict.new(),
-    webhook_id: None,
-    runtime_info: None,
-  )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker",
+      actions: ["action1"],
+      services: [],
+      max_runs: Some(5),
+      labels: dict.new(),
+      webhook_id: None,
+      runtime_info: None,
+    )
   let assert Ok(_pb) = protobuf.encode_worker_register_request(req)
 }
 
@@ -270,36 +278,38 @@ pub fn encode_worker_listen_request_test() {
 }
 
 pub fn encode_step_action_event_test() {
-  let event = protobuf.StepActionEvent(
-    worker_id: "worker-123",
-    job_id: "job-456",
-    job_run_id: "job-run-789",
-    step_id: "step-abc",
-    step_run_id: "step-run-123",
-    action_id: "action-456",
-    event_timestamp: 1_700_000_000_000,
-    event_type: protobuf.StepEventTypeCompleted,
-    event_payload: "{\"result\": \"success\"}",
-    retry_count: Some(0),
-    should_not_retry: None,
-  )
+  let event =
+    protobuf.StepActionEvent(
+      worker_id: "worker-123",
+      job_id: "job-456",
+      job_run_id: "job-run-789",
+      step_id: "step-abc",
+      step_run_id: "step-run-123",
+      action_id: "action-456",
+      event_timestamp: 1_700_000_000_000,
+      event_type: protobuf.StepEventTypeCompleted,
+      event_payload: "{\"result\": \"success\"}",
+      retry_count: Some(0),
+      should_not_retry: None,
+    )
   let assert Ok(_pb) = protobuf.encode_step_action_event(event)
 }
 
 pub fn encode_step_action_event_with_no_retry_test() {
-  let event = protobuf.StepActionEvent(
-    worker_id: "worker-123",
-    job_id: "job-456",
-    job_run_id: "job-run-789",
-    step_id: "step-abc",
-    step_run_id: "step-run-123",
-    action_id: "action-456",
-    event_timestamp: 1_700_000_000_000,
-    event_type: protobuf.StepEventTypeFailed,
-    event_payload: "{\"error\": \"fatal error\"}",
-    retry_count: Some(3),
-    should_not_retry: Some(True),
-  )
+  let event =
+    protobuf.StepActionEvent(
+      worker_id: "worker-123",
+      job_id: "job-456",
+      job_run_id: "job-run-789",
+      step_id: "step-abc",
+      step_run_id: "step-run-123",
+      action_id: "action-456",
+      event_timestamp: 1_700_000_000_000,
+      event_type: protobuf.StepEventTypeFailed,
+      event_payload: "{\"error\": \"fatal error\"}",
+      retry_count: Some(3),
+      should_not_retry: Some(True),
+    )
   let assert Ok(_pb) = protobuf.encode_step_action_event(event)
 }
 

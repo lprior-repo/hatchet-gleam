@@ -4,12 +4,12 @@ import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import hatchet/errors.{
-  AuthenticationFailed, ConfigError, ConnectionError, ConnectionFailed,
-  ConnectionReset, ConnectionTimeout, DecodeError, EncodeError,
+  type HatchetError, AuthenticationFailed, ConfigError, ConnectionError,
+  ConnectionFailed, ConnectionReset, ConnectionTimeout, DecodeError, EncodeError,
   EnvironmentError, EventSendFailed, GenericError, GrpcError, HandlerError,
-  type HatchetError, InputDecodeError, InvalidConfig, JsonError, MaxReconnectsExceeded,
-  MaxRetriesExceeded, MissingConfig, NoHandlerFound, ProtocolError, TaskCancelled,
-  TaskError, TaskTimeout, TlsError, UnexpectedResponse,
+  InputDecodeError, InvalidConfig, JsonError, MaxReconnectsExceeded,
+  MaxRetriesExceeded, MissingConfig, NoHandlerFound, ProtocolError,
+  TaskCancelled, TaskError, TaskTimeout, TlsError, UnexpectedResponse,
 }
 
 pub fn main() {
@@ -67,7 +67,7 @@ pub fn handler_error_to_string_test() {
 }
 
 pub fn task_timeout_to_string_test() {
-  let error = TaskError(TaskTimeout("slow-task", 60000))
+  let error = TaskError(TaskTimeout("slow-task", 60_000))
   let result = errors.to_string(error)
   result |> should.equal("Task 'slow-task' timed out after 60000ms")
 }
@@ -88,9 +88,7 @@ pub fn max_retries_exceeded_to_string_test() {
   let error = TaskError(MaxRetriesExceeded("flaky-task", 3, "network error"))
   let result = errors.to_string(error)
   result
-  |> should.equal(
-    "Task 'flaky-task' failed after 3 attempts: network error",
-  )
+  |> should.equal("Task 'flaky-task' failed after 3 attempts: network error")
 }
 
 pub fn event_send_failed_to_string_test() {
@@ -103,7 +101,8 @@ pub fn event_send_failed_to_string_test() {
 pub fn input_decode_error_to_string_test() {
   let error = TaskError(InputDecodeError("my-task", "invalid JSON"))
   let result = errors.to_string(error)
-  result |> should.equal("Failed to decode input for task 'my-task': invalid JSON")
+  result
+  |> should.equal("Failed to decode input for task 'my-task': invalid JSON")
 }
 
 // ============================================================================
@@ -134,9 +133,11 @@ pub fn environment_error_to_string_test() {
 // ============================================================================
 
 pub fn encode_error_to_string_test() {
-  let error = ProtocolError(EncodeError("WorkerRegisterRequest", "missing field"))
+  let error =
+    ProtocolError(EncodeError("WorkerRegisterRequest", "missing field"))
   let result = errors.to_string(error)
-  result |> should.equal("Failed to encode WorkerRegisterRequest: missing field")
+  result
+  |> should.equal("Failed to encode WorkerRegisterRequest: missing field")
 }
 
 pub fn decode_error_to_string_test() {
@@ -152,7 +153,8 @@ pub fn json_error_to_string_test() {
 }
 
 pub fn grpc_error_with_code_to_string_test() {
-  let error = ProtocolError(GrpcError("RegisterWorker", Some(14), "unavailable"))
+  let error =
+    ProtocolError(GrpcError("RegisterWorker", Some(14), "unavailable"))
   let result = errors.to_string(error)
   result |> should.equal("gRPC error in RegisterWorker (code 14): unavailable")
 }
@@ -164,9 +166,13 @@ pub fn grpc_error_without_code_to_string_test() {
 }
 
 pub fn unexpected_response_to_string_test() {
-  let error = ProtocolError(UnexpectedResponse("WorkerRegisterResponse", "error"))
+  let error =
+    ProtocolError(UnexpectedResponse("WorkerRegisterResponse", "error"))
   let result = errors.to_string(error)
-  result |> should.equal("Unexpected response: expected WorkerRegisterResponse, got error")
+  result
+  |> should.equal(
+    "Unexpected response: expected WorkerRegisterResponse, got error",
+  )
 }
 
 // ============================================================================
@@ -209,7 +215,7 @@ pub fn handler_error_is_retryable_test() {
 }
 
 pub fn task_timeout_is_retryable_test() {
-  let error = TaskError(TaskTimeout("task", 60000))
+  let error = TaskError(TaskTimeout("task", 60_000))
   errors.is_retryable(error) |> should.equal(True)
 }
 

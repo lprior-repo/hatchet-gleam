@@ -282,9 +282,20 @@ pub fn encode_worker_register_request(
   let map = case req.runtime_info {
     Some(info) -> {
       let info_map = erlang_map_new()
-      let info_map = erlang_map_put_string(info_map, "sdk_version", info.sdk_version)
-      let info_map = erlang_map_put_int(info_map, "language", sdk_language_to_int(info.language))
-      let info_map = erlang_map_put_string(info_map, "language_version", info.language_version)
+      let info_map =
+        erlang_map_put_string(info_map, "sdk_version", info.sdk_version)
+      let info_map =
+        erlang_map_put_int(
+          info_map,
+          "language",
+          sdk_language_to_int(info.language),
+        )
+      let info_map =
+        erlang_map_put_string(
+          info_map,
+          "language_version",
+          info.language_version,
+        )
       let info_map = erlang_map_put_string(info_map, "os", info.os)
       let info_map = case info.extra {
         Some(e) -> erlang_map_put_string(info_map, "extra", e)
@@ -297,14 +308,15 @@ pub fn encode_worker_register_request(
   // Add labels if present
   let map = case dict.size(req.labels) > 0 {
     True -> {
-      let label_maps = dict.fold(req.labels, [], fn(acc, key, value) {
-        let label_map = erlang_map_new()
-        let label_map = case value {
-          StringLabel(s) -> erlang_map_put_string(label_map, "str_value", s)
-          IntLabel(i) -> erlang_map_put_int(label_map, "int_value", i)
-        }
-        [#(key, label_map), ..acc]
-      })
+      let label_maps =
+        dict.fold(req.labels, [], fn(acc, key, value) {
+          let label_map = erlang_map_new()
+          let label_map = case value {
+            StringLabel(s) -> erlang_map_put_string(label_map, "str_value", s)
+            IntLabel(i) -> erlang_map_put_int(label_map, "int_value", i)
+          }
+          [#(key, label_map), ..acc]
+        })
       erlang_map_put_label_map(map, "labels", label_maps)
     }
     False -> map
@@ -332,7 +344,12 @@ pub fn encode_step_action_event(
   let map = erlang_map_put_string(map, "step_run_id", event.step_run_id)
   let map = erlang_map_put_string(map, "action_id", event.action_id)
   let map = erlang_map_put_int(map, "event_timestamp", event.event_timestamp)
-  let map = erlang_map_put_int(map, "event_type", step_event_type_to_int(event.event_type))
+  let map =
+    erlang_map_put_int(
+      map,
+      "event_type",
+      step_event_type_to_int(event.event_type),
+    )
   let map = erlang_map_put_string(map, "event_payload", event.event_payload)
   let map = case event.retry_count {
     Some(count) -> erlang_map_put_int(map, "retry_count", count)
@@ -396,8 +413,10 @@ pub fn decode_assigned_action(
 
   // Required fields
   let tenant_id = erlang_map_get_string_default(map, "tenant_id", "")
-  let workflow_run_id = erlang_map_get_string_default(map, "workflow_run_id", "")
-  let get_group_key_run_id = erlang_map_get_string_default(map, "get_group_key_run_id", "")
+  let workflow_run_id =
+    erlang_map_get_string_default(map, "workflow_run_id", "")
+  let get_group_key_run_id =
+    erlang_map_get_string_default(map, "get_group_key_run_id", "")
   let job_id = erlang_map_get_string_default(map, "job_id", "")
   let job_name = erlang_map_get_string_default(map, "job_name", "")
   let job_run_id = erlang_map_get_string_default(map, "job_run_id", "")
@@ -405,18 +424,24 @@ pub fn decode_assigned_action(
   let step_run_id = erlang_map_get_string_default(map, "step_run_id", "")
   let action_id = erlang_map_get_string_default(map, "action_id", "")
   let action_type_int = erlang_map_get_int_default(map, "action_type", 0)
-  let action_payload = erlang_map_get_string_default(map, "action_payload", "{}")
+  let action_payload =
+    erlang_map_get_string_default(map, "action_payload", "{}")
   let step_name = erlang_map_get_string_default(map, "step_name", "")
   let retry_count = erlang_map_get_int_default(map, "retry_count", 0)
   let priority = erlang_map_get_int_default(map, "priority", 0)
 
   // Optional fields
-  let additional_metadata = erlang_map_get_string_option(map, "additional_metadata")
-  let child_workflow_index = erlang_map_get_int_option(map, "child_workflow_index")
-  let child_workflow_key = erlang_map_get_string_option(map, "child_workflow_key")
-  let parent_workflow_run_id = erlang_map_get_string_option(map, "parent_workflow_run_id")
+  let additional_metadata =
+    erlang_map_get_string_option(map, "additional_metadata")
+  let child_workflow_index =
+    erlang_map_get_int_option(map, "child_workflow_index")
+  let child_workflow_key =
+    erlang_map_get_string_option(map, "child_workflow_key")
+  let parent_workflow_run_id =
+    erlang_map_get_string_option(map, "parent_workflow_run_id")
   let workflow_id = erlang_map_get_string_option(map, "workflow_id")
-  let workflow_version_id = erlang_map_get_string_option(map, "workflow_version_id")
+  let workflow_version_id =
+    erlang_map_get_string_option(map, "workflow_version_id")
 
   Ok(AssignedAction(
     tenant_id: tenant_id,
@@ -481,7 +506,11 @@ fn erlang_map_put_list(map: ErlangMap, key: String, value: List(a)) -> ErlangMap
 fn erlang_map_get_string(map: ErlangMap, key: String) -> Result(String, Nil)
 
 @external(erlang, "dispatcher_pb_helper", "get_string_default")
-fn erlang_map_get_string_default(map: ErlangMap, key: String, default: String) -> String
+fn erlang_map_get_string_default(
+  map: ErlangMap,
+  key: String,
+  default: String,
+) -> String
 
 @external(erlang, "dispatcher_pb_helper", "get_string_option")
 fn erlang_map_get_string_option(map: ErlangMap, key: String) -> Option(String)
@@ -499,7 +528,11 @@ fn erlang_map_get_int_option(map: ErlangMap, key: String) -> Option(Int)
 fn erlang_map_put_bool(map: ErlangMap, key: String, value: Bool) -> ErlangMap
 
 @external(erlang, "dispatcher_pb_helper", "put_nested")
-fn erlang_map_put_nested(map: ErlangMap, key: String, nested: ErlangMap) -> ErlangMap
+fn erlang_map_put_nested(
+  map: ErlangMap,
+  key: String,
+  nested: ErlangMap,
+) -> ErlangMap
 
 @external(erlang, "dispatcher_pb_helper", "put_label_map")
 fn erlang_map_put_label_map(

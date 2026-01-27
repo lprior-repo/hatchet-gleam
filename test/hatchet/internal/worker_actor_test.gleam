@@ -3,12 +3,12 @@
 //// Tests for the worker actor types and message handling.
 //// Note: Full integration tests require a running Hatchet server.
 
-import gleeunit
-import gleeunit/should
 import gleam/dynamic
 import gleam/option.{None, Some}
-import hatchet/internal/worker_actor
+import gleeunit
+import gleeunit/should
 import hatchet/internal/ffi/protobuf
+import hatchet/internal/worker_actor
 
 pub fn main() {
   gleeunit.main()
@@ -59,28 +59,29 @@ pub fn worker_message_send_heartbeat_test() {
 // ============================================================================
 
 pub fn worker_message_task_assigned_test() {
-  let action = protobuf.AssignedAction(
-    tenant_id: "tenant",
-    workflow_run_id: "wf-run",
-    get_group_key_run_id: "",
-    job_id: "job",
-    job_name: "job-name",
-    job_run_id: "job-run",
-    step_id: "step",
-    step_run_id: "step-run",
-    action_id: "action",
-    action_type: protobuf.StartStepRun,
-    action_payload: "{}",
-    step_name: "my-task",
-    retry_count: 0,
-    additional_metadata: None,
-    child_workflow_index: None,
-    child_workflow_key: None,
-    parent_workflow_run_id: None,
-    priority: 1,
-    workflow_id: None,
-    workflow_version_id: None,
-  )
+  let action =
+    protobuf.AssignedAction(
+      tenant_id: "tenant",
+      workflow_run_id: "wf-run",
+      get_group_key_run_id: "",
+      job_id: "job",
+      job_name: "job-name",
+      job_run_id: "job-run",
+      step_id: "step",
+      step_run_id: "step-run",
+      action_id: "action",
+      action_type: protobuf.StartStepRun,
+      action_payload: "{}",
+      step_name: "my-task",
+      retry_count: 0,
+      additional_metadata: None,
+      child_workflow_index: None,
+      child_workflow_key: None,
+      parent_workflow_run_id: None,
+      priority: 1,
+      workflow_id: None,
+      workflow_version_id: None,
+    )
 
   let msg = worker_actor.TaskAssigned(action)
   case msg {
@@ -120,7 +121,8 @@ pub fn worker_message_task_started_test() {
 
 pub fn worker_message_task_completed_test() {
   // TaskCompleted now takes the JSON output as a String
-  let msg = worker_actor.TaskCompleted("step-run-123", "{\"result\": \"success\"}")
+  let msg =
+    worker_actor.TaskCompleted("step-run-123", "{\"result\": \"success\"}")
   case msg {
     worker_actor.TaskCompleted(step_run_id, output) -> {
       step_run_id |> should.equal("step-run-123")
@@ -165,14 +167,15 @@ pub fn worker_message_task_slot_released_test() {
 // ============================================================================
 
 pub fn task_handler_type_test() {
-  let handler = worker_actor.TaskHandler(
-    workflow_name: "my-workflow",
-    task_name: "my-task",
-    handler: fn(_ctx) { Ok(dynamic.string("result")) },
-    retries: 3,
-    timeout_ms: 60_000,
-    skip_if: None,
-  )
+  let handler =
+    worker_actor.TaskHandler(
+      workflow_name: "my-workflow",
+      task_name: "my-task",
+      handler: fn(_ctx) { Ok(dynamic.string("result")) },
+      retries: 3,
+      timeout_ms: 60_000,
+      skip_if: None,
+    )
 
   handler.workflow_name |> should.equal("my-workflow")
   handler.task_name |> should.equal("my-task")
@@ -196,14 +199,15 @@ pub fn running_task_type_test() {
 
 pub fn task_handler_with_retries_test() {
   // Test that TaskHandler stores retry configuration
-  let handler = worker_actor.TaskHandler(
-    workflow_name: "order-workflow",
-    task_name: "charge-payment",
-    handler: fn(_ctx) { Ok(dynamic.string("success")) },
-    retries: 5,
-    timeout_ms: 30_000,
-    skip_if: None,
-  )
+  let handler =
+    worker_actor.TaskHandler(
+      workflow_name: "order-workflow",
+      task_name: "charge-payment",
+      handler: fn(_ctx) { Ok(dynamic.string("success")) },
+      retries: 5,
+      timeout_ms: 30_000,
+      skip_if: None,
+    )
 
   handler.retries |> should.equal(5)
   handler.timeout_ms |> should.equal(30_000)
@@ -211,14 +215,15 @@ pub fn task_handler_with_retries_test() {
 
 pub fn task_handler_no_retries_test() {
   // Test handler with no retries
-  let handler = worker_actor.TaskHandler(
-    workflow_name: "simple-workflow",
-    task_name: "one-shot-task",
-    handler: fn(_ctx) { Ok(dynamic.string("done")) },
-    retries: 0,
-    timeout_ms: 60_000,
-    skip_if: None,
-  )
+  let handler =
+    worker_actor.TaskHandler(
+      workflow_name: "simple-workflow",
+      task_name: "one-shot-task",
+      handler: fn(_ctx) { Ok(dynamic.string("done")) },
+      retries: 0,
+      timeout_ms: 60_000,
+      skip_if: None,
+    )
 
   handler.retries |> should.equal(0)
 }
@@ -231,14 +236,15 @@ pub fn task_handler_with_skip_if_test() {
   // Test that TaskHandler can have a skip_if condition
   let skip_condition = fn(_ctx) { True }
 
-  let handler = worker_actor.TaskHandler(
-    workflow_name: "conditional-workflow",
-    task_name: "maybe-skip-task",
-    handler: fn(_ctx) { Ok(dynamic.string("executed")) },
-    retries: 0,
-    timeout_ms: 60_000,
-    skip_if: Some(skip_condition),
-  )
+  let handler =
+    worker_actor.TaskHandler(
+      workflow_name: "conditional-workflow",
+      task_name: "maybe-skip-task",
+      handler: fn(_ctx) { Ok(dynamic.string("executed")) },
+      retries: 0,
+      timeout_ms: 60_000,
+      skip_if: Some(skip_condition),
+    )
 
   // Verify skip_if is set
   case handler.skip_if {
@@ -249,14 +255,15 @@ pub fn task_handler_with_skip_if_test() {
 
 pub fn task_handler_without_skip_if_test() {
   // Test that TaskHandler can have no skip_if condition
-  let handler = worker_actor.TaskHandler(
-    workflow_name: "simple-workflow",
-    task_name: "always-run-task",
-    handler: fn(_ctx) { Ok(dynamic.string("executed")) },
-    retries: 0,
-    timeout_ms: 60_000,
-    skip_if: None,
-  )
+  let handler =
+    worker_actor.TaskHandler(
+      workflow_name: "simple-workflow",
+      task_name: "always-run-task",
+      handler: fn(_ctx) { Ok(dynamic.string("executed")) },
+      retries: 0,
+      timeout_ms: 60_000,
+      skip_if: None,
+    )
 
   // Verify skip_if is not set
   case handler.skip_if {
@@ -314,4 +321,3 @@ pub fn task_failed_no_retry_test() {
     _ -> should.fail()
   }
 }
-

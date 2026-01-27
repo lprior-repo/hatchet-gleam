@@ -309,10 +309,7 @@ fn sleep_ms(ms: Int) -> Nil {
 // ============================================================================
 
 /// Cancel multiple workflow runs at once.
-pub fn bulk_cancel(
-  client: Client,
-  run_ids: List(String),
-) -> Result(Nil, String) {
+pub fn bulk_cancel(client: Client, run_ids: List(String)) -> Result(Nil, String) {
   let body = j.encode_bulk_cancel(run_ids)
   let url = build_base_url(client) <> "/api/v1/runs/bulk/cancel"
 
@@ -339,10 +336,7 @@ pub fn bulk_cancel(
 }
 
 /// Replay (re-run) failed workflow runs.
-pub fn replay(
-  client: Client,
-  run_ids: List(String),
-) -> Result(Nil, String) {
+pub fn replay(client: Client, run_ids: List(String)) -> Result(Nil, String) {
   let body = j.encode_bulk_replay(run_ids)
   let url = build_base_url(client) <> "/api/v1/runs/bulk/replay"
 

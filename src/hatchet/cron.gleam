@@ -37,10 +37,7 @@ pub fn create(
       input: input,
     ))
   let url =
-    build_base_url(client)
-    <> "/api/v1/workflows/"
-    <> workflow.name
-    <> "/crons"
+    build_base_url(client) <> "/api/v1/workflows/" <> workflow.name <> "/crons"
 
   case request.to(url) {
     Ok(req) -> {

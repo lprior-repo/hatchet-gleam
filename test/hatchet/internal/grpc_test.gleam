@@ -92,15 +92,16 @@ pub fn register_worker_with_protobuf_test() {
 
   let channel = grpc.mock_channel(12_345)
 
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker-1",
-    actions: ["action1", "action2", "action3"],
-    services: [],
-    max_runs: option.Some(10),
-    labels: dict.new(),
-    webhook_id: option.None,
-    runtime_info: option.None,
-  )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker-1",
+      actions: ["action1", "action2", "action3"],
+      services: [],
+      max_runs: option.Some(10),
+      labels: dict.new(),
+      webhook_id: option.None,
+      runtime_info: option.None,
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
@@ -126,15 +127,16 @@ pub fn register_worker_with_empty_actions_test() {
 
   let channel = grpc.mock_channel(12_345)
 
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker-empty",
-    actions: [],
-    services: [],
-    max_runs: option.None,
-    labels: dict.new(),
-    webhook_id: option.None,
-    runtime_info: option.None,
-  )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker-empty",
+      actions: [],
+      services: [],
+      max_runs: option.None,
+      labels: dict.new(),
+      webhook_id: option.None,
+      runtime_info: option.None,
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
@@ -155,23 +157,25 @@ pub fn register_worker_with_runtime_info_test() {
 
   let channel = grpc.mock_channel(12_345)
 
-  let runtime_info = protobuf.RuntimeInfo(
-    sdk_version: "0.1.0",
-    language: protobuf.Gleam,
-    language_version: "1.0.0",
-    os: "linux/amd64",
-    extra: option.None,
-  )
+  let runtime_info =
+    protobuf.RuntimeInfo(
+      sdk_version: "0.1.0",
+      language: protobuf.Gleam,
+      language_version: "1.0.0",
+      os: "linux/amd64",
+      extra: option.None,
+    )
 
-  let req = protobuf.WorkerRegisterRequest(
-    worker_name: "test-worker-with-info",
-    actions: ["workflow:task"],
-    services: [],
-    max_runs: option.Some(10),
-    labels: dict.new(),
-    webhook_id: option.None,
-    runtime_info: option.Some(runtime_info),
-  )
+  let req =
+    protobuf.WorkerRegisterRequest(
+      worker_name: "test-worker-with-info",
+      actions: ["workflow:task"],
+      services: [],
+      max_runs: option.Some(10),
+      labels: dict.new(),
+      webhook_id: option.None,
+      runtime_info: option.Some(runtime_info),
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
@@ -198,15 +202,16 @@ pub fn listen_v2_requires_connection_test() {
   let result = grpc.listen_v2(channel, "test-worker-1", "test-auth-token")
 
   case result {
-    Ok(_) -> should.be_true(True)  // Success if mock allows
-    Error(_msg) -> should.be_true(True)  // Expected with mock
+    Ok(_) -> should.be_true(True)
+    // Success if mock allows
+    Error(_msg) -> should.be_true(True)
+    // Expected with mock
   }
 }
 
 // ============================================================================
 // STEP EVENT TESTS
 // ============================================================================
-
 
 pub fn send_step_event_with_protobuf_test() {
   // CONTRACT: Sending step event uses protobuf encoding
@@ -216,19 +221,20 @@ pub fn send_step_event_with_protobuf_test() {
 
   let stream = grpc.mock_stream(12_346)
 
-  let event = protobuf.StepActionEvent(
-    worker_id: "worker-123",
-    job_id: "job-456",
-    job_run_id: "job-run-789",
-    step_id: "step-abc",
-    step_run_id: "step-run-123",
-    action_id: "action-456",
-    event_timestamp: 1_700_000_000_000,
-    event_type: protobuf.StepEventTypeStarted,
-    event_payload: "{}",
-    retry_count: option.Some(0),
-    should_not_retry: option.None,
-  )
+  let event =
+    protobuf.StepActionEvent(
+      worker_id: "worker-123",
+      job_id: "job-456",
+      job_run_id: "job-run-789",
+      step_id: "step-abc",
+      step_run_id: "step-run-123",
+      action_id: "action-456",
+      event_timestamp: 1_700_000_000_000,
+      event_type: protobuf.StepEventTypeStarted,
+      event_payload: "{}",
+      retry_count: option.Some(0),
+      should_not_retry: option.None,
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_step_action_event(event)
 
@@ -244,19 +250,20 @@ pub fn send_step_event_completed_test() {
   // CONTRACT: Completed events include output payload
   let stream = grpc.mock_stream(12_346)
 
-  let event = protobuf.StepActionEvent(
-    worker_id: "worker-123",
-    job_id: "job-456",
-    job_run_id: "job-run-789",
-    step_id: "step-abc",
-    step_run_id: "step-run-123",
-    action_id: "action-456",
-    event_timestamp: 1_700_000_000_000,
-    event_type: protobuf.StepEventTypeCompleted,
-    event_payload: "{\"result\": \"success\"}",
-    retry_count: option.Some(0),
-    should_not_retry: option.None,
-  )
+  let event =
+    protobuf.StepActionEvent(
+      worker_id: "worker-123",
+      job_id: "job-456",
+      job_run_id: "job-run-789",
+      step_id: "step-abc",
+      step_run_id: "step-run-123",
+      action_id: "action-456",
+      event_timestamp: 1_700_000_000_000,
+      event_type: protobuf.StepEventTypeCompleted,
+      event_payload: "{\"result\": \"success\"}",
+      retry_count: option.Some(0),
+      should_not_retry: option.None,
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_step_action_event(event)
   let result = grpc.send_step_event(stream, pb_msg)
@@ -271,19 +278,20 @@ pub fn send_step_event_failed_test() {
   // CONTRACT: Failed events can mark should_not_retry
   let stream = grpc.mock_stream(12_346)
 
-  let event = protobuf.StepActionEvent(
-    worker_id: "worker-123",
-    job_id: "job-456",
-    job_run_id: "job-run-789",
-    step_id: "step-abc",
-    step_run_id: "step-run-123",
-    action_id: "action-456",
-    event_timestamp: 1_700_000_000_000,
-    event_type: protobuf.StepEventTypeFailed,
-    event_payload: "{\"error\": \"fatal error\"}",
-    retry_count: option.Some(3),
-    should_not_retry: option.Some(True),
-  )
+  let event =
+    protobuf.StepActionEvent(
+      worker_id: "worker-123",
+      job_id: "job-456",
+      job_run_id: "job-run-789",
+      step_id: "step-abc",
+      step_run_id: "step-run-123",
+      action_id: "action-456",
+      event_timestamp: 1_700_000_000_000,
+      event_type: protobuf.StepEventTypeFailed,
+      event_payload: "{\"error\": \"fatal error\"}",
+      retry_count: option.Some(3),
+      should_not_retry: option.Some(True),
+    )
 
   let assert Ok(pb_msg) = protobuf.encode_step_action_event(event)
   let result = grpc.send_step_event(stream, pb_msg)

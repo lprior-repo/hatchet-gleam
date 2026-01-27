@@ -268,9 +268,7 @@ pub fn encode_cron_create(req: p.CronCreateRequest) -> String {
   |> json.to_string()
 }
 
-pub fn decode_cron_response(
-  body: String,
-) -> Result(p.CronResponse, String) {
+pub fn decode_cron_response(body: String) -> Result(p.CronResponse, String) {
   let decoder = {
     use cron_id <- decode.field("cron_id", decode.string)
     use name <- decode.field("name", decode.string)

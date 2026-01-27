@@ -233,7 +233,8 @@ pub fn listen_v2(
             Error(e) -> Error(error_to_string(e))
           }
         }
-        Error(e) -> Error("Failed to encode listen request: " <> pb_error_message(e))
+        Error(e) ->
+          Error("Failed to encode listen request: " <> pb_error_message(e))
       }
     }
     Error(e) -> Error(error_to_string(e))
@@ -308,10 +309,9 @@ pub fn send_step_action_event(
     Ok(encoded) -> {
       let data = protobuf.protobuf_message_to_bits(encoded)
       let rpc_opts =
-        grpcbox.RpcOptions(
-          timeout_ms: 10_000,
-          metadata: [#("authorization", "Bearer " <> auth_token)],
-        )
+        grpcbox.RpcOptions(timeout_ms: 10_000, metadata: [
+          #("authorization", "Bearer " <> auth_token),
+        ])
 
       case
         grpcbox.unary_call(
@@ -346,19 +346,16 @@ pub fn send_heartbeat(
 
   // Get current timestamp in milliseconds
   let timestamp = current_time_ms()
-  let heartbeat_req = protobuf.HeartbeatRequest(
-    worker_id: worker_id,
-    heartbeat_at: timestamp,
-  )
+  let heartbeat_req =
+    protobuf.HeartbeatRequest(worker_id: worker_id, heartbeat_at: timestamp)
 
   case protobuf.encode_heartbeat_request(heartbeat_req) {
     Ok(encoded) -> {
       let data = protobuf.protobuf_message_to_bits(encoded)
       let rpc_opts =
-        grpcbox.RpcOptions(
-          timeout_ms: 5000,
-          metadata: [#("authorization", "Bearer " <> auth_token)],
-        )
+        grpcbox.RpcOptions(timeout_ms: 5000, metadata: [
+          #("authorization", "Bearer " <> auth_token),
+        ])
 
       case
         grpcbox.unary_call(
