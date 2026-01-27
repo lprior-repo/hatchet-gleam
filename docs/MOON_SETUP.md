@@ -2,6 +2,8 @@
 
 This project uses [Moonrepo](https://moonrepo.dev) for task running, caching, and CI/CD orchestration.
 
+> **Default branch:** `main`
+
 ## Overview
 
 Moonrepo is configured with:

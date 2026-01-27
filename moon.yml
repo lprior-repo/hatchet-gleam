@@ -114,9 +114,9 @@ tasks:
       cache: true
       outputStyle: 'stream'
 
-  # Clean build artifacts
+  # Clean build artifacts (removes build and .gleam cache)
   clean:
-    description: 'Clean build artifacts'
+    description: 'Clean all build artifacts and cache'
     command: 'rm -rf build .gleam'
     platform: 'system'
     options:
