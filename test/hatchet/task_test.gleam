@@ -142,6 +142,11 @@ pub fn task_context_accessors_test() {
       parent_outputs: dict.from_list([#("task1", dynamic.string("output1"))]),
       metadata: dict.from_list([#("key1", "value1")]),
       logger: fn(_) { Nil },
+      stream_fn: fn(_) { Ok(Nil) },
+      release_slot_fn: fn() { Ok(Nil) },
+      refresh_timeout_fn: fn(_) { Ok(Nil) },
+      cancel_fn: fn() { Ok(Nil) },
+      spawn_workflow_fn: fn(_, _, _) { Ok("workflow-run-id") },
     )
 
   task.get_workflow_run_id(ctx)
@@ -173,6 +178,11 @@ pub fn get_parent_output_test() {
       parent_outputs: dict.from_list([#("task1", dynamic.string("output1"))]),
       metadata: dict.new(),
       logger: fn(_) { Nil },
+      stream_fn: fn(_) { Ok(Nil) },
+      release_slot_fn: fn() { Ok(Nil) },
+      refresh_timeout_fn: fn(_) { Ok(Nil) },
+      cancel_fn: fn() { Ok(Nil) },
+      spawn_workflow_fn: fn(_, _, _) { Ok("workflow-run-id") },
     )
 
   task.get_parent_output(ctx, "task1")
