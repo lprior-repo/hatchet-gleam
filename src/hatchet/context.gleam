@@ -131,14 +131,21 @@ pub fn log(ctx: Context, message: String) -> Nil {
 /// Create a Context from an AssignedAction.
 ///
 /// This is called internally by the worker when a task is assigned.
+/// Parent outputs are extracted from the action_payload if present.
 pub fn from_assigned_action(
   action: protobuf.AssignedAction,
   worker_id: String,
-  parent_outputs: Dict(String, Dynamic),
+  additional_parent_outputs: Dict(String, Dynamic),
   log_fn: fn(String) -> Nil,
 ) -> Context {
-  // Parse the action payload as JSON to get the input
-  let input = parse_action_payload(action.action_payload)
+  // Parse the action payload as JSON to get the input and parent outputs
+  let #(input, payload_parent_outputs) =
+    parse_action_payload_with_parents(action.action_payload)
+
+  // Merge additional parent outputs with those from payload
+  // Additional outputs take precedence (allows local overrides)
+  let parent_outputs =
+    dict.merge(payload_parent_outputs, additional_parent_outputs)
 
   // Parse additional metadata if present
   let metadata = case action.additional_metadata {
@@ -162,11 +169,42 @@ pub fn from_assigned_action(
   )
 }
 
-/// Parse the JSON action payload into a Dynamic value.
-fn parse_action_payload(payload: String) -> Dynamic {
+/// Parse the JSON action payload, extracting input and parent outputs.
+///
+/// The payload format from Hatchet is typically:
+/// ```json
+/// {
+///   "input": {...},
+///   "parents": {
+///     "parent_task_name": {...}
+///   }
+/// }
+/// ```
+///
+/// Or it may be just the input data directly.
+fn parse_action_payload_with_parents(
+  payload: String,
+) -> #(Dynamic, Dict(String, Dynamic)) {
   case json.decode(payload, dynamic.dynamic) {
-    Ok(value) -> value
-    Error(_) -> dynamic.from(payload)
+    Ok(value) -> {
+      // Try to extract structured payload with input and parents
+      let input_result =
+        dynamic.field("input", dynamic.dynamic)(value)
+      let parents_result =
+        dynamic.field("parents", dynamic.dict(dynamic.string, dynamic.dynamic))(
+          value,
+        )
+
+      case input_result, parents_result {
+        Ok(input), Ok(parents) -> #(input, parents)
+        Ok(input), Error(_) -> #(input, dict.new())
+        Error(_), _ -> {
+          // Payload is just the input data itself
+          #(value, dict.new())
+        }
+      }
+    }
+    Error(_) -> #(dynamic.from(payload), dict.new())
   }
 }
 

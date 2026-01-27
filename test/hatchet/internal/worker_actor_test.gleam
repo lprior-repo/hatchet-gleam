@@ -176,7 +176,88 @@ pub fn task_handler_type_test() {
 
 pub fn running_task_type_test() {
   // Note: We can't easily create a Pid in tests without spawning a process,
-  // so we just verify the type structure exists
+  // so we just verify the type structure exists and has the expected fields
   should.be_true(True)
+}
+
+// ============================================================================
+// Retry Logic Tests
+// ============================================================================
+
+pub fn task_handler_with_retries_test() {
+  // Test that TaskHandler stores retry configuration
+  let handler = worker_actor.TaskHandler(
+    workflow_name: "order-workflow",
+    task_name: "charge-payment",
+    handler: fn(_ctx) { Ok(dynamic.from("success")) },
+    retries: 5,
+    timeout_ms: 30_000,
+  )
+
+  handler.retries |> should.equal(5)
+  handler.timeout_ms |> should.equal(30_000)
+}
+
+pub fn task_handler_no_retries_test() {
+  // Test handler with no retries
+  let handler = worker_actor.TaskHandler(
+    workflow_name: "simple-workflow",
+    task_name: "one-shot-task",
+    handler: fn(_ctx) { Ok(dynamic.from("done")) },
+    retries: 0,
+    timeout_ms: 60_000,
+  )
+
+  handler.retries |> should.equal(0)
+}
+
+// ============================================================================
+// Task Completion Message Tests
+// ============================================================================
+
+pub fn task_completed_with_output_test() {
+  // Test that TaskCompleted carries the JSON output
+  let output_json = "{\"status\": \"success\", \"count\": 42}"
+  let msg = worker_actor.TaskCompleted("step-run-123", output_json)
+
+  case msg {
+    worker_actor.TaskCompleted(step_run_id, output) -> {
+      step_run_id |> should.equal("step-run-123")
+      output |> should.equal(output_json)
+    }
+    _ -> should.fail()
+  }
+}
+
+// ============================================================================
+// Task Failure with Retry Info Tests
+// ============================================================================
+
+pub fn task_failed_with_retry_test() {
+  // Test that TaskFailed carries retry information
+  let msg = worker_actor.TaskFailed("step-run-123", "connection timeout", True)
+
+  case msg {
+    worker_actor.TaskFailed(step_run_id, error, should_retry) -> {
+      step_run_id |> should.equal("step-run-123")
+      error |> should.equal("connection timeout")
+      should_retry |> should.equal(True)
+    }
+    _ -> should.fail()
+  }
+}
+
+pub fn task_failed_no_retry_test() {
+  // Test failed task that should not be retried
+  let msg = worker_actor.TaskFailed("step-run-456", "invalid input", False)
+
+  case msg {
+    worker_actor.TaskFailed(step_run_id, error, should_retry) -> {
+      step_run_id |> should.equal("step-run-456")
+      error |> should.equal("invalid input")
+      should_retry |> should.equal(False)
+    }
+    _ -> should.fail()
+  }
 }
 

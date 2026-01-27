@@ -96,6 +96,9 @@ pub type WorkerState {
     // Running tasks - maps step_run_id to task info
     running_tasks: Dict(String, RunningTask),
     available_slots: Int,
+    // Completed task outputs - maps workflow_run_id to (step_name -> output)
+    // Used for local parent output tracking within a workflow run
+    completed_outputs: Dict(String, Dict(String, String)),
     // Health tracking
     heartbeat_failures: Int,
     reconnect_attempts: Int,
@@ -118,6 +121,7 @@ pub type TaskHandler {
 pub type RunningTask {
   RunningTask(
     action: protobuf.AssignedAction,
+    handler: TaskHandler,
     pid: Pid,
     started_at: Int,
   )
@@ -155,6 +159,7 @@ pub fn start(
       action_registry: action_registry,
       running_tasks: dict.new(),
       available_slots: config.slots,
+      completed_outputs: dict.new(),
       heartbeat_failures: 0,
       reconnect_attempts: 0,
       is_running: False,
@@ -497,10 +502,11 @@ fn handle_task_assigned(
           let task_pid =
             spawn_task_process(action, handler, state)
 
-          // Track the running task
+          // Track the running task with handler info for retry decisions
           let running_task =
             RunningTask(
               action: action,
+              handler: handler,
               pid: task_pid,
               started_at: current_time_ms(),
             )
@@ -578,9 +584,22 @@ fn spawn_task_process(
   let channel = state.channel
   let token = state.token
 
+  // Get local parent outputs for this workflow run if available
+  let local_parent_outputs =
+    dict.get(state.completed_outputs, action.workflow_run_id)
+    |> option.unwrap(dict.new())
+
   process.start(
     fn() {
-      execute_task_in_process(action, handler, worker_id, channel, token, parent)
+      execute_task_in_process(
+        action,
+        handler,
+        worker_id,
+        channel,
+        token,
+        local_parent_outputs,
+        parent,
+      )
     },
     True,
   )
@@ -592,6 +611,7 @@ fn execute_task_in_process(
   worker_id: String,
   channel: Option(grpc.Channel),
   token: String,
+  local_parent_outputs: Dict(String, String),
   parent: Subject(WorkerMessage),
 ) -> Nil {
   // Send ACKNOWLEDGED
@@ -622,8 +642,22 @@ fn execute_task_in_process(
     log_info("[" <> action.step_name <> "] " <> msg)
   }
 
+  // Convert local parent outputs from JSON strings to Dynamic
+  let parent_outputs_dynamic =
+    dict.fold(local_parent_outputs, dict.new(), fn(acc, step_name, output_json) {
+      case json.decode(output_json, dynamic.dynamic) {
+        Ok(value) -> dict.insert(acc, step_name, value)
+        Error(_) -> acc
+      }
+    })
+
   let ctx =
-    context.from_assigned_action(action, worker_id, dict.new(), log_fn)
+    context.from_assigned_action(
+      action,
+      worker_id,
+      parent_outputs_dynamic,
+      log_fn,
+    )
 
   // Execute the handler
   case handler.handler(ctx) {
@@ -641,13 +675,25 @@ fn execute_task_in_process(
         output_json,
       )
 
-      // Notify parent
+      // Notify parent with output (for local tracking)
       process.send(parent, TaskCompleted(action.step_run_id, output_json))
     }
     Error(error) -> {
-      // Encode error
+      // Determine if we should retry based on handler config and retry count
+      // The server handles retries by re-assigning the task with incremented retry_count
+      // We report should_retry=True if we haven't exceeded max retries
+      let should_retry = action.retry_count < handler.retries
+
+      // Encode error with retry info
       let error_json =
-        json.to_string(json.object([#("error", json.string(error))]))
+        json.to_string(
+          json.object([
+            #("error", json.string(error)),
+            #("retry_count", json.int(action.retry_count)),
+            #("max_retries", json.int(handler.retries)),
+            #("should_retry", json.bool(should_retry)),
+          ]),
+        )
 
       // Send FAILED event
       send_event_from_task(
@@ -659,8 +705,8 @@ fn execute_task_in_process(
         error_json,
       )
 
-      // Notify parent
-      process.send(parent, TaskFailed(action.step_run_id, error, True))
+      // Notify parent with retry decision
+      process.send(parent, TaskFailed(action.step_run_id, error, should_retry))
     }
   }
 }
@@ -709,10 +755,31 @@ fn handle_task_started(
 
 fn handle_task_completed(
   step_run_id: String,
-  _output: String,
+  output: String,
   state: WorkerState,
 ) -> actor.Next(WorkerMessage, WorkerState) {
   log_info("Task completed: " <> step_run_id)
+
+  // Get the running task info to store output
+  let new_completed_outputs = case dict.get(state.running_tasks, step_run_id) {
+    Some(running_task) -> {
+      let workflow_run_id = running_task.action.workflow_run_id
+      let step_name = running_task.action.step_name
+
+      // Get or create the outputs dict for this workflow run
+      let workflow_outputs =
+        dict.get(state.completed_outputs, workflow_run_id)
+        |> option.unwrap(dict.new())
+
+      // Store this task's output
+      let updated_workflow_outputs =
+        dict.insert(workflow_outputs, step_name, output)
+
+      // Update the completed outputs
+      dict.insert(state.completed_outputs, workflow_run_id, updated_workflow_outputs)
+    }
+    None -> state.completed_outputs
+  }
 
   // Remove from running tasks and free slot
   let new_running = dict.delete(state.running_tasks, step_run_id)
@@ -720,6 +787,7 @@ fn handle_task_completed(
     WorkerState(
       ..state,
       running_tasks: new_running,
+      completed_outputs: new_completed_outputs,
       available_slots: state.available_slots + 1,
     ),
   )
@@ -728,10 +796,15 @@ fn handle_task_completed(
 fn handle_task_failed(
   step_run_id: String,
   error: String,
-  _should_retry: Bool,
+  should_retry: Bool,
   state: WorkerState,
 ) -> actor.Next(WorkerMessage, WorkerState) {
-  log_error("Task failed: " <> step_run_id <> " - " <> error)
+  // Log with retry information
+  let retry_info = case should_retry {
+    True -> " (will be retried by server)"
+    False -> " (max retries exceeded)"
+  }
+  log_error("Task failed: " <> step_run_id <> " - " <> error <> retry_info)
 
   // Remove from running tasks and free slot
   let new_running = dict.delete(state.running_tasks, step_run_id)
@@ -751,13 +824,30 @@ fn handle_task_timeout(
   // Check if task is still running
   case dict.get(state.running_tasks, step_run_id) {
     Some(running_task) -> {
-      log_error("Task timeout: " <> step_run_id)
+      let action = running_task.action
+      let handler = running_task.handler
+
+      // Determine if we should retry based on handler config
+      let should_retry = action.retry_count < handler.retries
+      let retry_info = case should_retry {
+        True -> " (will be retried by server)"
+        False -> " (max retries exceeded)"
+      }
+
+      log_error(
+        "Task timeout: "
+        <> step_run_id
+        <> " after "
+        <> int_to_string(handler.timeout_ms)
+        <> "ms"
+        <> retry_info,
+      )
 
       // Kill the task process
       process.kill(running_task.pid)
 
-      // Send FAILED event for timeout
-      send_task_failed_event(state, running_task.action, "Task execution timeout")
+      // Send FAILED event for timeout with retry info
+      send_task_timeout_event(state, action, handler)
 
       // Remove from running tasks and free slot
       let new_running = dict.delete(state.running_tasks, step_run_id)
@@ -773,6 +863,51 @@ fn handle_task_timeout(
       // Task already completed, ignore timeout
       actor.continue(state)
     }
+  }
+}
+
+fn send_task_timeout_event(
+  state: WorkerState,
+  action: protobuf.AssignedAction,
+  handler: TaskHandler,
+) -> Nil {
+  case state.channel {
+    Some(channel) -> {
+      let should_retry = action.retry_count < handler.retries
+
+      let error_json =
+        json.to_string(
+          json.object([
+            #("error", json.string("Task execution timeout")),
+            #("timeout_ms", json.int(handler.timeout_ms)),
+            #("retry_count", json.int(action.retry_count)),
+            #("max_retries", json.int(handler.retries)),
+            #("should_retry", json.bool(should_retry)),
+          ]),
+        )
+
+      let event =
+        protobuf.StepActionEvent(
+          worker_id: option.unwrap(state.worker_id, ""),
+          job_id: action.job_id,
+          job_run_id: action.job_run_id,
+          step_id: action.step_id,
+          step_run_id: action.step_run_id,
+          action_id: action.action_id,
+          event_timestamp: current_time_ms(),
+          event_type: protobuf.StepEventTypeFailed,
+          event_payload: error_json,
+          retry_count: Some(action.retry_count),
+          // Tell server not to retry if we've exceeded max
+          should_not_retry: Some(!should_retry),
+        )
+
+      case grpc.send_step_action_event(channel, event, state.token) {
+        Ok(_) -> Nil
+        Error(e) -> log_error("Failed to send timeout event: " <> e)
+      }
+    }
+    None -> Nil
   }
 }
 
