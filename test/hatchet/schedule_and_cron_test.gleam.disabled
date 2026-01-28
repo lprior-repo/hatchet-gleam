@@ -1,0 +1,558 @@
+import gleam/dynamic
+import gleam/list
+import gleam/option
+import gleam/string
+import gleeunit/should
+import hatchet/internal/json as j
+import hatchet/internal/protocol as p
+import hatchet/workflow
+
+// ============================================================================
+// Section 1: Cron Expression Parsing Tests
+// ============================================================================
+
+pub fn cron_simple_expression_test() {
+  let wf = workflow.new("test-workflow") |> workflow.with_cron("*/5 * * * *")
+
+  wf.cron
+  |> should.equal(option.Some("*/5 * * * *"))
+}
+
+pub fn cron_weekdays_at_9am_test() {
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.with_cron("0 9 * * 1-5")
+
+  wf.cron
+  |> should.equal(option.Some("0 9 * * 1-5"))
+}
+
+pub fn cron_first_of_month_test() {
+  let wf = workflow.new("test-workflow") |> workflow.with_cron("0 0 1 * *")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 1 * *"))
+}
+
+pub fn cron_six_field_expression_test() {
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.with_cron("0 0 1 1 * 2025")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 1 1 * 2025"))
+}
+
+pub fn cron_complex_expression_test() {
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.with_cron("*/15 2,14,16 * * 1-5")
+
+  wf.cron
+  |> should.equal(option.Some("*/15 2,14,16 * * 1-5"))
+}
+
+// ============================================================================
+// Section 2: Schedule Creation Tests
+// ============================================================================
+
+pub fn schedule_create_simple_test() {
+  let req =
+    p.ScheduleCreateRequest(
+      trigger_at: "2024-12-25T00:00:00Z",
+      input: dynamic.string("test input"),
+    )
+
+  let json_str = j.encode_schedule_create(req)
+
+  string.contains(json_str, "2024-12-25T00:00:00Z")
+  |> should.equal(True)
+
+  string.contains(json_str, "trigger_at")
+  |> should.equal(True)
+}
+
+pub fn schedule_create_with_complex_input_test() {
+  let input =
+    dynamic.from_dict([
+      #("key1", dynamic.string("value1")),
+      #("key2", dynamic.int(42)),
+    ])
+
+  let req =
+    p.ScheduleCreateRequest(trigger_at: "2025-01-01T12:30:45Z", input: input)
+
+  let json_str = j.encode_schedule_create(req)
+
+  string.contains(json_str, "2025-01-01T12:30:45Z")
+  |> should.equal(True)
+}
+
+pub fn schedule_decode_response_test() {
+  let json_body =
+    "{\"schedule_id\":\"sched-123\",\"trigger_at\":\"2024-12-25T00:00:00Z\"}"
+
+  let assert Ok(response) = j.decode_schedule_response(json_body)
+
+  response.schedule_id
+  |> should.equal("sched-123")
+
+  response.trigger_at
+  |> should.equal("2024-12-25T00:00:00Z")
+}
+
+// ============================================================================
+// Section 3: Schedule Attachment to Workflows Tests
+// ============================================================================
+
+pub fn workflow_with_single_cron_test() {
+  let handler = fn(_ctx) { Ok(dynamic.string("result")) }
+  let wf =
+    workflow.new("scheduled-workflow")
+    |> workflow.with_cron("0 0 * * *")
+    |> workflow.task("process", handler)
+
+  wf.cron
+  |> should.equal(option.Some("0 0 * * *"))
+
+  wf.tasks
+  |> list.length
+  |> should.equal(1)
+}
+
+pub fn workflow_update_cron_test() {
+  let wf =
+    workflow.new("scheduled-workflow")
+    |> workflow.with_cron("0 0 * * *")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 * * *"))
+
+  let updated_wf = wf |> workflow.with_cron("0 9 * * 1-5")
+
+  updated_wf.cron
+  |> should.equal(option.Some("0 9 * * 1-5"))
+}
+
+pub fn workflow_remove_cron_test() {
+  let wf =
+    workflow.new("scheduled-workflow")
+    |> workflow.with_cron("0 0 * * *")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 * * *"))
+
+  let wf_no_cron = workflow.new("scheduled-workflow")
+
+  wf_no_cron.cron
+  |> should.equal(option.None)
+}
+
+pub fn workflow_json_with_cron_test() {
+  let req =
+    p.WorkflowCreateRequest(
+      name: "scheduled-workflow",
+      description: option.Some("A scheduled workflow"),
+      version: option.Some("1.0.0"),
+      tasks: [],
+      cron: option.Some("0 0 * * *"),
+      events: [],
+      concurrency: option.None,
+    )
+
+  let json_str = j.encode_workflow_create(req)
+
+  string.contains(json_str, "0 0 * * *")
+  |> should.equal(True)
+
+  string.contains(json_str, "cron")
+  |> should.equal(True)
+}
+
+pub fn workflow_json_without_cron_test() {
+  let req =
+    p.WorkflowCreateRequest(
+      name: "manual-workflow",
+      description: option.None,
+      version: option.None,
+      tasks: [],
+      cron: option.None,
+      events: [],
+      concurrency: option.None,
+    )
+
+  let json_str = j.encode_workflow_create(req)
+
+  string.contains(json_str, "cron")
+  |> should.equal(True)
+
+  string.contains(json_str, "null")
+  |> should.equal(True)
+}
+
+// ============================================================================
+// Section 4: Schedule Execution Tests (Mock/API)
+// ============================================================================
+
+pub fn cron_create_request_encoding_test() {
+  let req =
+    p.CronCreateRequest(
+      name: "nightly-job",
+      expression: "0 0 * * *",
+      input: dynamic.string(#("task", "data")),
+    )
+
+  let json_str = j.encode_cron_create(req)
+
+  string.contains(json_str, "nightly-job")
+  |> should.equal(True)
+
+  string.contains(json_str, "0 0 * * *")
+  |> should.equal(True)
+
+  string.contains(json_str, "expression")
+  |> should.equal(True)
+}
+
+pub fn cron_response_decoding_test() {
+  let json_body =
+    "{\"cron_id\":\"cron-123\",\"name\":\"nightly-job\",\"expression\":\"0 0 * * *\"}"
+
+  let assert Ok(response) = j.decode_cron_response(json_body)
+
+  response.cron_id
+  |> should.equal("cron-123")
+
+  response.name
+  |> should.equal("nightly-job")
+
+  response.expression
+  |> should.equal("0 0 * * *")
+}
+
+pub fn cron_create_with_complex_input_test() {
+  let input =
+    dynamic.from_dict([
+      #("userId", dynamic.string("user-123")),
+      #("action", dynamic.string("send-email")),
+      #("priority", dynamic.int(1)),
+    ])
+
+  let req =
+    p.CronCreateRequest(
+      name: "user-reminder",
+      expression: "*/30 * * * *",
+      input: input,
+    )
+
+  let json_str = j.encode_cron_create(req)
+
+  string.contains(json_str, "user-reminder")
+  |> should.equal(True)
+
+  string.contains(json_str, "*/30 * * * *")
+  |> should.equal(True)
+}
+
+// ============================================================================
+// Section 5: Timezone Handling Tests (API Only)
+// ============================================================================
+
+pub fn schedule_iso8601_utc_test() {
+  let req =
+    p.ScheduleCreateRequest(
+      trigger_at: "2025-01-01T00:00:00Z",
+      input: dynamic.string("test"),
+    )
+
+  let json_str = j.encode_schedule_create(req)
+
+  string.contains(json_str, "2025-01-01T00:00:00Z")
+  |> should.equal(True)
+
+  string.contains(json_str, "Z")
+  |> should.equal(True)
+}
+
+pub fn schedule_iso8601_with_offset_test() {
+  let req =
+    p.ScheduleCreateRequest(
+      trigger_at: "2025-01-01T00:00:00-05:00",
+      input: dynamic.string("test"),
+    )
+
+  let json_str = j.encode_schedule_create(req)
+
+  string.contains(json_str, "2025-01-01T00:00:00-05:00")
+  |> should.equal(True)
+}
+
+pub fn schedule_iso8601_with_milliseconds_test() {
+  let req =
+    p.ScheduleCreateRequest(
+      trigger_at: "2025-01-01T12:30:45.123Z",
+      input: dynamic.string("test"),
+    )
+
+  let json_str = j.encode_schedule_create(req)
+
+  string.contains(json_str, "2025-01-01T12:30:45.123Z")
+  |> should.equal(True)
+}
+
+// ============================================================================
+// Section 6: Schedule Monitoring Tests (Mock/API)
+// ============================================================================
+
+pub fn cron_create_response_fields_test() {
+  let json_body =
+    "{\"cron_id\":\"cron-abc-123\",\"name\":\"daily-report\",\"expression\":\"0 9 * * *\"}"
+
+  let assert Ok(response) = j.decode_cron_response(json_body)
+
+  response.cron_id
+  |> should.equal("cron-abc-123")
+
+  response.name
+  |> should.equal("daily-report")
+
+  response.expression
+  |> should.equal("0 9 * * *")
+}
+
+pub fn schedule_create_response_fields_test() {
+  let json_body =
+    "{\"schedule_id\":\"sched-xyz-789\",\"trigger_at\":\"2025-06-01T08:00:00Z\"}"
+
+  let assert Ok(response) = j.decode_schedule_response(json_body)
+
+  response.schedule_id
+  |> should.equal("sched-xyz-789")
+
+  response.trigger_at
+  |> should.equal("2025-06-01T08:00:00Z")
+}
+
+// ============================================================================
+// Section 7: Complex Cron Expressions
+// ============================================================================
+
+pub fn cron_every_hour_test() {
+  let wf = workflow.new("hourly-job") |> workflow.with_cron("0 * * * *")
+
+  wf.cron
+  |> should.equal(option.Some("0 * * * *"))
+}
+
+pub fn cron_every_day_midnight_test() {
+  let wf = workflow.new("daily-job") |> workflow.with_cron("0 0 * * *")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 * * *"))
+}
+
+pub fn cron_every_week_test() {
+  let wf = workflow.new("weekly-job") |> workflow.with_cron("0 0 * * 0")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 * * 0"))
+}
+
+pub fn cron_every_month_test() {
+  let wf = workflow.new("monthly-job") |> workflow.with_cron("0 0 1 * *")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 1 * *"))
+}
+
+pub fn cron_every_year_test() {
+  let wf = workflow.new("yearly-job") |> workflow.with_cron("0 0 1 1 *")
+
+  wf.cron
+  |> should.equal(option.Some("0 0 1 1 *"))
+}
+
+pub fn cron_business_hours_test() {
+  let wf =
+    workflow.new("business-hours-job")
+    |> workflow.with_cron("0 9-17 * * 1-5")
+
+  wf.cron
+  |> should.equal(option.Some("0 9-17 * * 1-5"))
+}
+
+pub fn cron_specific_times_test() {
+  let wf =
+    workflow.new("multi-time-job")
+    |> workflow.with_cron("0 9,12,18 * * *")
+
+  wf.cron
+  |> should.equal(option.Some("0 9,12,18 * * *"))
+}
+
+pub fn cron_step_expression_test() {
+  let wf = workflow.new("stepped-job") |> workflow.with_cron("*/10 * * * *")
+
+  wf.cron
+  |> should.equal(option.Some("*/10 * * * *"))
+}
+
+pub fn cron_range_with_step_test() {
+  let wf =
+    workflow.new("complex-step-job")
+    |> workflow.with_cron("0 8-17/2 * * 1-5")
+
+  wf.cron
+  |> should.equal(option.Some("0 8-17/2 * * 1-5"))
+}
+
+// ============================================================================
+// Section 8: Error Handling Tests
+// ============================================================================
+
+pub fn schedule_decode_missing_field_test() {
+  let json_body = "{\"schedule_id\":\"sched-123\"}"
+
+  let assert Error(_msg) = j.decode_schedule_response(json_body)
+}
+
+pub fn schedule_decode_invalid_json_test() {
+  let json_body = "{invalid json}"
+
+  let assert Error(_msg) = j.decode_schedule_response(json_body)
+}
+
+pub fn cron_decode_missing_field_test() {
+  let json_body = "{\"cron_id\":\"cron-123\",\"name\":\"test\"}"
+
+  let assert Error(_msg) = j.decode_cron_response(json_body)
+}
+
+pub fn cron_decode_invalid_json_test() {
+  let json_body = "{invalid json}"
+
+  let assert Error(_msg) = j.decode_cron_response(json_body)
+}
+
+// ============================================================================
+// Section 9: Integration Tests
+// ============================================================================
+
+pub fn workflow_with_cron_and_events_test() {
+  let handler = fn(_ctx) { Ok(dynamic.string("result")) }
+  let wf =
+    workflow.new("multi-trigger-workflow")
+    |> workflow.with_cron("0 0 * * *")
+    |> workflow.with_events(["user.created", "order.placed"])
+    |> workflow.task("process", handler)
+
+  wf.cron
+  |> should.equal(option.Some("0 0 * * *"))
+
+  wf.events
+  |> should.equal(["user.created", "order.placed"])
+
+  wf.tasks
+  |> list.length
+  |> should.equal(1)
+}
+
+pub fn workflow_with_cron_and_concurrency_test() {
+  let handler = fn(_ctx) { Ok(dynamic.string("result")) }
+  let wf =
+    workflow.new("concurrent-scheduled-workflow")
+    |> workflow.with_cron("*/5 * * * *")
+    |> workflow.with_concurrency(5, hatchet / types.CancelInProgress)
+    |> workflow.task("process", handler)
+
+  wf.cron
+  |> should.equal(option.Some("*/5 * * * *"))
+
+  let assert option.Some(concurrency) = wf.concurrency
+  concurrency.max_concurrent
+  |> should.equal(5)
+}
+
+pub fn workflow_request_with_all_triggers_test() {
+  let req =
+    p.WorkflowCreateRequest(
+      name: "full-featured-workflow",
+      description: option.Some("A workflow with all triggers"),
+      version: option.Some("2.0.0"),
+      tasks: [],
+      cron: option.Some("0 9 * * 1-5"),
+      events: ["event.a", "event.b"],
+      concurrency: option.None,
+    )
+
+  let json_str = j.encode_workflow_create(req)
+
+  string.contains(json_str, "cron")
+  |> should.equal(True)
+
+  string.contains(json_str, "events")
+  |> should.equal(True)
+
+  string.contains(json_str, "event.a")
+  |> should.equal(True)
+}
+
+// ============================================================================
+// Section 10: Edge Cases
+// ============================================================================
+
+pub fn cron_with_multiple_ranges_test() {
+  let wf =
+    workflow.new("multi-range-job")
+    |> workflow.with_cron("0 8-10,14-17 * * 1-5")
+
+  wf.cron
+  |> should.equal(option.Some("0 8-10,14-17 * * 1-5"))
+}
+
+pub fn cron_with_all_stars_test() {
+  let wf = workflow.new("every-minute-job") |> workflow.with_cron("* * * * *")
+
+  wf.cron
+  |> should.equal(option.Some("* * * * *"))
+}
+
+pub fn schedule_with_future_date_test() {
+  let req =
+    p.ScheduleCreateRequest(
+      trigger_at: "2099-12-31T23:59:59Z",
+      input: dynamic.string("future job"),
+    )
+
+  let json_str = j.encode_schedule_create(req)
+
+  string.contains(json_str, "2099-12-31T23:59:59Z")
+  |> should.equal(True)
+}
+
+pub fn schedule_with_empty_input_test() {
+  let req =
+    p.ScheduleCreateRequest(
+      trigger_at: "2025-01-01T00:00:00Z",
+      input: dynamic.string(""),
+    )
+
+  let json_str = j.encode_schedule_create(req)
+
+  string.contains(json_str, "2025-01-01T00:00:00Z")
+  |> should.equal(True)
+}
+
+pub fn cron_create_with_empty_name_test() {
+  let req =
+    p.CronCreateRequest(
+      name: "",
+      expression: "0 * * * *",
+      input: dynamic.string("test"),
+    )
+
+  let json_str = j.encode_cron_create(req)
+
+  string.contains(json_str, "expression")
+  |> should.equal(True)
+}
