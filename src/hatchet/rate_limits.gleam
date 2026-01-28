@@ -7,6 +7,7 @@
 import gleam/http/request
 import gleam/httpc
 import gleam/int
+import hatchet/errors
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
 import hatchet/types.{type Client}
@@ -60,8 +61,13 @@ pub fn upsert(
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 || resp.status == 201 -> Ok(Nil)
         Ok(resp) ->
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
-        Error(_) -> Error("Network error")
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
     Error(_) -> Error("Invalid URL")

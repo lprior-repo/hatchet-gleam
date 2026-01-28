@@ -11,7 +11,7 @@ import gleam/dynamic.{string}
 import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/io
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/string
 import gleeunit/should
 import hatchet/client
@@ -102,7 +102,13 @@ pub fn end_to_end_workflow_execution_test() {
       )
 
     let assert Ok(worker) =
-      client.new_worker_with_grpc_port(client, config, [test_workflow], 7077)
+      client.new_worker_with_grpc_port(
+        client,
+        config,
+        [test_workflow],
+        7077,
+        None,
+      )
 
     io.println("   ✅ Worker created\n")
 
@@ -162,7 +168,13 @@ pub fn worker_registration_and_connection_test() {
       )
 
     let assert Ok(worker) =
-      client.new_worker_with_grpc_port(client, config, [simple_workflow], 7077)
+      client.new_worker_with_grpc_port(
+        client,
+        config,
+        [simple_workflow],
+        7077,
+        None,
+      )
 
     io.println("   ✅ Worker created\n")
 

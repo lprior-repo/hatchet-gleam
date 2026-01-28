@@ -17,6 +17,9 @@ import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/erlang/process.{type Pid, type Subject}
+import gleam/http/request
+import gleam/httpc
+import gleam/int
 import gleam/io
 import gleam/json
 import gleam/list
@@ -26,9 +29,12 @@ import gleam/result
 import gleam/string
 
 import hatchet/context
+import hatchet/errors
 import hatchet/internal/ffi/protobuf
 import hatchet/internal/grpc
-import hatchet/internal/tls.{type TLSConfig, Insecure}
+import hatchet/internal/json as j
+import hatchet/internal/protocol as p
+import hatchet/internal/tls.{type TLSConfig}
 import hatchet/types.{type Client, type WorkerConfig, type Workflow}
 
 // ============================================================================
@@ -141,9 +147,11 @@ pub fn start(
   config: WorkerConfig,
   workflows: List(Workflow),
   grpc_port: Int,
+  tls_config: Option(tls.TLSConfig),
 ) -> Result(Subject(WorkerMessage), actor.StartError) {
   let host = types.get_host(client)
   let token = types.get_token(client)
+  let tls = option.unwrap(tls_config, tls.Insecure)
 
   // Build action registry from workflows
   let action_registry = build_action_registry(workflows)
@@ -155,7 +163,7 @@ pub fn start(
       host: host,
       grpc_port: grpc_port,
       token: token,
-      tls_config: Insecure,
+      tls_config: tls,
       channel: None,
       stream: None,
       worker_id: None,
@@ -447,8 +455,22 @@ fn register_worker(
     }
     Error(e) -> {
       case e {
-        protobuf.ProtobufEncodeError(msg) -> Error("Encode error: " <> msg)
-        protobuf.ProtobufDecodeError(msg) -> Error("Decode error: " <> msg)
+        protobuf.ProtobufEncodeError(msg) -> {
+          Error(
+            errors.to_simple_string(errors.decode_error(
+              "worker register request",
+              msg,
+            )),
+          )
+        }
+        protobuf.ProtobufDecodeError(msg) -> {
+          Error(
+            errors.to_simple_string(errors.decode_error(
+              "worker register request",
+              msg,
+            )),
+          )
+        }
       }
     }
   }
@@ -640,6 +662,7 @@ fn spawn_task_process(
   let worker_id = option.unwrap(state.worker_id, "")
   let channel = state.channel
   let token = state.token
+  let client = state.client
 
   // Get local parent outputs for this workflow run if available
   let local_parent_outputs =
@@ -654,6 +677,7 @@ fn spawn_task_process(
       channel,
       token,
       local_parent_outputs,
+      client,
       parent,
     )
   })
@@ -666,6 +690,7 @@ fn execute_task_in_process(
   channel: Option(grpc.Channel),
   token: String,
   local_parent_outputs: Dict(String, String),
+  client: Client,
   parent: Subject(WorkerMessage),
 ) -> Nil {
   // Send ACKNOWLEDGED
@@ -752,10 +777,9 @@ fn execute_task_in_process(
         )
         Ok(Nil)
       },
-      spawn_workflow_fn: fn(_workflow_name, _input, _metadata) {
-        // Child workflow spawning is handled server-side via REST API
-        // This requires the REST client which is separate from the gRPC worker
-        Error("Child workflow spawning requires REST API client")
+      spawn_workflow_fn: fn(workflow_name, input, metadata) {
+        // Spawn child workflow via REST API
+        spawn_child_workflow(client, workflow_name, input, metadata)
       },
     )
 
@@ -1278,6 +1302,64 @@ fn encode_dynamic_to_json_value(value: Dynamic) -> json.Json {
           }
       }
   }
+}
+
+// ============================================================================
+// Child Workflow Spawning
+// ============================================================================
+
+fn spawn_child_workflow(
+  client: Client,
+  workflow_name: String,
+  input: Dynamic,
+  metadata: Dict(String, String),
+) -> Result(String, String) {
+  let run_req =
+    p.WorkflowRunRequest(
+      workflow_name: workflow_name,
+      input: input,
+      metadata: metadata,
+      priority: None,
+      sticky: False,
+      run_key: None,
+    )
+
+  let req_body = j.encode_workflow_run(run_req)
+  let base_url = build_base_url(client)
+  let url = base_url <> "/api/v1/workflows/" <> workflow_name <> "/run"
+
+  case request.to(url) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_body(req_body)
+        |> request.set_header("content-type", "application/json")
+        |> request.set_header(
+          "authorization",
+          "Bearer " <> types.get_token(client),
+        )
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 -> {
+          case j.decode_workflow_run_response(resp.body) {
+            Ok(run_resp) -> Ok(run_resp.run_id)
+            Error(e) -> Error("Failed to decode response: " <> e)
+          }
+        }
+        Ok(resp) -> {
+          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
+        }
+        Error(_) -> Error("Network error")
+      }
+    }
+    Error(_) -> Error("Invalid URL")
+  }
+}
+
+fn build_base_url(client: Client) -> String {
+  let host = types.get_host(client)
+  let port = types.get_port(client)
+  "http://" <> host <> ":" <> int.to_string(port)
 }
 
 // ============================================================================

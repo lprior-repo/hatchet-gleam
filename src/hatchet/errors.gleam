@@ -281,3 +281,35 @@ pub fn is_task_error(error: HatchetError) -> Bool {
 
 @external(erlang, "erlang", "integer_to_binary")
 fn int_to_string(i: Int) -> String
+
+// ============================================================================
+// Error Wrappers (for DRY error handling)
+// ============================================================================
+
+/// Wrap an HTTP API error with consistent formatting.
+pub fn api_http_error(status_code: Int, body: String) -> HatchetError {
+  ProtocolError(JsonError(
+    "API request",
+    "status " <> int_to_string(status_code) <> ": " <> body,
+  ))
+}
+
+/// Wrap a network error with consistent formatting.
+pub fn network_error(details: String) -> HatchetError {
+  ConnectionError(ConnectionFailed("unknown", 0, details))
+}
+
+/// Wrap a decode/parse error with consistent formatting.
+pub fn decode_error(operation: String, details: String) -> HatchetError {
+  ProtocolError(DecodeError(operation, details))
+}
+
+/// Wrap a gRPC error with consistent formatting.
+pub fn grpc_error(method: String, details: String) -> HatchetError {
+  ProtocolError(GrpcError(method, None, details))
+}
+
+/// Convert a HatchetError to a simple string for Result(String) returns.
+pub fn to_simple_string(error: HatchetError) -> String {
+  to_string(error)
+}

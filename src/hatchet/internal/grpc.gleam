@@ -79,6 +79,7 @@
 /// gRPC Client Module
 ///
 import gleam/option.{type Option, None, Some}
+import hatchet/errors
 import hatchet/internal/ffi/grpcbox
 import hatchet/internal/ffi/protobuf
 import hatchet/internal/tls.{type TLSConfig, Insecure, Mtls, Tls}
@@ -169,7 +170,14 @@ pub fn register_worker(
         )
       {
         Ok(resp) -> Ok(RegisterResponse(worker_id: resp.worker_id))
-        Error(e) -> Error("Decode error: " <> error_message(e))
+        Error(e) -> {
+          Error(
+            errors.to_simple_string(errors.decode_error(
+              "worker register response",
+              error_message(e),
+            )),
+          )
+        }
       }
     Error(e) -> Error(error_to_string(e))
   }
@@ -226,7 +234,12 @@ pub fn listen_v2(
       }
     }
     Error(e) ->
-      Error("Failed to encode listen request: " <> pb_error_message(e))
+      Error(
+        errors.to_simple_string(errors.decode_error(
+          "listen request",
+          pb_error_message(e),
+        )),
+      )
   }
 }
 
@@ -279,7 +292,14 @@ pub fn recv_assigned_action(
       let msg = protobuf.protobuf_message_from_bits(data)
       case protobuf.decode_assigned_action(msg) {
         Ok(action) -> Ok(action)
-        Error(e) -> Error("Decode error: " <> pb_error_message(e))
+        Error(e) -> {
+          Error(
+            errors.to_simple_string(errors.decode_error(
+              "assigned action",
+              pb_error_message(e),
+            )),
+          )
+        }
       }
     }
     Error(e) -> Error(e)
@@ -315,13 +335,27 @@ pub fn send_step_action_event(
           let msg = protobuf.protobuf_message_from_bits(resp_data)
           case protobuf.decode_action_event_response(msg) {
             Ok(resp) -> Ok(resp)
-            Error(e) -> Error("Decode error: " <> pb_error_message(e))
+            Error(e) -> {
+              Error(
+                errors.to_simple_string(errors.decode_error(
+                  "action event response",
+                  pb_error_message(e),
+                )),
+              )
+            }
           }
         }
         Error(e) -> Error(error_to_string(e))
       }
     }
-    Error(e) -> Error("Encode error: " <> pb_error_message(e))
+    Error(e) -> {
+      Error(
+        errors.to_simple_string(errors.decode_error(
+          "step action event",
+          pb_error_message(e),
+        )),
+      )
+    }
   }
 }
 
@@ -351,7 +385,14 @@ pub fn send_heartbeat(
         Error(e) -> Error(error_to_string(e))
       }
     }
-    Error(e) -> Error("Encode error: " <> pb_error_message(e))
+    Error(e) -> {
+      Error(
+        errors.to_simple_string(errors.decode_error(
+          "heartbeat request",
+          pb_error_message(e),
+        )),
+      )
+    }
   }
 }
 

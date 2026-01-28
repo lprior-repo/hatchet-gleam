@@ -237,6 +237,18 @@ send(dummy, _Data) ->
 recv(Stream, Timeout) when is_tuple(Stream) ->
     {gun_stream, GunPid, StreamRef} = Stream,
     case gun:await(GunPid, StreamRef, Timeout) of
+        {response, nofin, 200, _Headers} ->
+            %% Initial response headers for server-streaming, continue reading
+            recv(Stream, Timeout);
+        {response, fin, _Status, Headers} ->
+            %% Server closed with trailers-only response (error)
+            GrpcStatus = proplists:get_value(<<"grpc-status">>, Headers, <<"0">>),
+            case GrpcStatus of
+                <<"0">> -> {error, <<"stream closed">>};
+                _ ->
+                    Msg = proplists:get_value(<<"grpc-message">>, Headers, <<"unknown">>),
+                    {error, <<"gRPC error ", GrpcStatus/binary, ": ", Msg/binary>>}
+            end;
         {data, nofin, Data} ->
             case grpc_frame_decode(Data) of
                 {ok, Payload} -> {ok, Payload};

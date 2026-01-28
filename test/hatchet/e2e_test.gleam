@@ -4,7 +4,7 @@ import gleam/dynamic.{int, string}
 import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleeunit/should
 import hatchet/client
 import hatchet/internal/protocol as p
@@ -141,7 +141,7 @@ pub fn e2e_happy_path_test() {
       )
 
     let worker_result =
-      client.new_worker_with_grpc_port(c, worker_config, [workflow], 7077)
+      client.new_worker_with_grpc_port(c, worker_config, [workflow], 7077, None)
     worker_result |> should.be_ok()
 
     let assert Ok(worker) = worker_result
@@ -209,7 +209,7 @@ pub fn e2e_numeric_processing_test() {
       )
 
     let worker_result =
-      client.new_worker_with_grpc_port(c, worker_config, [workflow], 7077)
+      client.new_worker_with_grpc_port(c, worker_config, [workflow], 7077, None)
     worker_result |> should.be_ok()
 
     let assert Ok(worker) = worker_result
@@ -287,7 +287,7 @@ pub fn e2e_multi_step_workflow_test() {
       )
 
     let worker_result =
-      client.new_worker_with_grpc_port(c, worker_config, [workflow], 7077)
+      client.new_worker_with_grpc_port(c, worker_config, [workflow], 7077, None)
     worker_result |> should.be_ok()
 
     let assert Ok(worker) = worker_result

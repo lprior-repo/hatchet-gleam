@@ -2,9 +2,16 @@ import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang/process
 import gleam/option.{type Option, None, Some}
+import hatchet/internal/tls.{type TLSConfig}
 
 pub opaque type Client {
-  Client(host: String, port: Int, token: String, namespace: Option(String))
+  Client(
+    host: String,
+    port: Int,
+    token: String,
+    namespace: Option(String),
+    tls_config: TLSConfig,
+  )
 }
 
 pub fn create_client(
@@ -13,7 +20,29 @@ pub fn create_client(
   token: String,
   namespace: Option(String),
 ) -> Client {
-  Client(host: host, port: port, token: token, namespace: namespace)
+  Client(
+    host: host,
+    port: port,
+    token: token,
+    namespace: namespace,
+    tls_config: tls.Insecure,
+  )
+}
+
+pub fn create_client_with_tls(
+  host: String,
+  port: Int,
+  token: String,
+  namespace: Option(String),
+  tls_config: TLSConfig,
+) -> Client {
+  Client(
+    host: host,
+    port: port,
+    token: token,
+    namespace: namespace,
+    tls_config: tls_config,
+  )
 }
 
 pub fn get_host(client: Client) -> String {
@@ -30,6 +59,10 @@ pub fn get_token(client: Client) -> String {
 
 pub fn get_namespace(client: Client) -> Option(String) {
   client.namespace
+}
+
+pub fn get_tls_config(client: Client) -> TLSConfig {
+  client.tls_config
 }
 
 pub type Workflow {
@@ -83,13 +116,37 @@ pub type TaskContext {
     parent_outputs: Dict(String, Dynamic),
     metadata: Dict(String, String),
     logger: fn(String) -> Nil,
-    // Callbacks to the orchestrator
+    // Callbacks to orchestrator
     stream_fn: fn(Dynamic) -> Result(Nil, String),
     release_slot_fn: fn() -> Result(Nil, String),
     refresh_timeout_fn: fn(Int) -> Result(Nil, String),
     cancel_fn: fn() -> Result(Nil, String),
     spawn_workflow_fn: fn(String, Dynamic, Dict(String, String)) ->
       Result(String, String),
+  )
+}
+
+/// Durable context for tasks that can survive process restarts.
+///
+/// Extends TaskContext with checkpointing capabilities and
+/// durable sleep operations.
+pub type DurableContext {
+  DurableContext(
+    task_context: TaskContext,
+    checkpoint_key: String,
+    wait_key_counter: Int,
+    register_durable_event_fn: fn(String, String, DurableEventConditions) ->
+      Result(Nil, String),
+    await_durable_event_fn: fn(String, String) -> Result(Dynamic, String),
+  )
+}
+
+/// Durable event conditions for SleepFor and WaitForEvent operations.
+pub type DurableEventConditions {
+  DurableEventConditions(
+    sleep_duration_ms: Option(Int),
+    event_key: Option(String),
+    event_expression: Option(String),
   )
 }
 

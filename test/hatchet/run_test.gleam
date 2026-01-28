@@ -1,6 +1,6 @@
 import gleam/dict
-import gleam/option
 import gleam/list
+import gleam/option
 import gleeunit/should
 import hatchet/client
 import hatchet/run

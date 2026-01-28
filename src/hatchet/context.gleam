@@ -19,7 +19,7 @@
 ////     Some(parent_data) -> {
 ////       // Process with parent data
 ////       context.log(ctx, "Processing with parent data")
-////       Ok(dynamic.from("result"))
+////       Ok(dynamic.string("result"))
 ////     }
 ////     None -> Error("Missing parent output")
 ////   }

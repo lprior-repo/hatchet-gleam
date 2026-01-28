@@ -86,7 +86,7 @@ pub fn live_worker_registration_test() {
 
     // Create worker with gRPC port 7077
     let worker_result =
-      client.new_worker_with_grpc_port(c, config, [workflow], 7077)
+      client.new_worker_with_grpc_port(c, config, [workflow], 7077, None)
     worker_result |> should.be_ok()
 
     let assert Ok(worker) = worker_result

@@ -8,6 +8,7 @@ import gleam/http
 import gleam/http/request
 import gleam/httpc
 import gleam/int
+import hatchet/errors
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
 import hatchet/types.{type Client, type Workflow}
@@ -54,12 +55,24 @@ pub fn create(
         Ok(resp) if resp.status == 200 || resp.status == 201 -> {
           case j.decode_schedule_response(resp.body) {
             Ok(sched_resp) -> Ok(sched_resp.schedule_id)
-            Error(e) -> Error("Failed to decode response: " <> e)
+            Error(e) -> {
+              Error(
+                errors.to_simple_string(errors.decode_error(
+                  "schedule response",
+                  e,
+                )),
+              )
+            }
           }
         }
         Ok(resp) ->
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
-        Error(_) -> Error("Network error")
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
     Error(_) -> Error("Invalid URL")
@@ -82,8 +95,13 @@ pub fn delete(client: Client, schedule_id: String) -> Result(Nil, String) {
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 || resp.status == 204 -> Ok(Nil)
         Ok(resp) ->
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
-        Error(_) -> Error("Network error")
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
     Error(_) -> Error("Invalid URL")

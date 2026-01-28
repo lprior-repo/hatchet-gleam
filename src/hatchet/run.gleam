@@ -1,11 +1,11 @@
 import gleam/dict
 import gleam/dynamic.{type Dynamic}
-import gleam/http/request
 import gleam/httpc
-import gleam/int
 import gleam/list
 import gleam/option
+import hatchet/errors
 import hatchet/internal/ffi/timer
+import hatchet/internal/http as h
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
 import hatchet/types.{
@@ -40,20 +40,11 @@ pub fn run_with_options(
     )
 
   let req_body = j.encode_workflow_run(run_req)
-  let base_url = build_base_url(client)
+  let base_url = h.build_base_url(client)
   let url = base_url <> "/api/v1/workflows/" <> workflow.name <> "/run"
 
-  case request.to(url) {
+  case h.make_authenticated_request(client, url, option.Some(req_body)) {
     Ok(req) -> {
-      let req =
-        req
-        |> request.set_body(req_body)
-        |> request.set_header("content-type", "application/json")
-        |> request.set_header(
-          "authorization",
-          "Bearer " <> types.get_token(client),
-        )
-
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 -> {
           case j.decode_workflow_run_response(resp.body) {
@@ -62,16 +53,28 @@ pub fn run_with_options(
                 types.create_workflow_run_ref(run_resp.run_id, client)
               await_result(run_ref)
             }
-            Error(e) -> Error("Failed to decode response: " <> e)
+            Error(e) -> {
+              Error(
+                errors.to_simple_string(errors.decode_error(
+                  "workflow run response",
+                  e,
+                )),
+              )
+            }
           }
         }
         Ok(resp) -> {
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
         }
-        Error(_) -> Error("Network error")
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
-    Error(_) -> Error("Invalid URL")
+    Error(e) -> Error(e)
   }
 }
 
@@ -101,36 +104,39 @@ pub fn run_no_wait_with_options(
     )
 
   let req_body = j.encode_workflow_run(run_req)
-  let base_url = build_base_url(client)
+  let base_url = h.build_base_url(client)
   let url = base_url <> "/api/v1/workflows/" <> workflow.name <> "/run"
 
-  case request.to(url) {
+  case h.make_authenticated_request(client, url, option.Some(req_body)) {
     Ok(req) -> {
-      let req =
-        req
-        |> request.set_body(req_body)
-        |> request.set_header("content-type", "application/json")
-        |> request.set_header(
-          "authorization",
-          "Bearer " <> types.get_token(client),
-        )
-
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 -> {
           case j.decode_workflow_run_response(resp.body) {
             Ok(run_resp) -> {
               Ok(types.create_workflow_run_ref(run_resp.run_id, client))
             }
-            Error(e) -> Error("Failed to decode response: " <> e)
+            Error(e) -> {
+              Error(
+                errors.to_simple_string(errors.decode_error(
+                  "workflow run response",
+                  e,
+                )),
+              )
+            }
           }
         }
         Ok(resp) -> {
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
         }
-        Error(_) -> Error("Network error")
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
-    Error(_) -> Error("Invalid URL")
+    Error(e) -> Error(e)
   }
 }
 
@@ -165,18 +171,17 @@ fn poll_result(ref: WorkflowRunRef, attempts: Int) -> Result(Dynamic, String) {
   case get_status(ref) {
     Ok(Succeeded) -> {
       let url =
-        build_base_url(types.get_ref_client(ref))
+        h.build_base_url(types.get_ref_client(ref))
         <> "/api/v1/runs/"
         <> types.get_run_id(ref)
-      case request.to(url) {
+      case
+        h.make_authenticated_request(
+          types.get_ref_client(ref),
+          url,
+          option.None,
+        )
+      {
         Ok(req) -> {
-          let req =
-            req
-            |> request.set_header(
-              "authorization",
-              "Bearer " <> types.get_token(types.get_ref_client(ref)),
-            )
-
           case httpc.send(req) {
             Ok(resp) if resp.status == 200 -> {
               case j.decode_workflow_status_response(resp.body) {
@@ -186,14 +191,24 @@ fn poll_result(ref: WorkflowRunRef, attempts: Int) -> Result(Dynamic, String) {
                     option.None -> Error("No output available")
                   }
                 }
-                Error(e) -> Error("Failed to decode response: " <> e)
+                Error(e) -> {
+                  Error(
+                    errors.to_simple_string(errors.decode_error(
+                      "workflow status response",
+                      e,
+                    )),
+                  )
+                }
               }
             }
-            Ok(resp) -> Error("API error: " <> int.to_string(resp.status))
-            Error(_) -> Error("Network error")
+            Ok(resp) ->
+              Error(
+                errors.to_simple_string(errors.api_http_error(resp.status, "")),
+              )
+            Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
           }
         }
-        Error(_) -> Error("Invalid URL")
+        Error(e) -> Error(e)
       }
     }
     Ok(Failed(err)) -> Error("Workflow failed: " <> err)
@@ -212,67 +227,61 @@ fn poll_result(ref: WorkflowRunRef, attempts: Int) -> Result(Dynamic, String) {
 
 pub fn get_status(ref: WorkflowRunRef) -> Result(RunStatus, String) {
   let url =
-    build_base_url(types.get_ref_client(ref))
+    h.build_base_url(types.get_ref_client(ref))
     <> "/api/v1/runs/"
     <> types.get_run_id(ref)
     <> "/status"
-  case request.to(url) {
+  case
+    h.make_authenticated_request(types.get_ref_client(ref), url, option.None)
+  {
     Ok(req) -> {
-      let req =
-        req
-        |> request.set_header(
-          "authorization",
-          "Bearer " <> types.get_token(types.get_ref_client(ref)),
-        )
-
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 -> {
           case j.decode_workflow_status_response(resp.body) {
             Ok(status_resp) -> Ok(parse_status(status_resp))
-            Error(e) -> Error("Failed to decode response: " <> e)
+            Error(e) -> {
+              Error(
+                errors.to_simple_string(errors.decode_error(
+                  "workflow status response",
+                  e,
+                )),
+              )
+            }
           }
         }
-        Ok(resp) -> Error("API error: " <> int.to_string(resp.status))
-        Error(_) -> Error("Network error")
+        Ok(resp) ->
+          Error(errors.to_simple_string(errors.api_http_error(resp.status, "")))
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
-    Error(_) -> Error("Invalid URL")
+    Error(e) -> Error(e)
   }
 }
 
 pub fn cancel(ref: WorkflowRunRef) -> Result(Nil, String) {
   let url =
-    build_base_url(types.get_ref_client(ref))
+    h.build_base_url(types.get_ref_client(ref))
     <> "/api/v1/runs/"
     <> types.get_run_id(ref)
     <> "/cancel"
-  case request.to(url) {
+  case
+    h.make_authenticated_request(types.get_ref_client(ref), url, option.None)
+  {
     Ok(req) -> {
-      let req =
-        req
-        |> request.set_header(
-          "authorization",
-          "Bearer " <> types.get_token(types.get_ref_client(ref)),
-        )
-
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 -> Ok(Nil)
-        Ok(resp) -> Error("API error: " <> int.to_string(resp.status))
-        Error(_) -> Error("Network error")
+        Ok(resp) ->
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
-    Error(_) -> Error("Invalid URL")
+    Error(e) -> Error(e)
   }
-}
-
-fn build_base_url(client: Client) -> String {
-  let host = types.get_host(client)
-  let port = types.get_port(client)
-  let ns_part = case types.get_namespace(client) {
-    option.Some(ns) -> "/" <> ns
-    option.None -> ""
-  }
-  "http://" <> host <> ":" <> int.to_string(port) <> ns_part
 }
 
 fn default_run_options() -> RunOptions {
@@ -311,54 +320,46 @@ fn sleep_ms(ms: Int) -> Nil {
 /// Cancel multiple workflow runs at once.
 pub fn bulk_cancel(client: Client, run_ids: List(String)) -> Result(Nil, String) {
   let body = j.encode_bulk_cancel(run_ids)
-  let url = build_base_url(client) <> "/api/v1/runs/bulk/cancel"
+  let url = h.build_base_url(client) <> "/api/v1/runs/bulk/cancel"
 
-  case request.to(url) {
+  case h.make_authenticated_request(client, url, option.Some(body)) {
     Ok(req) -> {
-      let req =
-        req
-        |> request.set_body(body)
-        |> request.set_header("content-type", "application/json")
-        |> request.set_header(
-          "authorization",
-          "Bearer " <> types.get_token(client),
-        )
-
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 -> Ok(Nil)
         Ok(resp) ->
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
-        Error(_) -> Error("Network error")
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
-    Error(_) -> Error("Invalid URL")
+    Error(e) -> Error(e)
   }
 }
 
 /// Replay (re-run) failed workflow runs.
 pub fn replay(client: Client, run_ids: List(String)) -> Result(Nil, String) {
   let body = j.encode_bulk_replay(run_ids)
-  let url = build_base_url(client) <> "/api/v1/runs/bulk/replay"
+  let url = h.build_base_url(client) <> "/api/v1/runs/bulk/replay"
 
-  case request.to(url) {
+  case h.make_authenticated_request(client, url, option.Some(body)) {
     Ok(req) -> {
-      let req =
-        req
-        |> request.set_body(body)
-        |> request.set_header("content-type", "application/json")
-        |> request.set_header(
-          "authorization",
-          "Bearer " <> types.get_token(client),
-        )
-
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 -> Ok(Nil)
         Ok(resp) ->
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
-        Error(_) -> Error("Network error")
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
-    Error(_) -> Error("Invalid URL")
+    Error(e) -> Error(e)
   }
 }
 

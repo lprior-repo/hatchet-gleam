@@ -1,14 +1,15 @@
 import gleam/dict
 import gleam/erlang/process
-import gleam/http/request
 import gleam/httpc
-import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
+import hatchet/errors
 import hatchet/internal/config.{
   type Config, MissingTokenError, from_environment_checked,
 }
+import hatchet/internal/http as h
 import hatchet/internal/json as j
+import hatchet/internal/tls
 import hatchet/internal/worker_actor
 import hatchet/run
 import hatchet/types.{type Client, type Worker, type WorkerConfig, type Workflow}
@@ -106,6 +107,66 @@ pub fn with_config(config: Config) -> Result(Client, String) {
   }
 }
 
+/// Create a worker directly from a Config record.
+///
+/// This is a convenience function that extracts TLS configuration from the
+/// Config and passes it to the worker. Use this when you have a Config
+/// from `config.from_environment()` or `config.from_dict()`.
+///
+/// **Parameters:**
+///   - `config`: A `Config` from `hatchet/internal/config`
+///   - `worker_config`: Worker configuration (slots, name, etc.)
+///   - `workflows`: List of workflows this worker can process
+///
+/// **Returns:** `Ok(Worker)` on success, `Error(String)` on failure
+///
+/// **Examples:**
+/// ```gleam
+/// import hatchet/internal/config
+///
+/// let cfg = config.from_environment()
+/// let worker_cfg = client.worker_config(Some("my-worker"), 5)
+/// case client.new_worker_from_config(cfg, worker_cfg, [my_workflow]) {
+///   Ok(worker) -> client.start_worker_blocking(worker)
+///   Error(e) -> io.println("Failed: " <> e)
+/// }
+/// ```
+pub fn new_worker_from_config(
+  config: Config,
+  worker_config: WorkerConfig,
+  workflows: List(Workflow),
+) -> Result(Worker, String) {
+  case config.token {
+    None -> Error("Token is required for worker configuration")
+    Some(token) -> {
+      let client =
+        types.create_client(config.host, config.port, token, config.namespace)
+      let tls_config =
+        tls.from_parts(config.tls_ca, config.tls_cert, config.tls_key)
+      case tls_config {
+        Ok(tls_cfg) ->
+          new_worker_with_grpc_port(
+            client,
+            worker_config,
+            workflows,
+            config.grpc_port,
+            Some(tls_cfg),
+          )
+        Error(e) ->
+          Error("Invalid TLS configuration: " <> tls_error_to_string(e))
+      }
+    }
+  }
+}
+
+fn tls_error_to_string(err: tls.TLSConfigError) -> String {
+  case err {
+    tls.MissingCA -> "TLS requires CA certificate"
+    tls.MissingCert -> "mTLS requires client certificate"
+    tls.MissingKey -> "mTLS requires client private key"
+  }
+}
+
 /// Set a custom port for the client connection.
 ///
 /// **Parameters:**
@@ -177,29 +238,25 @@ pub fn register_workflow(
 ) -> Result(Nil, String) {
   let protocol_req = run.convert_workflow_to_protocol_for_test(workflow)
   let req_body = j.encode_workflow_create(protocol_req)
-  let base_url = build_base_url(client)
+  let base_url = h.build_base_url(client)
   let url = base_url <> "/api/v1/tenants/default/workflows"
 
-  case request.to(url) {
+  case h.make_authenticated_request(client, url, option.Some(req_body)) {
     Ok(req) -> {
-      let req =
-        req
-        |> request.set_body(req_body)
-        |> request.set_header("content-type", "application/json")
-        |> request.set_header(
-          "authorization",
-          "Bearer " <> types.get_token(client),
-        )
-
       case httpc.send(req) {
         Ok(resp) if resp.status == 200 || resp.status == 201 -> Ok(Nil)
         Ok(resp) -> {
-          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
         }
-        Error(_) -> Error("Network error")
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
       }
     }
-    Error(_) -> Error("Invalid URL")
+    Error(e) -> Error(e)
   }
 }
 
@@ -223,16 +280,6 @@ pub fn register_workflows(
       }
     }
   }
-}
-
-fn build_base_url(client: Client) -> String {
-  let host = types.get_host(client)
-  let port = types.get_port(client)
-  let ns_part = case types.get_namespace(client) {
-    option.Some(ns) -> "/" <> ns
-    option.None -> ""
-  }
-  "http://" <> host <> ":" <> int.to_string(port) <> ns_part
 }
 
 /// Create a new worker configuration with sensible defaults.
@@ -282,19 +329,29 @@ pub fn new_worker(
   config: WorkerConfig,
   workflows: List(Workflow),
 ) -> Result(Worker, String) {
-  new_worker_with_grpc_port(client, config, workflows, 7077)
+  new_worker_with_grpc_port(client, config, workflows, 7077, None)
 }
 
 /// Create a new worker with a custom gRPC port.
 ///
 /// Use this when the dispatcher is running on a non-standard port.
+///
+/// **Parameters:**
+///   - `client`: The Hatchet client
+///   - `config`: Worker configuration (slots, name, etc.)
+///   - `workflows`: List of workflows this worker can process
+///   - `grpc_port`: The gRPC dispatcher port
+///   - `tls_config`: Optional TLS/mTLS configuration
+///
+/// **Returns:** `Ok(Worker)` on success, `Error(String)` on failure
 pub fn new_worker_with_grpc_port(
   client: Client,
   config: WorkerConfig,
   workflows: List(Workflow),
   grpc_port: Int,
+  tls_config: Option(tls.TLSConfig),
 ) -> Result(Worker, String) {
-  case worker_actor.start(client, config, workflows, grpc_port) {
+  case worker_actor.start(client, config, workflows, grpc_port, tls_config) {
     Ok(subject) -> Ok(types.create_worker_with_subject(subject))
     Error(e) -> Error("Failed to start worker: " <> actor_error_to_string(e))
   }
@@ -338,7 +395,10 @@ pub fn start_worker_blocking(worker: Worker) -> Result(Nil, String) {
       process.selector_receive_forever(selector)
       Ok(Nil)
     }
-    None -> Error("Worker not properly initialized")
+    None ->
+      Error(
+        errors.to_simple_string(errors.network_error("Worker not initialized")),
+      )
   }
 }
 
@@ -359,7 +419,10 @@ pub fn start_worker(worker: Worker) -> Result(fn() -> Nil, String) {
         Nil
       })
     }
-    None -> Error("Worker not properly initialized")
+    None ->
+      Error(
+        errors.to_simple_string(errors.network_error("Worker not initialized")),
+      )
   }
 }
 
