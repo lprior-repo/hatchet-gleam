@@ -361,3 +361,102 @@ pub fn replay(client: Client, run_ids: List(String)) -> Result(Nil, String) {
     Error(_) -> Error("Invalid URL")
   }
 }
+
+/// Convert Workflow type to protocol WorkflowCreateRequest for API calls
+fn convert_workflow_to_protocol(wf: types.Workflow) -> p.WorkflowCreateRequest {
+  let tasks_converted =
+    list.map(wf.tasks, fn(task) { convert_task_to_protocol(task) })
+
+  let concurrency_converted = case wf.concurrency {
+    option.Some(config) ->
+      option.Some(p.ConcurrencyCreate(
+        max_concurrent: config.max_concurrent,
+        limit_strategy: convert_limit_strategy(config.limit_strategy),
+      ))
+    option.None -> option.None
+  }
+
+  p.WorkflowCreateRequest(
+    name: wf.name,
+    description: wf.description,
+    version: wf.version,
+    tasks: tasks_converted,
+    cron: wf.cron,
+    events: wf.events,
+    concurrency: concurrency_converted,
+  )
+}
+
+fn convert_task_to_protocol(task: types.TaskDef) -> p.TaskCreate {
+  let backoff_converted = case task.retry_backoff {
+    option.Some(config) -> option.Some(convert_backoff_config(config))
+    option.None -> option.None
+  }
+
+  let concurrency_converted = case task.concurrency {
+    option.Some(config) ->
+      option.Some(p.ConcurrencyCreate(
+        max_concurrent: config.max_concurrent,
+        limit_strategy: convert_limit_strategy(config.limit_strategy),
+      ))
+    option.None -> option.None
+  }
+
+  let wait_converted = case task.wait_for {
+    option.Some(config) -> option.Some(convert_wait_config(config))
+    option.None -> option.None
+  }
+
+  p.TaskCreate(
+    name: task.name,
+    parents: task.parents,
+    retries: task.retries,
+    retry_backoff: backoff_converted,
+    execution_timeout_ms: task.execution_timeout_ms,
+    schedule_timeout_ms: task.schedule_timeout_ms,
+    rate_limits: list.map(task.rate_limits, fn(limit) {
+      p.RateLimitCreate(
+        key: limit.key,
+        units: limit.units,
+        duration_ms: limit.duration_ms,
+      )
+    }),
+    concurrency: concurrency_converted,
+    wait_for: wait_converted,
+  )
+}
+
+fn convert_backoff_config(config: types.BackoffConfig) -> p.BackoffCreate {
+  case config {
+    types.Exponential(base_ms, max_ms) ->
+      p.ExponentialCreate(base_ms: base_ms, max_ms: max_ms)
+    types.Linear(step_ms, max_ms) ->
+      p.LinearCreate(step_ms: step_ms, max_ms: max_ms)
+    types.Constant(delay_ms) -> p.ConstantCreate(delay_ms: delay_ms)
+  }
+}
+
+fn convert_limit_strategy(strategy: types.LimitStrategy) -> String {
+  case strategy {
+    types.CancelInProgress -> "CANCEL_IN_PROGRESS"
+    types.QueueNew -> "QUEUE_NEW"
+    types.DropNew -> "DROP_NEW"
+  }
+}
+
+fn convert_wait_config(config: types.WaitCondition) -> p.WaitCreate {
+  case config {
+    types.WaitForEvent(event, timeout_ms) ->
+      p.WaitForEventCreate(event: event, timeout_ms: timeout_ms)
+    types.WaitForTime(duration_ms) ->
+      p.WaitForTimeCreate(duration_ms: duration_ms)
+    types.WaitForExpression(cel) -> p.WaitForExpressionCreate(cel: cel)
+  }
+}
+
+/// Export workflow conversion for testing
+pub fn convert_workflow_to_protocol_for_test(
+  wf: types.Workflow,
+) -> p.WorkflowCreateRequest {
+  convert_workflow_to_protocol(wf)
+}
