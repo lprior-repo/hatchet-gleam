@@ -1,0 +1,254 @@
+import gleam/dynamic
+import gleam/dynamic/decode
+import gleam/list
+import gleam/option.{type Option, None, Some}
+import gleam/result
+import gleeunit
+import gleeunit/should
+import hatchet/durable
+import hatchet/workflow
+
+pub fn durable_context_creation_test() {
+  // Create a simple workflow with a durable task
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.durable_task(
+      "durable-step",
+      fn(ctx: durable.DurableContext) {
+        durable.log(ctx, "Starting durable task")
+        Ok(dynamic.from("success"))
+      },
+      "test-checkpoint",
+    )
+
+  wf.name
+  |> should.equal("test-workflow")
+
+  wf.tasks
+  |> list.length
+  |> should.equal(1)
+
+  let task = list.first(wf.tasks)
+  case task {
+    Some(t) -> {
+      t.name
+      |> should.equal("durable-step")
+    }
+    None -> should.fail("Task not found")
+  }
+}
+
+pub fn checkpoint_save_test() {
+  // Mock durable context with minimal setup
+  let mock_register = fn(_, _, _) { Ok(Nil) }
+  let mock_await = fn(_, _) { Ok(dynamic.from("complete")) }
+
+  let ctx =
+    durable.DurableContext(
+      task_context: hatchet
+        / context.TaskContext(
+        workflow_run_id: "test-run-id",
+        task_run_id: "test-task-id",
+        input: dynamic.from("test"),
+        parent_outputs: dict.new(),
+        metadata: dict.new(),
+        logger: fn(_) { Nil },
+        stream_fn: fn(_) { Ok(Nil) },
+        release_slot_fn: fn() { Ok(Nil) },
+        refresh_timeout_fn: fn(_) { Ok(Nil) },
+        cancel_fn: fn() { Ok(Nil) },
+        spawn_workflow_fn: fn(_, _, _) { Ok("child-id") },
+      ),
+      checkpoint_key: "test-key",
+      wait_key_counter: 0,
+      register_durable_event_fn: mock_register,
+      await_durable_event_fn: mock_await,
+    )
+
+  // Test saving checkpoint
+  let result = durable.save_checkpoint(ctx, "checkpoint-1", dynamic.from(42))
+
+  case result {
+    Ok(_) -> should.be_true(True)
+    Error(_) -> should.fail("Checkpoint save failed")
+  }
+}
+
+pub fn sleep_for_test() {
+  let mock_register = fn(step_run_id, signal_key, conditions) {
+    step_run_id
+    |> should.equal("test-task-id")
+    signal_key
+    |> should.equal("sleep-0")
+    conditions.sleep_duration_ms
+    |> should.equal(Some(5000))
+    Ok(Nil)
+  }
+
+  let mock_await = fn(_, _) { Ok(dynamic.from("woke_up")) }
+
+  let ctx =
+    durable.DurableContext(
+      task_context: hatchet
+        / context.TaskContext(
+        workflow_run_id: "test-run-id",
+        task_run_id: "test-task-id",
+        input: dynamic.from("test"),
+        parent_outputs: dict.new(),
+        metadata: dict.new(),
+        logger: fn(_) { Nil },
+        stream_fn: fn(_) { Ok(Nil) },
+        release_slot_fn: fn() { Ok(Nil) },
+        refresh_timeout_fn: fn(_) { Ok(Nil) },
+        cancel_fn: fn() { Ok(Nil) },
+        spawn_workflow_fn: fn(_, _, _) { Ok("child-id") },
+      ),
+      checkpoint_key: "test-key",
+      wait_key_counter: 0,
+      register_durable_event_fn: mock_register,
+      await_durable_event_fn: mock_await,
+    )
+
+  // Test durable sleep
+  let result = durable.sleep_for(ctx, 5000)
+
+  case result {
+    Ok(value) -> {
+      value
+      |> decode.string
+      |> result.map(should.equal(_, "woke_up"))
+      |> should.equal(Ok(Nil))
+    }
+    Error(_) -> should.fail("Sleep failed")
+  }
+}
+
+pub fn wait_for_event_test() {
+  let mock_register = fn(step_run_id, signal_key, conditions) {
+    step_run_id
+    |> should.equal("test-task-id")
+    signal_key
+    |> should.equal("event-0")
+    conditions.event_key
+    |> should.equal(Some("user.created"))
+    conditions.event_expression
+    |> should.equal(Some("data.userId == '123'"))
+    Ok(Nil)
+  }
+
+  let mock_await = fn(_, _) { Ok(dynamic.from("event-received")) }
+
+  let ctx =
+    durable.DurableContext(
+      task_context: hatchet
+        / context.TaskContext(
+        workflow_run_id: "test-run-id",
+        task_run_id: "test-task-id",
+        input: dynamic.from("test"),
+        parent_outputs: dict.new(),
+        metadata: dict.new(),
+        logger: fn(_) { Nil },
+        stream_fn: fn(_) { Ok(Nil) },
+        release_slot_fn: fn() { Ok(Nil) },
+        refresh_timeout_fn: fn(_) { Ok(Nil) },
+        cancel_fn: fn() { Ok(Nil) },
+        spawn_workflow_fn: fn(_, _, _) { Ok("child-id") },
+      ),
+      checkpoint_key: "test-key",
+      wait_key_counter: 0,
+      register_durable_event_fn: mock_register,
+      await_durable_event_fn: mock_await,
+    )
+
+  // Test wait for event
+  let result =
+    durable.wait_for_event(ctx, "user.created", Some("data.userId == '123'"))
+
+  case result {
+    Ok(value) -> {
+      value
+      |> decode.string
+      |> result.map(should.equal(_, "event-received"))
+      |> should.equal(Ok(Nil))
+    }
+    Error(_) -> should.fail("Wait for event failed")
+  }
+}
+
+pub fn context_accessors_test() {
+  let ctx =
+    durable.DurableContext(
+      task_context: hatchet
+        / context.TaskContext(
+        workflow_run_id: "test-run-id",
+        task_run_id: "test-task-id",
+        input: dynamic.from("{\"test\": 123}"),
+        parent_outputs: dict.from_list([
+          #("parent1", dynamic.from("parent-output")),
+        ]),
+        metadata: dict.from_list([#("key1", "value1")]),
+        logger: fn(_) { Nil },
+        stream_fn: fn(_) { Ok(Nil) },
+        release_slot_fn: fn() { Ok(Nil) },
+        refresh_timeout_fn: fn(_) { Ok(Nil) },
+        cancel_fn: fn() { Ok(Nil) },
+        spawn_workflow_fn: fn(_, _, _) { Ok("child-id") },
+      ),
+      checkpoint_key: "test-key",
+      wait_key_counter: 5,
+      register_durable_event_fn: fn(_, _, _) { Ok(Nil) },
+      await_durable_event_fn: fn(_, _) { Ok(dynamic.from("test")) },
+    )
+
+  // Test accessors
+  durable.input(ctx)
+  |> should.equal(dynamic.from("{\"test\": 123}"))
+
+  durable.workflow_run_id(ctx)
+  |> should.equal("test-run-id")
+
+  durable.step_run_id(ctx)
+  |> should.equal("test-task-id")
+
+  durable.get_checkpoint_key(ctx)
+  |> should.equal("test-key")
+
+  durable.get_metadata(ctx, "key1")
+  |> should.equal(Some("value1"))
+
+  durable.get_metadata(ctx, "missing")
+  |> should.equal(None)
+}
+
+pub fn increment_wait_key_counter_test() {
+  let ctx =
+    durable.DurableContext(
+      task_context: hatchet
+        / context.TaskContext(
+        workflow_run_id: "test-run-id",
+        task_run_id: "test-task-id",
+        input: dynamic.from("test"),
+        parent_outputs: dict.new(),
+        metadata: dict.new(),
+        logger: fn(_) { Nil },
+        stream_fn: fn(_) { Ok(Nil) },
+        release_slot_fn: fn() { Ok(Nil) },
+        refresh_timeout_fn: fn(_) { Ok(Nil) },
+        cancel_fn: fn() { Ok(Nil) },
+        spawn_workflow_fn: fn(_, _, _) { Ok("child-id") },
+      ),
+      checkpoint_key: "test-key",
+      wait_key_counter: 0,
+      register_durable_event_fn: fn(_, _, _) { Ok(Nil) },
+      await_durable_event_fn: fn(_, _) { Ok(dynamic.from("test")) },
+    )
+
+  let ctx1 = durable.increment_wait_key_counter(ctx)
+  let ctx2 = durable.increment_wait_key_counter(ctx1)
+
+  ctx1.wait_key_counter
+  |> should.equal(1)
+
+  ctx2.wait_key_counter
+  |> should.equal(2)
+}

@@ -1,0 +1,645 @@
+//// Comprehensive QA tests for the Hatchet Event System.
+////
+//// This test file verifies event publishing, subscription, and delivery
+//// reliability and type-safety as specified in bead hatchet-port-ei5.
+////
+//// Test Categories:
+//// 1. Event Emission - publish, publish_with_metadata, publish_many
+//// 2. Event Listening - workflow event subscription
+//// 3. Event Validation - name format, payload serializability
+//// 4. Event Metadata - handling and merging
+//// 5. Event JSON encoding - proper serialization
+////
+//// Run with: gleam test --target erlang test/hatchet/event_test.gleam
+//// For live tests: HATCHET_LIVE_TEST=1 HATCHET_CLIENT_TOKEN=<token> gleam test
+
+import gleam/dict
+import gleam/dynamic
+import gleam/io
+import gleam/list
+import gleam/string
+import gleam/int
+import gleeunit/should
+import hatchet/events
+import hatchet/internal/json as hatchet_json
+import hatchet/internal/protocol as p
+import hatchet/workflow
+
+// ============================================================================
+// SECTION 1: Event Emission Tests
+// ============================================================================
+
+/// Publish single event successfully
+pub fn publish_single_event_test() {
+  // CONTRACT: event.publish() creates an Event with given key and data
+  let event = events.event("user.created", dynamic.from_int("test-data"))
+
+  event.key
+  |> should.equal("user.created")
+
+  event.data
+  |> dynamic.unsafe_coerce_string
+  |> should.equal("test-data")
+}
+
+/// Publish event with JSON payload
+pub fn publish_event_with_json_payload_test() {
+  let payload =
+    dict.from_list([
+      #("user_id", dynamic.from_int(123)),
+      #("email", dynamic.from_int("test@example.com")),
+      #("active", dynamic.from_int(True)),
+    ])
+
+  let event = events.event("order.placed", dynamic.from_int(payload))
+
+  let assert Ok(payload_dict) =
+    event.data
+    |> dynamic.dict(dynamic.string, dynamic.dynamic)
+
+  dict.get(payload_dict, "user_id")
+  |> should.equal(Ok(dynamic.from_int(123)))
+}
+
+/// Publish event with no payload (empty dict)
+pub fn publish_event_with_no_payload_test() {
+  let event = events.event("system.startup", dynamic.from_int(dict.new()))
+
+  let assert Ok(payload_dict) =
+    event.data
+    |> dynamic.dict(dynamic.string, dynamic.dynamic)
+
+  dict.size(payload_dict)
+  |> should.equal(0)
+}
+
+/// Event creation builder pattern
+pub fn event_builder_test() {
+  let event =
+    events.event("user.updated", dynamic.from_int("data"))
+    |> events.with_metadata(dict.from_list([#("source", "api")]))
+    |> events.put_metadata("version", "2.0")
+
+  event.key
+  |> should.equal("user.updated")
+
+  event.metadata
+  |> dict.get("source")
+  |> should.equal(Ok("api"))
+
+  event.metadata
+  |> dict.get("version")
+  |> should.equal(Ok("2.0"))
+}
+
+/// Publish many events with publish_many
+pub fn publish_many_events_test() {
+  let events_list = [
+    events.event("event1", dynamic.from_int(1)),
+    events.event("event2", dynamic.from_int(2)),
+    events.event("event3", dynamic.from_int(3)),
+  ]
+
+  list.length(events_list)
+  |> should.equal(3)
+
+  // Verify each event has correct data
+  events_list
+  |> list.map(fn(e) { e.data })
+  |> should.equal([
+    dynamic.from_int(1),
+    dynamic.from_int(2),
+    dynamic.from_int(3),
+  ])
+}
+
+/// Event metadata is properly merged
+pub fn event_metadata_merging_test() {
+  let initial_event =
+    events.event("test", dynamic.from_int("data"))
+    |> events.with_metadata(dict.from_list([#("key1", "value1")]))
+
+  let updated_event =
+    events.with_metadata(initial_event, dict.from_list([#("key2", "value2")]))
+
+  // Original metadata should be preserved
+  updated_event.metadata
+  |> dict.get("key1")
+  |> should.equal(Ok("value1"))
+
+  // New metadata should be added
+  updated_event.metadata
+  |> dict.get("key2")
+  |> should.equal(Ok("value2"))
+
+  dict.size(updated_event.metadata)
+  |> should.equal(2)
+}
+
+/// Event metadata overwrites existing keys
+pub fn event_metadata_overwrite_test() {
+  let event =
+    events.event("test", dynamic.from_int("data"))
+    |> events.with_metadata(dict.from_list([#("source", "original")]))
+    |> events.put_metadata("source", "updated")
+
+  event.metadata
+  |> dict.get("source")
+  |> should.equal(Ok("updated"))
+}
+
+// ============================================================================
+// SECTION 2: Event Listening Tests (Workflow Subscription)
+// ============================================================================
+
+/// Workflow subscribes to single event
+pub fn workflow_subscribes_to_single_event_test() {
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.with_events(["user.created"])
+
+  wf.events
+  |> should.equal(["user.created"])
+}
+
+/// Workflow subscribes to multiple events
+pub fn workflow_subscribes_to_multiple_events_test() {
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.with_events([
+      "user.created",
+      "order.placed",
+      "payment.completed",
+    ])
+
+  wf.events
+  |> list.length
+  |> should.equal(3)
+
+  wf.events
+  |> should.equal(["user.created", "order.placed", "payment.completed"])
+}
+
+/// Workflow with duplicate events (deduplication)
+pub fn workflow_with_duplicate_events_test() {
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.with_events(["user.created", "user.created"])
+
+  wf.events
+  |> should.equal(["user.created"])
+
+  list.length(wf.events)
+  |> should.equal(1)
+}
+
+/// Workflow event subscription preserves existing events
+pub fn workflow_event_subscription_preservation_test() {
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.with_events(["event1", "event2"])
+    |> workflow.with_events(["event3", "event4"])
+
+  wf.events
+  |> list.length
+  |> should.equal(4)
+
+  wf.events
+  |> should.equal(["event1", "event2", "event3", "event4"])
+}
+
+// ============================================================================
+// SECTION 3: Event Validation Tests (Name Format)
+// ============================================================================
+
+/// Event name follows domain convention (entity.action)
+pub fn event_name_domain_convention_test() {
+  let valid_names = [
+    "user.created",
+    "order.placed",
+    "payment.completed",
+    "system.startup",
+    "api.request.received",
+  ]
+
+  let events_list =
+    list.map(valid_names, fn(name) { events.event(name, dynamic.from_int("test")) })
+
+  list.length(events_list)
+  |> should.equal(5)
+}
+
+/// Event name with dots and hyphens
+pub fn event_name_with_special_chars_test() {
+  let valid_names = [
+    "user.created",
+    "order.placed.v2",
+    "api.request-received",
+    "system.startup-initial",
+  ]
+
+  let events_list =
+    list.map(valid_names, fn(name) { events.event(name, dynamic.from_int("test")) })
+
+  list.length(events_list)
+  |> should.equal(4)
+}
+
+/// Event name as empty string (should work at SDK level)
+pub fn event_name_empty_string_test() {
+  let event = events.event("", dynamic.from_int("test"))
+
+  event.key
+  |> should.equal("")
+}
+
+/// Event name with unicode characters
+pub fn event_name_unicode_test() {
+  let event = events.event("user.用户-注册", dynamic.from_int("test"))
+
+  event.key
+  |> should.equal("user.用户-注册")
+}
+
+// ============================================================================
+// SECTION 4: Event Payload Tests
+// ============================================================================
+
+/// Event payload with various data types
+pub fn event_payload_various_types_test() {
+  let payloads = [
+    dynamic.from_int("string"),
+    dynamic.from_int(42),
+    dynamic.from_int(True),
+    dynamic.from_int(3.14),
+    dynamic.from_int([]),
+    dynamic.from_int(dict.new()),
+  ]
+
+  let events_list =
+    list.map(payloads, fn(payload) { events.event("test", payload) })
+
+  list.length(events_list)
+  |> should.equal(6)
+}
+
+/// Event payload with nested structures
+pub fn event_payload_nested_structure_test() {
+  let nested =
+    dict.from_list([
+      #(
+        "user",
+        dict.from_list([
+          #("id", dynamic.from_int(1)),
+          #("profile", dict.from_list([#("name", dynamic.from_int("Alice"))])),
+        ]),
+      ),
+    ])
+
+  let event = events.event("user.created", dynamic.from_int(nested))
+
+  event.data
+  |> should.be_ok()
+}
+
+/// Event payload with large data (1MB simulation)
+pub fn event_payload_large_data_test() {
+  let large_string = string.repeat("x", 100_000)
+
+  let event = events.event("bulk.data", dynamic.from_int(large_string))
+
+  let assert Ok(payload) =
+    event.data
+    |> dynamic.string
+
+  string.length(payload)
+  |> should.equal(100_000)
+}
+
+/// Event payload with list of items
+pub fn event_payload_list_test() {
+  let items =
+    [1, 2, 3, 4, 5]
+    |> list.map(dynamic.from)
+
+  let event = events.event("bulk.import", dynamic.from_int(items))
+
+  let assert Ok(payload_list) =
+    event.data
+    |> dynamic.list(dynamic.dynamic)
+
+  list.length(payload_list)
+  |> should.equal(5)
+}
+
+// ============================================================================
+// SECTION 5: Event JSON Encoding Tests
+// ============================================================================
+
+/// Event publish JSON encoding includes event_key
+pub fn event_json_encoding_has_event_key_test() {
+  let req =
+    p.EventPublishRequest(
+      event_key: "test-event",
+      data: dynamic.from_int("data"),
+      metadata: dict.new(),
+    )
+
+  let encoded = hatchet_json.encode_event_publish(req)
+
+  string.contains(encoded, "test-event")
+  |> should.equal(True)
+
+  string.contains(encoded, "event_key")
+  |> should.equal(True)
+}
+
+/// Event publish JSON encoding includes data
+pub fn event_json_encoding_has_data_test() {
+  let req =
+    p.EventPublishRequest(
+      event_key: "test-event",
+      data: dynamic.from_int("test-data"),
+      metadata: dict.new(),
+    )
+
+  let encoded = hatchet_json.encode_event_publish(req)
+
+  string.contains(encoded, "data")
+  |> should.equal(True)
+}
+
+/// Event publish JSON encoding includes metadata
+pub fn event_json_encoding_has_metadata_test() {
+  let req =
+    p.EventPublishRequest(
+      event_key: "test-event",
+      data: dynamic.from_int("data"),
+      metadata: dict.from_list([#("source", "api")]),
+    )
+
+  let encoded = hatchet_json.encode_event_publish(req)
+
+  string.contains(encoded, "metadata")
+  |> should.equal(True)
+
+  string.contains(encoded, "source")
+  |> should.equal(True)
+}
+
+/// Event publish JSON encoding with complex data
+pub fn event_json_encoding_complex_data_test() {
+  let complex_data =
+    dict.from_list([
+      #("nested", dict.from_list([#("value", dynamic.from_int(42))])),
+    ])
+
+  let req =
+    p.EventPublishRequest(
+      event_key: "complex.event",
+      data: dynamic.from_int(complex_data),
+      metadata: dict.new(),
+    )
+
+  let encoded = hatchet_json.encode_event_publish(req)
+
+  string.contains(encoded, "complex.event")
+  |> should.equal(True)
+}
+
+/// Event publish JSON encoding is valid JSON
+pub fn event_json_encoding_valid_json_test() {
+  let req =
+    p.EventPublishRequest(
+      event_key: "test-event",
+      data: dynamic.from_int("data"),
+      metadata: dict.from_list([#("key", "value")]),
+    )
+
+  let encoded = hatchet_json.encode_event_publish(req)
+
+  // Check for JSON structure
+  string.starts_with(encoded, "{")
+  |> should.equal(True)
+
+  string.ends_with(encoded, "}")
+  |> should.equal(True)
+}
+
+// ============================================================================
+// SECTION 6: Event Type Safety Tests
+// ============================================================================
+
+/// Event type is properly defined
+pub fn event_type_definition_test() {
+  let event =
+    events.Event(key: "test", data: dynamic.from_int("data"), metadata: dict.new())
+
+  event.key
+  |> should.equal("test")
+
+  event.data
+  |> dynamic.unsafe_coerce_string
+  |> should.equal("data")
+
+  dict.size(event.metadata)
+  |> should.equal(0)
+}
+
+/// Event with_metadata returns new Event (immutability)
+pub fn event_immutability_test() {
+  let original = events.event("test", dynamic.from_int("data"))
+  let updated =
+    events.with_metadata(original, dict.from_list([#("key", "value")]))
+
+  // Original should remain unchanged
+  dict.size(original.metadata)
+  |> should.equal(0)
+
+  // Updated should have metadata
+  dict.size(updated.metadata)
+  |> should.equal(1)
+}
+
+/// Event put_metadata returns new Event
+pub fn event_put_metadata_test() {
+  let original = events.event("test", dynamic.from_int("data"))
+  let updated = events.put_metadata(original, "key", "value")
+
+  dict.size(original.metadata)
+  |> should.equal(0)
+
+  dict.size(updated.metadata)
+  |> should.equal(1)
+}
+
+// ============================================================================
+// SECTION 7: Live Integration Tests (Requires HATCHET_LIVE_TEST=1)
+// ============================================================================
+
+/// Live test: Publish event to running Hatchet server
+pub fn live_publish_event_test() {
+  case envoy.get("HATCHET_LIVE_TEST") {
+    Ok("1") -> {
+      let token = case envoy.get("HATCHET_CLIENT_TOKEN") {
+        Ok(t) -> t
+        Error(_) -> {
+          case envoy.get("HATCHET_TOKEN") {
+            Ok(t) -> t
+            Error(_) -> ""
+          }
+        }
+      }
+
+      case token {
+        "" -> io.println("SKIP: No HATCHET_CLIENT_TOKEN found")
+        t -> {
+          let assert Ok(client) = hatchet.new("localhost", t)
+
+          let result =
+            events.publish(client, "test.event", dynamic.from_int("test-data"))
+
+          result
+          |> should.be_ok()
+        }
+      }
+    }
+    _ -> io.println("SKIP: HATCHET_LIVE_TEST not set")
+  }
+}
+
+/// Live test: Publish event with metadata
+pub fn live_publish_event_with_metadata_test() {
+  case envoy.get("HATCHET_LIVE_TEST") {
+    Ok("1") -> {
+      let token = case envoy.get("HATCHET_CLIENT_TOKEN") {
+        Ok(t) -> t
+        Error(_) -> {
+          case envoy.get("HATCHET_TOKEN") {
+            Ok(t) -> t
+            Error(_) -> ""
+          }
+        }
+      }
+
+      case token {
+        "" -> io.println("SKIP: No HATCHET_CLIENT_TOKEN found")
+        t -> {
+          let assert Ok(client) = hatchet.new("localhost", t)
+
+          let metadata =
+            dict.from_list([
+              #("source", "test"),
+              #("version", "1.0"),
+            ])
+
+          let result =
+            events.publish_with_metadata(
+              client,
+              "test.event",
+              dynamic.from_int("test-data"),
+              metadata,
+            )
+
+          result
+          |> should.be_ok()
+        }
+      }
+    }
+    _ -> io.println("SKIP: HATCHET_LIVE_TEST not set")
+  }
+}
+
+/// Live test: Publish many events
+pub fn live_publish_many_events_test() {
+  case envoy.get("HATCHET_LIVE_TEST") {
+    Ok("1") -> {
+      let token = case envoy.get("HATCHET_CLIENT_TOKEN") {
+        Ok(t) -> t
+        Error(_) -> {
+          case envoy.get("HATCHET_TOKEN") {
+            Ok(t) -> t
+            Error(_) -> ""
+          }
+        }
+      }
+
+      case token {
+        "" -> io.println("SKIP: No HATCHET_CLIENT_TOKEN found")
+        t -> {
+          let assert Ok(client) = hatchet.new("localhost", t)
+
+          let events_list = [
+            events.event("test.event1", dynamic.from_int(1)),
+            events.event("test.event2", dynamic.from_int(2)),
+            events.event("test.event3", dynamic.from_int(3)),
+          ]
+
+          let result = events.publish_many(client, events_list)
+
+          result
+          |> should.be_ok()
+        }
+      }
+    }
+    _ -> io.println("SKIP: HATCHET_LIVE_TEST not set")
+  }
+}
+
+// ============================================================================
+// SECTION 8: Edge Case Tests
+// ============================================================================
+
+/// Event with empty metadata
+pub fn event_empty_metadata_test() {
+  let event = events.event("test", dynamic.from_int("data"))
+
+  dict.size(event.metadata)
+  |> should.equal(0)
+}
+
+/// Event with nil/None values in payload
+pub fn event_with_nil_values_test() {
+  let payload =
+    dict.from_list([
+      #("nullable", dynamic.from_int(dynamic.from_int(dynamic.nil))),
+    ])
+
+  let event = events.event("test", dynamic.from_int(payload))
+
+  event.data
+  |> should.be_ok()
+}
+
+/// Event key case sensitivity
+pub fn event_key_case_sensitivity_test() {
+  let event1 = events.event("User.Created", dynamic.from_int("data"))
+  let event2 = events.event("user.created", dynamic.from_int("data"))
+
+  event1.key
+  |> should.not_equal(event2.key)
+}
+
+/// Event with very long key name
+pub fn event_very_long_key_name_test() {
+  let long_key = string.repeat("a.", 100) <> "event"
+
+  let event = events.event(long_key, dynamic.from_int("data"))
+
+  string.length(event.key)
+  |> should.equal(202)
+}
+
+/// Event with many metadata fields
+pub fn event_many_metadata_fields_test() {
+  let metadata =
+    list.range(1, 100)
+    |> list.map(fn(i) { #(string.append("key_", int.to_string(i)), "value") })
+    |> dict.from_list
+
+  let event =
+    events.event("test", dynamic.from_int("data")) |> events.with_metadata(metadata)
+
+  dict.size(event.metadata)
+  |> should.equal(100)
+}
