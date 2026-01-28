@@ -104,7 +104,6 @@ pub fn run_status_failed_contains_error_message_test() {
 
   case failed {
     types.Failed(err) -> err |> should.equal("Task timeout after 30s")
-    _ -> should.fail()
   }
 }
 

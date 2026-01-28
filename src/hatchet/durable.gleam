@@ -154,8 +154,8 @@ pub fn save_checkpoint(
 /// }
 /// ```
 pub fn load_checkpoint(
-  ctx: DurableContext,
-  checkpoint_key: String,
+  _ctx: DurableContext,
+  _checkpoint_key: String,
 ) -> Option(Dynamic) {
   // In a full implementation, this would query the Hatchet API for checkpoint data
   // For now, we return None to indicate no checkpoint exists

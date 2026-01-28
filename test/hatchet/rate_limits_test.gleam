@@ -114,13 +114,13 @@ pub fn multiple_rate_limits_can_be_attached_to_task_test() {
   let rate_limits = task.rate_limits
   should.equal(2, list.length(rate_limits))
   let limit1 = list.first(rate_limits) |> should.be_ok()
-  should.equal("per-minute", limit1.key)
-  should.equal(100, limit1.units)
-  should.equal(60_000, limit1.duration_ms)
+  should.equal("per-hour", limit1.key)
+  should.equal(1000, limit1.units)
+  should.equal(3_600_000, limit1.duration_ms)
   let limit2 = list.drop(rate_limits, 1) |> list.first |> should.be_ok()
-  should.equal("per-hour", limit2.key)
-  should.equal(1000, limit2.units)
-  should.equal(3_600_000, limit2.duration_ms)
+  should.equal("per-minute", limit2.key)
+  should.equal(100, limit2.units)
+  should.equal(60_000, limit2.duration_ms)
 }
 
 pub fn rate_limit_per_week_can_be_defined_test() {

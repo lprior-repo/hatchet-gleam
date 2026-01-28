@@ -2,6 +2,7 @@ import gleam/dict
 import gleam/dynamic.{type Dynamic}
 import gleam/list
 import gleam/option
+import gleam/string
 import hatchet/types.{
   type BackoffConfig, type DurableContext, type DurableTaskDef,
   type FailureContext, type LimitStrategy, type TaskContext, type TaskDef,
