@@ -8,8 +8,8 @@ service Dispatcher {
   // Register a worker with the dispatcher
   rpc Register(WorkerRegisterRequest) returns (WorkerRegisterResponse);
 
-  // Bidirectional stream for task assignments
-  rpc ListenV2(stream WorkerListenRequest) returns (stream AssignedAction);
+  // Server stream for task assignments
+  rpc ListenV2(WorkerListenRequest) returns (stream AssignedAction);
 
   // Send step action events (part of bidirectional stream)
   rpc SendStepActionEvent(StepActionEvent) returns (ActionEventResponse);
@@ -33,14 +33,14 @@ message WorkerRegisterRequest {
 }
 
 message WorkerLabels {
-  optional string str_value = 1;
-  optional int32 int_value = 2;
+  optional string strValue = 1;
+  optional int32 intValue = 2;
 }
 
 message RuntimeInfo {
-  optional string sdk_version = 1;
+  optional string sdkVersion = 1;
   optional SDKS language = 2;
-  optional string language_version = 3;
+  optional string languageVersion = 3;
   optional string os = 4;
   optional string extra = 5;
 }
@@ -50,7 +50,6 @@ enum SDKS {
   GO = 1;
   PYTHON = 2;
   TYPESCRIPT = 3;
-  GLEAM = 4;  // Added for Gleam SDK
 }
 
 message WorkerRegisterResponse {

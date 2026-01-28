@@ -1,6 +1,4 @@
-# Agent Instructions
-
-Gleam SDK for Hatchet distributed task orchestration. Uses **bd** (beads) for issue tracking.
+# Claude AI Agent Instructions
 
 ## ⚠️ CRITICAL: Use Existing Hatchet Docker Installation
 
@@ -34,7 +32,11 @@ open http://localhost:8080
 
 **NEVER** run `docker compose up` or `docker run` commands. Use existing setup only.
 
-## Quick Start
+## Project Overview
+
+Gleam SDK for Hatchet distributed task orchestration.
+
+### Quick Start
 
 ```bash
 # Work
@@ -62,4 +64,3 @@ bd sync && git push                # MANDATORY
 3. `bd close` finished beads
 4. `bd sync && git push`
 5. Verify: `git status` shows clean
-

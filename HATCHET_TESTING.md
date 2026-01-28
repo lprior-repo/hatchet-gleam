@@ -4,29 +4,76 @@ This document describes how to test the Gleam Hatchet SDK against a local Hatche
 
 ## Local Hatchet Server Setup
 
-The recommended way to run a local Hatchet server is using Docker:
+### Using Docker Compose (Recommended)
+
+The project includes a `docker-compose.yml` file for easy setup:
+
+```bash
+# Start all Hatchet services
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+```
+
+Services exposed:
+- **gRPC Engine**: `localhost:7077` (container: 7070 → host: 7077)
+- **Dashboard**: `http://localhost:8080`
+- **RabbitMQ**: `localhost:5672`
+- **RabbitMQ UI**: `http://localhost:15672`
+- **PostgreSQL**: `localhost:5432`
+
+### Using All-in-One Image
+
+If you prefer the all-in-one image:
 
 ```bash
 docker run -p 7070:7070 -p 7071:7071 ghcr.io/hatchet-dev/hatchet/hatchet-all-in-one:latest
 ```
 
-If the all-in-one image is not available, use Docker Compose with the official configuration:
-
-```bash
-git clone https://github.com/hatchet-dev/hatchet.git
-cd hatchet/docker
-docker compose up -d
-```
-
-## Verifying Server Connection
+### Verifying Server Connection
 
 Test that the Hatchet server is running and accessible:
 
 ```bash
-curl http://localhost:7070/health
+# Check gRPC engine health
+curl http://localhost:7077/health
+
+# Or check dashboard
+open http://localhost:8080
 ```
 
-## Integration Testing
+## Running Live Integration Tests
+
+The SDK includes live integration tests that verify end-to-end workflow execution against a real Hatchet server.
+
+### Run Live Tests
+
+```bash
+# 1. Start Hatchet server
+docker compose up -d
+
+# 2. Wait for services to be ready (30-60 seconds)
+docker compose ps
+
+# 3. Run live integration tests
+HATCHET_LIVE_TEST=1 gleam test
+
+# Only specific test:
+HATCHET_LIVE_TEST=1 gleam test --target test/integration/live_test
+```
+
+### Live Test Coverage
+
+- **Worker registration**: Verify workers can connect and register with gRPC
+- **Workflow execution**: Test multi-step workflows with task dependencies
+- **Task execution**: Verify tasks receive input and produce output
+- **Context handling**: Test TaskContext API with real data
+
+## Unit Testing
 
 The SDK includes comprehensive unit tests that verify:
 - Client creation and configuration
@@ -34,9 +81,9 @@ The SDK includes comprehensive unit tests that verify:
 - Task configuration (retries, timeouts, backoff)
 - JSON serialization for wire protocol
 - Worker configuration
+- gRPC protocol encoding/decoding
 
-Run all tests:
-
+Run all tests (excludes live tests unless `HATCHET_LIVE_TEST=1`):
 ```bash
 gleam test
 ```

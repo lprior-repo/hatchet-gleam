@@ -15,18 +15,12 @@ pub fn main() {
 // SDK Language Enum Tests
 // ============================================================================
 
-pub fn sdk_language_gleam_test() {
-  let lang = protobuf.Gleam
-  lang |> should.equal(protobuf.Gleam)
-}
-
 pub fn sdk_language_all_values_test() {
   // Test that all SDK language values exist
   let _unknown = protobuf.Unknown
   let _go = protobuf.Go
   let _python = protobuf.Python
   let _typescript = protobuf.TypeScript
-  let _gleam = protobuf.Gleam
   should.be_true(True)
 }
 
@@ -78,13 +72,13 @@ pub fn runtime_info_type_test() {
   let info =
     protobuf.RuntimeInfo(
       sdk_version: "0.1.0",
-      language: protobuf.Gleam,
+      language: protobuf.Go,
       language_version: "1.0.0",
       os: "linux/amd64",
       extra: None,
     )
   info.sdk_version |> should.equal("0.1.0")
-  info.language |> should.equal(protobuf.Gleam)
+  info.language |> should.equal(protobuf.Go)
 }
 
 // ============================================================================
@@ -125,7 +119,7 @@ pub fn worker_register_request_with_runtime_info_test() {
   let info =
     protobuf.RuntimeInfo(
       sdk_version: "0.1.0",
-      language: protobuf.Gleam,
+      language: protobuf.Go,
       language_version: "1.0.0",
       os: "linux",
       extra: None,

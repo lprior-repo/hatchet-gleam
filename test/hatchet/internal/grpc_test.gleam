@@ -160,7 +160,7 @@ pub fn register_worker_with_runtime_info_test() {
   let runtime_info =
     protobuf.RuntimeInfo(
       sdk_version: "0.1.0",
-      language: protobuf.Gleam,
+      language: protobuf.Go,
       language_version: "1.0.0",
       os: "linux/amd64",
       extra: option.None,

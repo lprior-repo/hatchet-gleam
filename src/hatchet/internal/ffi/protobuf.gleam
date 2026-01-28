@@ -34,7 +34,6 @@ pub type SdkLanguage {
   Go
   Python
   TypeScript
-  Gleam
 }
 
 /// Convert SDK language to the gpb enum atom string
@@ -44,7 +43,6 @@ fn sdk_language_to_enum_name(lang: SdkLanguage) -> String {
     Go -> "GO"
     Python -> "PYTHON"
     TypeScript -> "TYPESCRIPT"
-    Gleam -> "GLEAM"
   }
 }
 
@@ -253,7 +251,7 @@ pub fn encode_worker_register_request(
     Some(info) -> {
       let info_map = erlang_map_new()
       let info_map =
-        erlang_map_put_string(info_map, "sdk_version", info.sdk_version)
+        erlang_map_put_string(info_map, "sdkVersion", info.sdk_version)
       let info_map =
         erlang_map_put_enum(
           info_map,
@@ -263,7 +261,7 @@ pub fn encode_worker_register_request(
       let info_map =
         erlang_map_put_string(
           info_map,
-          "language_version",
+          "languageVersion",
           info.language_version,
         )
       let info_map = erlang_map_put_string(info_map, "os", info.os)
@@ -282,8 +280,8 @@ pub fn encode_worker_register_request(
         dict.fold(req.labels, [], fn(acc, key, value) {
           let label_map = erlang_map_new()
           let label_map = case value {
-            StringLabel(s) -> erlang_map_put_string(label_map, "str_value", s)
-            IntLabel(i) -> erlang_map_put_int(label_map, "int_value", i)
+            StringLabel(s) -> erlang_map_put_string(label_map, "strValue", s)
+            IntLabel(i) -> erlang_map_put_int(label_map, "intValue", i)
           }
           [#(key, label_map), ..acc]
         })
