@@ -1,11 +1,16 @@
 import gleam/dict
 import gleam/erlang/process
+import gleam/http/request
+import gleam/httpc
+import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import hatchet/internal/config.{
   type Config, MissingTokenError, from_environment_checked,
 }
+import hatchet/internal/json as j
 import hatchet/internal/worker_actor
+import hatchet/run
 import hatchet/types.{type Client, type Worker, type WorkerConfig, type Workflow}
 
 /// Create a new Hatchet client with the given host and token.
@@ -146,6 +151,88 @@ pub fn with_namespace(client: Client, namespace: String) -> Client {
     types.get_token(client),
     Some(namespace),
   )
+}
+
+/// Register a workflow with the Hatchet server via REST API.
+///
+/// **Parameters:**
+///   - `client`: The Hatchet client
+///   - `workflow`: The workflow to register
+///
+/// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
+///
+/// **Examples:**
+/// ```gleam
+/// let workflow = workflow.new("my-workflow")
+///   |> workflow.task("my-task", fn(ctx) { Ok(dynamic.string("done")) })
+///
+/// case client.register_workflow(client, workflow) {
+///   Ok(_) -> io.println("Workflow registered")
+///   Error(e) -> io.println("Failed: " <> e)
+/// }
+/// ```
+pub fn register_workflow(
+  client: Client,
+  workflow: Workflow,
+) -> Result(Nil, String) {
+  let protocol_req = run.convert_workflow_to_protocol_for_test(workflow)
+  let req_body = j.encode_workflow_create(protocol_req)
+  let base_url = build_base_url(client)
+  let url = base_url <> "/api/v1/tenants/default/workflows"
+
+  case request.to(url) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_body(req_body)
+        |> request.set_header("content-type", "application/json")
+        |> request.set_header(
+          "authorization",
+          "Bearer " <> types.get_token(client),
+        )
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 || resp.status == 201 -> Ok(Nil)
+        Ok(resp) -> {
+          Error("API error: " <> int.to_string(resp.status) <> " " <> resp.body)
+        }
+        Error(_) -> Error("Network error")
+      }
+    }
+    Error(_) -> Error("Invalid URL")
+  }
+}
+
+/// Register multiple workflows at once.
+///
+/// **Parameters:**
+///   - `client`: The Hatchet client
+///   - `workflows`: List of workflows to register
+///
+/// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
+pub fn register_workflows(
+  client: Client,
+  workflows: List(Workflow),
+) -> Result(Nil, String) {
+  case workflows {
+    [] -> Ok(Nil)
+    [workflow, ..rest] -> {
+      case register_workflow(client, workflow) {
+        Ok(_) -> register_workflows(client, rest)
+        Error(e) -> Error(e)
+      }
+    }
+  }
+}
+
+fn build_base_url(client: Client) -> String {
+  let host = types.get_host(client)
+  let port = types.get_port(client)
+  let ns_part = case types.get_namespace(client) {
+    option.Some(ns) -> "/" <> ns
+    option.None -> ""
+  }
+  "http://" <> host <> ":" <> int.to_string(port) <> ns_part
 }
 
 /// Create a new worker configuration with sensible defaults.

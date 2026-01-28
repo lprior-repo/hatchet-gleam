@@ -381,8 +381,7 @@ pub fn decode_assigned_action(
 
   // Required fields
   let tenant_id = erlang_map_get_string_default(map, "tenantId", "")
-  let workflow_run_id =
-    erlang_map_get_string_default(map, "workflowRunId", "")
+  let workflow_run_id = erlang_map_get_string_default(map, "workflowRunId", "")
   let get_group_key_run_id =
     erlang_map_get_string_default(map, "getGroupKeyRunId", "")
   let job_id = erlang_map_get_string_default(map, "jobId", "")
@@ -392,8 +391,7 @@ pub fn decode_assigned_action(
   let step_run_id = erlang_map_get_string_default(map, "stepRunId", "")
   let action_id = erlang_map_get_string_default(map, "actionId", "")
   let action_type_int = erlang_map_get_int_default(map, "actionType", 0)
-  let action_payload =
-    erlang_map_get_string_default(map, "actionPayload", "{}")
+  let action_payload = erlang_map_get_string_default(map, "actionPayload", "{}")
   let step_name = erlang_map_get_string_default(map, "stepName", "")
   let retry_count = erlang_map_get_int_default(map, "retryCount", 0)
   let priority = erlang_map_get_int_default(map, "priority", 0)
@@ -403,8 +401,7 @@ pub fn decode_assigned_action(
     erlang_map_get_string_option(map, "additionalMetadata")
   let child_workflow_index =
     erlang_map_get_int_option(map, "childWorkflowIndex")
-  let child_workflow_key =
-    erlang_map_get_string_option(map, "childWorkflowKey")
+  let child_workflow_key = erlang_map_get_string_option(map, "childWorkflowKey")
   let parent_workflow_run_id =
     erlang_map_get_string_option(map, "parentWorkflowRunId")
   let workflow_id = erlang_map_get_string_option(map, "workflowId")
