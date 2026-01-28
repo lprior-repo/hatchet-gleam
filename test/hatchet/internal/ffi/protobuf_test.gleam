@@ -17,10 +17,7 @@ pub fn main() {
 
 pub fn sdk_language_gleam_test() {
   let lang = protobuf.Gleam
-  case lang {
-    protobuf.Gleam -> should.be_true(True)
-    _ -> should.fail()
-  }
+  lang |> should.equal(protobuf.Gleam)
 }
 
 pub fn sdk_language_all_values_test() {
@@ -39,10 +36,7 @@ pub fn sdk_language_all_values_test() {
 
 pub fn action_type_start_step_run_test() {
   let action = protobuf.StartStepRun
-  case action {
-    protobuf.StartStepRun -> should.be_true(True)
-    _ -> should.fail()
-  }
+  action |> should.equal(protobuf.StartStepRun)
 }
 
 pub fn action_type_all_values_test() {
@@ -90,10 +84,7 @@ pub fn runtime_info_type_test() {
       extra: None,
     )
   info.sdk_version |> should.equal("0.1.0")
-  case info.language {
-    protobuf.Gleam -> should.be_true(True)
-    _ -> should.fail()
-  }
+  info.language |> should.equal(protobuf.Gleam)
 }
 
 // ============================================================================
@@ -102,18 +93,14 @@ pub fn runtime_info_type_test() {
 
 pub fn worker_label_string_test() {
   let label = protobuf.StringLabel("production")
-  case label {
-    protobuf.StringLabel(val) -> val |> should.equal("production")
-    _ -> should.fail()
-  }
+  let protobuf.StringLabel(val) = label
+  val |> should.equal("production")
 }
 
 pub fn worker_label_int_test() {
   let label = protobuf.IntLabel(42)
-  case label {
-    protobuf.IntLabel(val) -> val |> should.equal(42)
-    _ -> should.fail()
-  }
+  let protobuf.IntLabel(val) = label
+  val |> should.equal(42)
 }
 
 // ============================================================================
@@ -208,10 +195,7 @@ pub fn assigned_action_type_test() {
     )
   action.workflow_run_id |> should.equal("wf-run-456")
   action.step_name |> should.equal("validate")
-  case action.action_type {
-    protobuf.StartStepRun -> should.be_true(True)
-    _ -> should.fail()
-  }
+  action.action_type |> should.equal(protobuf.StartStepRun)
 }
 
 // ============================================================================
@@ -234,10 +218,7 @@ pub fn step_action_event_type_test() {
       should_not_retry: None,
     )
   event.worker_id |> should.equal("worker-123")
-  case event.event_type {
-    protobuf.StepEventTypeStarted -> should.be_true(True)
-    _ -> should.fail()
-  }
+  event.event_type |> should.equal(protobuf.StepEventTypeStarted)
 }
 
 // ============================================================================

@@ -37,13 +37,14 @@ pub type SdkLanguage {
   Gleam
 }
 
-fn sdk_language_to_int(lang: SdkLanguage) -> Int {
+/// Convert SDK language to the gpb enum atom string
+fn sdk_language_to_enum_name(lang: SdkLanguage) -> String {
   case lang {
-    Unknown -> 0
-    Go -> 1
-    Python -> 2
-    TypeScript -> 3
-    Gleam -> 4
+    Unknown -> "UNKNOWN"
+    Go -> "GO"
+    Python -> "PYTHON"
+    TypeScript -> "TYPESCRIPT"
+    Gleam -> "GLEAM"
   }
 }
 
@@ -254,10 +255,10 @@ pub fn encode_worker_register_request(
       let info_map =
         erlang_map_put_string(info_map, "sdk_version", info.sdk_version)
       let info_map =
-        erlang_map_put_int(
+        erlang_map_put_enum(
           info_map,
           "language",
-          sdk_language_to_int(info.language),
+          sdk_language_to_enum_name(info.language),
         )
       let info_map =
         erlang_map_put_string(
@@ -492,6 +493,9 @@ fn erlang_map_get_int_option(map: ErlangMap, key: String) -> Option(Int)
 
 @external(erlang, "dispatcher_pb_helper", "put_bool")
 fn erlang_map_put_bool(map: ErlangMap, key: String, value: Bool) -> ErlangMap
+
+@external(erlang, "dispatcher_pb_helper", "put_enum")
+fn erlang_map_put_enum(map: ErlangMap, key: String, value: String) -> ErlangMap
 
 @external(erlang, "dispatcher_pb_helper", "put_nested")
 fn erlang_map_put_nested(

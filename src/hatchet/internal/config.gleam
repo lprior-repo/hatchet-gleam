@@ -185,6 +185,7 @@
 
 /// Configuration Module
 ///
+import envoy
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -215,7 +216,8 @@ pub fn from_environment() -> Config {
     port: parse_port(get_env("HATCHET_PORT"), 7070),
     grpc_port: parse_port(get_env("HATCHET_GRPC_PORT"), 7070),
     // Default is 7070 for gRPC
-    token: get_env("HATCHET_TOKEN"),
+    // Try HATCHET_CLIENT_TOKEN as fallback (Docker uses this name)
+    token: get_env_with_fallback("HATCHET_TOKEN", "HATCHET_CLIENT_TOKEN"),
     namespace: get_env("HATCHET_NAMESPACE"),
     tls_ca: get_env("HATCHET_TLS_CA"),
     tls_cert: get_env("HATCHET_TLS_CERT"),
@@ -278,13 +280,18 @@ pub fn has_tls(config: Config) -> Bool {
 // INTERNAL HELPERS
 // ============================================================================
 
-@external(erlang, "os", "getenv")
-fn getenv(key: String) -> Result(String, Nil)
-
 fn get_env(key: String) -> Option(String) {
-  getenv(key)
-  |> result.map(Some)
-  |> result.unwrap(None)
+  case envoy.get(key) {
+    Ok(value) -> Some(value)
+    Error(_) -> None
+  }
+}
+
+fn get_env_with_fallback(key: String, fallback_key: String) -> Option(String) {
+  case get_env(key) {
+    Some(value) -> Some(value)
+    None -> get_env(fallback_key)
+  }
 }
 
 fn get_env_or_default(key: String, default: String) -> String {

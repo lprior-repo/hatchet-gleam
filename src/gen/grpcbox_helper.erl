@@ -21,7 +21,8 @@ connect(Uri, TimeoutMs, _TLSConfig) ->
                     retry_timeout => TimeoutMs
                 },
 
-                case gun:open(Host, Port, GunOpts) of
+                HostStr = if is_binary(Host) -> binary_to_list(Host); true -> Host end,
+                case gun:open(HostStr, Port, GunOpts) of
                     {ok, GunPid} ->
                         %% Wait for connection to be up
                         case gun:await_up(GunPid, TimeoutMs) of

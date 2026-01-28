@@ -1,6 +1,7 @@
 -module(dispatcher_pb_helper).
 -export([new_map/0,
          put_string/3, put_int/3, put_list/3, put_bool/3, put_nested/3, put_label_map/3,
+         put_enum/3,
          get_string/2, get_string_default/3, get_string_option/2,
          get_int/2, get_int_default/3, get_int_option/2,
          encode_msg/2, decode_msg/2]).
@@ -32,18 +33,27 @@ put_bool(Map, Key, Value) when is_binary(Key), is_boolean(Value) ->
     AtomKey = binary_to_atom(Key, utf8),
     Map#{AtomKey => Value}.
 
+%% Put an enum value with atom key (for gpb enum fields)
+%% EnumValue is a binary that gets converted to an atom for gpb
+put_enum(Map, Key, EnumValue) when is_binary(Key), is_binary(EnumValue) ->
+    AtomKey = binary_to_atom(Key, utf8),
+    EnumAtom = binary_to_atom(EnumValue, utf8),
+    Map#{AtomKey => EnumAtom}.
+
 %% Put a nested map with atom key
 put_nested(Map, Key, NestedMap) when is_binary(Key), is_map(NestedMap) ->
     AtomKey = binary_to_atom(Key, utf8),
     Map#{AtomKey => NestedMap}.
 
 %% Put a label map (for WorkerLabels map<string, WorkerLabels>)
+%% gpb expects labels as #{BinaryKey => WorkerLabelsMap} where keys stay as binaries
+%% because the proto map<string, WorkerLabels> encodes keys via e_type_string
 put_label_map(Map, Key, Labels) when is_binary(Key), is_list(Labels) ->
     AtomKey = binary_to_atom(Key, utf8),
-    %% Convert [{Key, LabelMap}] to #{atom => LabelMap}
+    %% Convert [{BinaryKey, LabelMap}] to #{BinaryKey => LabelMap}
+    %% Keep label name keys as binaries - gpb's e_type_string expects binaries
     LabelMap = lists:foldl(fun({LabelKey, LabelValue}, Acc) ->
-        LabelAtom = binary_to_atom(LabelKey, utf8),
-        Acc#{LabelAtom => LabelValue}
+        Acc#{LabelKey => LabelValue}
     end, #{}, Labels),
     Map#{AtomKey => LabelMap}.
 

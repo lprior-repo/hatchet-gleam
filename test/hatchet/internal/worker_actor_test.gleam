@@ -20,26 +20,18 @@ pub fn main() {
 
 pub fn worker_message_connect_test() {
   let msg = worker_actor.Connect
-  case msg {
-    worker_actor.Connect -> should.be_true(True)
-    _ -> should.fail()
-  }
+  msg |> should.equal(worker_actor.Connect)
 }
 
 pub fn worker_message_shutdown_test() {
   let msg = worker_actor.Shutdown
-  case msg {
-    worker_actor.Shutdown -> should.be_true(True)
-    _ -> should.fail()
-  }
+  msg |> should.equal(worker_actor.Shutdown)
 }
 
 pub fn worker_message_reconnect_test() {
   let msg = worker_actor.Reconnect(3)
-  case msg {
-    worker_actor.Reconnect(attempt) -> attempt |> should.equal(3)
-    _ -> should.fail()
-  }
+  let worker_actor.Reconnect(attempt) = msg
+  attempt |> should.equal(3)
 }
 
 // ============================================================================
@@ -48,10 +40,7 @@ pub fn worker_message_reconnect_test() {
 
 pub fn worker_message_send_heartbeat_test() {
   let msg = worker_actor.SendHeartbeat
-  case msg {
-    worker_actor.SendHeartbeat -> should.be_true(True)
-    _ -> should.fail()
-  }
+  msg |> should.equal(worker_actor.SendHeartbeat)
 }
 
 // ============================================================================
@@ -84,26 +73,19 @@ pub fn worker_message_task_assigned_test() {
     )
 
   let msg = worker_actor.TaskAssigned(action)
-  case msg {
-    worker_actor.TaskAssigned(a) -> a.step_name |> should.equal("my-task")
-    _ -> should.fail()
-  }
+  let worker_actor.TaskAssigned(a) = msg
+  a.step_name |> should.equal("my-task")
 }
 
 pub fn worker_message_listener_error_test() {
   let msg = worker_actor.ListenerError("connection reset")
-  case msg {
-    worker_actor.ListenerError(err) -> err |> should.equal("connection reset")
-    _ -> should.fail()
-  }
+  let worker_actor.ListenerError(err) = msg
+  err |> should.equal("connection reset")
 }
 
 pub fn worker_message_listener_stopped_test() {
   let msg = worker_actor.ListenerStopped
-  case msg {
-    worker_actor.ListenerStopped -> should.be_true(True)
-    _ -> should.fail()
-  }
+  msg |> should.equal(worker_actor.ListenerStopped)
 }
 
 // ============================================================================
@@ -112,54 +94,37 @@ pub fn worker_message_listener_stopped_test() {
 
 pub fn worker_message_task_started_test() {
   let msg = worker_actor.TaskStarted("step-run-123")
-  case msg {
-    worker_actor.TaskStarted(step_run_id) ->
-      step_run_id |> should.equal("step-run-123")
-    _ -> should.fail()
-  }
+  let worker_actor.TaskStarted(step_run_id) = msg
+  step_run_id |> should.equal("step-run-123")
 }
 
 pub fn worker_message_task_completed_test() {
   // TaskCompleted now takes the JSON output as a String
   let msg =
     worker_actor.TaskCompleted("step-run-123", "{\"result\": \"success\"}")
-  case msg {
-    worker_actor.TaskCompleted(step_run_id, output) -> {
-      step_run_id |> should.equal("step-run-123")
-      output |> should.equal("{\"result\": \"success\"}")
-    }
-    _ -> should.fail()
-  }
+  let worker_actor.TaskCompleted(step_run_id, output) = msg
+  step_run_id |> should.equal("step-run-123")
+  output |> should.equal("{\"result\": \"success\"}")
 }
 
 pub fn worker_message_task_failed_test() {
   let msg = worker_actor.TaskFailed("step-run-123", "error message", True)
-  case msg {
-    worker_actor.TaskFailed(step_run_id, error, should_retry) -> {
-      step_run_id |> should.equal("step-run-123")
-      error |> should.equal("error message")
-      should_retry |> should.equal(True)
-    }
-    _ -> should.fail()
-  }
+  let worker_actor.TaskFailed(step_run_id, error, should_retry) = msg
+  step_run_id |> should.equal("step-run-123")
+  error |> should.equal("error message")
+  should_retry |> should.equal(True)
 }
 
 pub fn worker_message_task_timeout_test() {
   let msg = worker_actor.TaskTimeout("step-run-123")
-  case msg {
-    worker_actor.TaskTimeout(step_run_id) ->
-      step_run_id |> should.equal("step-run-123")
-    _ -> should.fail()
-  }
+  let worker_actor.TaskTimeout(step_run_id) = msg
+  step_run_id |> should.equal("step-run-123")
 }
 
 pub fn worker_message_task_slot_released_test() {
   let msg = worker_actor.TaskSlotReleased("step-run-123")
-  case msg {
-    worker_actor.TaskSlotReleased(step_run_id) ->
-      step_run_id |> should.equal("step-run-123")
-    _ -> should.fail()
-  }
+  let worker_actor.TaskSlotReleased(step_run_id) = msg
+  step_run_id |> should.equal("step-run-123")
 }
 
 // ============================================================================
@@ -280,14 +245,9 @@ pub fn task_completed_with_output_test() {
   // Test that TaskCompleted carries the JSON output
   let output_json = "{\"status\": \"success\", \"count\": 42}"
   let msg = worker_actor.TaskCompleted("step-run-123", output_json)
-
-  case msg {
-    worker_actor.TaskCompleted(step_run_id, output) -> {
-      step_run_id |> should.equal("step-run-123")
-      output |> should.equal(output_json)
-    }
-    _ -> should.fail()
-  }
+  let worker_actor.TaskCompleted(step_run_id, output) = msg
+  step_run_id |> should.equal("step-run-123")
+  output |> should.equal(output_json)
 }
 
 // ============================================================================
@@ -297,27 +257,17 @@ pub fn task_completed_with_output_test() {
 pub fn task_failed_with_retry_test() {
   // Test that TaskFailed carries retry information
   let msg = worker_actor.TaskFailed("step-run-123", "connection timeout", True)
-
-  case msg {
-    worker_actor.TaskFailed(step_run_id, error, should_retry) -> {
-      step_run_id |> should.equal("step-run-123")
-      error |> should.equal("connection timeout")
-      should_retry |> should.equal(True)
-    }
-    _ -> should.fail()
-  }
+  let worker_actor.TaskFailed(step_run_id, error, should_retry) = msg
+  step_run_id |> should.equal("step-run-123")
+  error |> should.equal("connection timeout")
+  should_retry |> should.equal(True)
 }
 
 pub fn task_failed_no_retry_test() {
   // Test failed task that should not be retried
   let msg = worker_actor.TaskFailed("step-run-456", "invalid input", False)
-
-  case msg {
-    worker_actor.TaskFailed(step_run_id, error, should_retry) -> {
-      step_run_id |> should.equal("step-run-456")
-      error |> should.equal("invalid input")
-      should_retry |> should.equal(False)
-    }
-    _ -> should.fail()
-  }
+  let worker_actor.TaskFailed(step_run_id, error, should_retry) = msg
+  step_run_id |> should.equal("step-run-456")
+  error |> should.equal("invalid input")
+  should_retry |> should.equal(False)
 }
