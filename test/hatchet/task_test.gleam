@@ -141,12 +141,15 @@ pub fn task_context_accessors_test() {
       input: dynamic.string("test-input"),
       parent_outputs: dict.from_list([#("task1", dynamic.string("output1"))]),
       metadata: dict.from_list([#("key1", "value1")]),
+      step_run_errors: dict.from_list([#("failed-task", "error message")]),
       logger: fn(_) { Nil },
       stream_fn: fn(_) { Ok(Nil) },
       release_slot_fn: fn() { Ok(Nil) },
       refresh_timeout_fn: fn(_) { Ok(Nil) },
       cancel_fn: fn() { Ok(Nil) },
-      spawn_workflow_fn: fn(_, _, _) { Ok("workflow-run-id") },
+      spawn_workflow_fn: fn(workflow_name, input, metadata) {
+        Ok("workflow-run-id")
+      },
     )
 
   task.get_workflow_run_id(ctx)
@@ -177,12 +180,15 @@ pub fn get_parent_output_test() {
       input: dynamic.string("test-input"),
       parent_outputs: dict.from_list([#("task1", dynamic.string("output1"))]),
       metadata: dict.new(),
+      step_run_errors: dict.new(),
       logger: fn(_) { Nil },
       stream_fn: fn(_) { Ok(Nil) },
       release_slot_fn: fn() { Ok(Nil) },
       refresh_timeout_fn: fn(_) { Ok(Nil) },
       cancel_fn: fn() { Ok(Nil) },
-      spawn_workflow_fn: fn(_, _, _) { Ok("workflow-run-id") },
+      spawn_workflow_fn: fn(workflow_name, input, metadata) {
+        Ok("workflow-run-id")
+      },
     )
 
   task.get_parent_output(ctx, "task1")

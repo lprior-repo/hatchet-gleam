@@ -30,6 +30,7 @@ import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/json
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import hatchet/internal/ffi/protobuf
 
@@ -59,6 +60,8 @@ pub type Context {
     additional_metadata: Dict(String, String),
     // Retry info
     retry_count: Int,
+    // Step errors (for on-failure handlers)
+    step_run_errors: Dict(String, String),
     // Callbacks to the worker/server
     log_fn: fn(String) -> Nil,
     stream_fn: fn(Dynamic) -> Result(Nil, String),
@@ -102,6 +105,17 @@ pub fn all_parent_outputs(ctx: Context) -> Dict(String, Dynamic) {
 /// Get the current retry count (0 for first attempt).
 pub fn retry_count(ctx: Context) -> Int {
   ctx.retry_count
+}
+
+/// Get errors from failed steps in this workflow run.
+///
+/// This is primarily used in on-failure handlers to inspect
+/// which steps failed and what errors they produced. Only available
+/// in engine versions v0.53.10 and later.
+///
+/// Returns a dictionary mapping step names to error messages.
+pub fn step_run_errors(ctx: Context) -> Dict(String, String) {
+  ctx.step_run_errors
 }
 
 /// Get the workflow run ID.
@@ -199,6 +213,57 @@ pub fn spawn_workflow_with_metadata(
   ctx.spawn_workflow_fn(workflow_name, input, merged)
 }
 
+/// Specification for spawning a single child workflow.
+pub type ChildWorkflowSpec {
+  ChildWorkflowSpec(
+    workflow_name: String,
+    input: Dynamic,
+    metadata: Dict(String, String),
+  )
+}
+
+/// Spawn multiple child workflows in a batch.
+///
+/// This is more efficient than calling spawn_workflow multiple times
+/// as it sends all spawns in a single request to Hatchet.
+///
+/// **Parameters:**
+///   - `ctx`: The context
+///   - `workflows`: List of child workflow specifications
+///
+/// **Returns:** List of results, each being Ok(run_id) or Error(String)
+///
+/// **Examples:**
+/// ```gleam
+/// let specs = [
+///   ChildWorkflowSpec(
+///     workflow_name: "process-payment",
+///     input: dynamic.from("{\"amount\":100}"),
+///     metadata: dict.from_list([#("source", "web")]),
+///   ),
+///   ChildWorkflowSpec(
+///     workflow_name: "send-receipt",
+///     input: dynamic.from("{\"email\":\"user@example.com\""),
+///     metadata: dict.new(),
+///   ),
+/// ]
+///
+/// case context.spawn_workflows(ctx, specs) {
+///   [Ok(id1), Ok(id2), ..] -> // All spawned
+///   [Ok(id1), Error(e), ..] -> io.println("Failed: " <> e)
+///   [Error(e), ..] -> io.println("All failed: " <> e)
+/// }
+/// ```
+pub fn spawn_workflows(
+  ctx: Context,
+  workflows: List(ChildWorkflowSpec),
+) -> List(Result(String, String)) {
+  list.map(workflows, fn(spec) {
+    let merged = dict.merge(ctx.additional_metadata, spec.metadata)
+    ctx.spawn_workflow_fn(spec.workflow_name, spec.input, merged)
+  })
+}
+
 // ============================================================================
 // Context Construction (Internal)
 // ============================================================================
@@ -241,7 +306,7 @@ pub fn from_assigned_action(
   callbacks: ContextCallbacks,
 ) -> Context {
   // Parse the action payload as JSON to get the input and parent outputs
-  let #(input, payload_parent_outputs) =
+  let #(input, payload_parent_outputs, step_run_errors) =
     parse_action_payload_with_parents(action.action_payload)
 
   // Merge additional parent outputs with those from payload
@@ -267,6 +332,7 @@ pub fn from_assigned_action(
     parent_outputs: parent_outputs,
     additional_metadata: metadata,
     retry_count: action.retry_count,
+    step_run_errors: step_run_errors,
     log_fn: callbacks.log_fn,
     stream_fn: callbacks.stream_fn,
     release_slot_fn: callbacks.release_slot_fn,
@@ -291,32 +357,55 @@ pub fn from_assigned_action(
 /// Or it may be just the input data directly.
 fn parse_action_payload_with_parents(
   payload: String,
-) -> #(Dynamic, Dict(String, Dynamic)) {
+) -> #(Dynamic, Dict(String, Dynamic), Dict(String, String)) {
   case json.parse(payload, decode.dynamic) {
     Ok(value) -> {
-      // Try to extract structured payload with input and parents using builder pattern
+      // Try to extract structured payload with input, parents, and step_run_errors
       let decoder = {
         use input <- decode.field("input", decode.dynamic)
         use parents <- decode.field(
           "parents",
           decode.dict(decode.string, decode.dynamic),
         )
-        decode.success(#(input, parents))
+        use step_run_errors <- decode.field(
+          "step_run_errors",
+          decode.dict(decode.string, decode.string),
+        )
+        decode.success(#(input, parents, step_run_errors))
       }
 
       case decode.run(value, decoder) {
-        Ok(#(input, parents)) -> #(input, parents)
+        Ok(#(input, parents, step_run_errors)) -> #(
+          input,
+          parents,
+          step_run_errors,
+        )
         Error(_) -> {
-          // If structured decode fails, try just extracting input
-          let input_decoder = {
+          // Try extracting without step_run_errors (older versions)
+          let decoder_no_errors = {
             use input <- decode.field("input", decode.dynamic)
-            decode.success(input)
+            use parents <- decode.field(
+              "parents",
+              decode.dict(decode.string, decode.dynamic),
+            )
+            decode.success(#(input, parents))
           }
-          case decode.run(value, input_decoder) {
-            Ok(input) -> #(input, dict.new())
+
+          case decode.run(value, decoder_no_errors) {
+            Ok(#(input, parents)) -> #(input, parents, dict.new())
             Error(_) -> {
-              // Payload is just the input data itself
-              #(value, dict.new())
+              // If structured decode fails, try just extracting input
+              let input_decoder = {
+                use input <- decode.field("input", decode.dynamic)
+                decode.success(input)
+              }
+              case decode.run(value, input_decoder) {
+                Ok(input) -> #(input, dict.new(), dict.new())
+                Error(_) -> {
+                  // Payload is just the input data itself
+                  #(value, dict.new(), dict.new())
+                }
+              }
             }
           }
         }
@@ -325,7 +414,7 @@ fn parse_action_payload_with_parents(
     Error(_) -> {
       // If JSON parsing fails, treat the payload as a raw string value
       // Convert to Dynamic using the dynamic.string constructor
-      #(dynamic.string(payload), dict.new())
+      #(dynamic.string(payload), dict.new(), dict.new())
     }
   }
 }
@@ -357,6 +446,7 @@ pub fn mock(input: Dynamic, parent_outputs: Dict(String, Dynamic)) -> Context {
     parent_outputs: parent_outputs,
     additional_metadata: dict.new(),
     retry_count: 0,
+    step_run_errors: dict.new(),
     log_fn: noop_callbacks.log_fn,
     stream_fn: noop_callbacks.stream_fn,
     release_slot_fn: noop_callbacks.release_slot_fn,
@@ -385,6 +475,7 @@ pub fn mock_with_retry(
     parent_outputs: parent_outputs,
     additional_metadata: dict.new(),
     retry_count: retry,
+    step_run_errors: dict.new(),
     log_fn: noop_callbacks.log_fn,
     stream_fn: noop_callbacks.stream_fn,
     release_slot_fn: noop_callbacks.release_slot_fn,
@@ -412,6 +503,7 @@ pub fn to_task_context(ctx: Context) -> TaskContext {
     input: ctx.input,
     parent_outputs: ctx.parent_outputs,
     metadata: ctx.additional_metadata,
+    step_run_errors: ctx.step_run_errors,
     logger: ctx.log_fn,
     stream_fn: ctx.stream_fn,
     release_slot_fn: ctx.release_slot_fn,

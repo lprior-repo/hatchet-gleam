@@ -118,6 +118,8 @@ pub type TaskContext {
     parent_outputs: Dict(String, Dynamic),
     metadata: Dict(String, String),
     logger: fn(String) -> Nil,
+    // Step errors (for on-failure handlers)
+    step_run_errors: Dict(String, String),
     // Callbacks to orchestrator
     stream_fn: fn(Dynamic) -> Result(Nil, String),
     release_slot_fn: fn() -> Result(Nil, String),
@@ -134,6 +136,7 @@ pub type FailureContext {
     failed_task: String,
     error: String,
     input: Dynamic,
+    step_run_errors: Dict(String, String),
   )
 }
 

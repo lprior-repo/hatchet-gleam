@@ -1,5 +1,5 @@
 import gleam/dict
-import gleam/dynamic
+import gleam/dynamic.{type Dynamic}
 import gleam/dynamic/decode
 import gleam/option
 import hatchet/client
@@ -81,6 +81,11 @@ pub fn context_all_parent_outputs(ctx: Context) {
 /// Get the current retry count (0 for first attempt).
 pub fn context_retry_count(ctx: Context) {
   context.retry_count(ctx)
+}
+
+/// Get errors from failed steps in this workflow run.
+pub fn context_step_run_errors(ctx: Context) {
+  context.step_run_errors(ctx)
 }
 
 /// Get the workflow run ID.
@@ -542,6 +547,14 @@ pub fn context_spawn_workflow(
   context.spawn_workflow(ctx, workflow_name, input)
 }
 
+/// Spawn multiple child workflows in a batch.
+pub fn context_spawn_workflows(
+  ctx: Context,
+  workflows: List(context.ChildWorkflowSpec),
+) -> List(Result(String, String)) {
+  context.spawn_workflows(ctx, workflows)
+}
+
 // ============================================================================
 // TaskContext Orchestrator Methods
 // ============================================================================
@@ -573,6 +586,37 @@ pub fn spawn_workflow(
   input: dynamic.Dynamic,
 ) {
   task.spawn_workflow(ctx, workflow_name, input)
+}
+
+/// Spawn a child workflow with metadata from TaskContext.
+pub fn spawn_workflow_with_metadata(
+  ctx: TaskContext,
+  workflow_name: String,
+  input: dynamic.Dynamic,
+  metadata,
+) -> Result(String, String) {
+  task.spawn_workflow_with_metadata(ctx, workflow_name, input, metadata)
+}
+
+/// Spawn multiple child workflows in a batch.
+pub fn spawn_workflows(
+  ctx: TaskContext,
+  workflows: List(context.ChildWorkflowSpec),
+) -> List(Result(String, String)) {
+  task.spawn_workflows(ctx, workflows)
+}
+
+/// Create a child workflow specification.
+pub fn child_workflow_spec(
+  workflow_name: String,
+  input: dynamic.Dynamic,
+  metadata,
+) -> context.ChildWorkflowSpec {
+  context.ChildWorkflowSpec(
+    workflow_name: workflow_name,
+    input: input,
+    metadata: metadata,
+  )
 }
 
 // ============================================================================

@@ -1,7 +1,9 @@
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
+import gleam/list as list_module
 import gleam/option
 import hatchet/constants
+import hatchet/context.{type ChildWorkflowSpec}
 import hatchet/standalone
 import hatchet/types.{
   type BackoffConfig, type DurableTaskDef, type LimitStrategy,
@@ -450,6 +452,28 @@ pub fn get_task_run_id(ctx: TaskContext) -> String {
   ctx.task_run_id
 }
 
+/// Get errors from failed steps in this workflow run.
+///
+/// This is primarily used in on-failure handlers to inspect
+/// which steps failed and what errors they produced. Only available
+/// in engine versions v0.53.10 and later.
+///
+/// **Parameters:**
+///   - `ctx`: The task context
+///
+/// **Returns:** A dictionary mapping step names to error messages
+///
+/// **Examples:**
+/// ```gleam
+/// let errors = task.get_step_run_errors(ctx)
+/// dict.each(errors, fn(step_name, error_msg) {
+///   task.log(ctx, step_name <> " failed: " <> error_msg)
+/// })
+/// ```
+pub fn get_step_run_errors(ctx: TaskContext) -> Dict(String, String) {
+  ctx.step_run_errors
+}
+
 /// Push streaming data from within a task handler.
 ///
 /// Allows tasks to stream incremental results to clients.
@@ -589,6 +613,77 @@ pub fn spawn_workflow_with_metadata(
 ) -> Result(String, String) {
   let merged = dict.merge(ctx.metadata, metadata)
   ctx.spawn_workflow_fn(workflow_name, input, merged)
+}
+
+/// Spawn multiple child workflows in a batch.
+///
+/// This is more efficient than calling spawn_workflow multiple times
+/// as it sends all spawns in a single request to Hatchet.
+///
+/// **Parameters:**
+///   - `ctx`: The task context
+///   - `workflows`: List of child workflow specifications
+///
+/// **Returns:** List of results, each being Ok(run_id) or Error(String)
+///
+/// **Examples:**
+/// ```gleam
+/// let specs = [
+///   task.child_workflow_spec(
+///     "process-payment",
+///     dynamic.from("{\"amount\":100}"),
+///     dict.from_list([#("source", "web")]),
+///   ),
+///   task.child_workflow_spec(
+///     "send-receipt",
+///     dynamic.from("{\"email\":\"user@example.com\""),
+///     dict.new(),
+///   ),
+/// ]
+///
+/// case task.spawn_workflows(ctx, specs) {
+///   [Ok(id1), Ok(id2), ..] -> // All spawned
+///   [Ok(id1), Error(e), ..] -> io.println("Failed: " <> e)
+///   [Error(e), ..] -> io.println("All failed: " <> e)
+/// }
+/// ```
+pub fn spawn_workflows(
+  ctx: TaskContext,
+  workflows: List(ChildWorkflowSpec),
+) -> List(Result(String, String)) {
+  list_module.map(workflows, fn(spec) {
+    let merged = dict.merge(ctx.metadata, spec.metadata)
+    ctx.spawn_workflow_fn(spec.workflow_name, spec.input, merged)
+  })
+}
+
+/// Create a child workflow specification for batch spawning.
+///
+/// **Parameters:**
+///   - `workflow_name`: Name of the workflow to spawn
+///   - `input`: Input data for the child workflow
+///   - `metadata`: Additional metadata for the child workflow
+///
+/// **Returns:** A `ChildWorkflowSpec` that can be used with `spawn_workflows`
+///
+/// **Examples:**
+/// ```gleam
+/// let spec = task.child_workflow_spec(
+///   "child-workflow",
+///   dynamic.from("{\"key\":\"value\"}"),
+///   dict.from_list([#("trace_id", "12345")])
+/// )
+/// ```
+pub fn child_workflow_spec(
+  workflow_name: String,
+  input: Dynamic,
+  metadata: Dict(String, String),
+) -> context.ChildWorkflowSpec {
+  context.ChildWorkflowSpec(
+    workflow_name: workflow_name,
+    input: input,
+    metadata: metadata,
+  )
 }
 
 /// Return a successful task result.

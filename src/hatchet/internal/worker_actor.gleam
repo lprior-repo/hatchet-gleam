@@ -35,6 +35,7 @@ import hatchet/internal/grpc
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
 import hatchet/internal/tls.{type TLSConfig}
+import hatchet/task
 import hatchet/types.{type Client, type WorkerConfig, type Workflow}
 
 // ============================================================================
@@ -245,6 +246,7 @@ fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler)
                   failed_task: "",
                   error: "",
                   input: task_ctx.input,
+                  step_run_errors: task.get_step_run_errors(task_ctx),
                 )
               case failure_fn(failure_ctx) {
                 Ok(_) -> Ok(dynamic.string("on_failure completed"))

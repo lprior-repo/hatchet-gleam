@@ -132,10 +132,18 @@ pub fn save_checkpoint(
   _checkpoint_key: String,
   data: Dynamic,
 ) -> Result(Nil, String) {
-  // TODO: Implement checkpoint saving to Hatchet API
-  // For now, just return Ok to allow compilation
-  Ok(data)
-  |> result.map(fn(_) { Nil })
+  // Checkpoint saving is not yet available in Gleam SDK
+  // The official Python/Go SDKs have this feature as a TODO.
+  // The dispatcher manages durable sleep/event waits automatically.
+  //
+  // For production use, verify your Hatchet version supports
+  // persistent checkpoints and check REST API documentation.
+  Error(
+    "Checkpoint saving is not yet implemented. "
+    <> "The dispatcher manages durable sleep/event waits automatically. "
+    <> "Verify your Hatchet version supports persistent checkpoints "
+    <> "and check REST API documentation if manual checkpointing is required.",
+  )
 }
 
 /// Load a checkpoint with the given key.
@@ -157,8 +165,12 @@ pub fn load_checkpoint(
   _ctx: DurableContext,
   _checkpoint_key: String,
 ) -> Option(Dynamic) {
-  // In a full implementation, this would query the Hatchet API for checkpoint data
-  // For now, we return None to indicate no checkpoint exists
+  // Checkpoint loading is not yet available in Gleam SDK
+  // The official Python/Go SDKs have this feature as a TODO.
+  // The dispatcher manages durable sleep/event waits automatically.
+  //
+  // For production use, verify your Hatchet version supports
+  // persistent checkpoints and check REST API documentation.
   None
 }
 
