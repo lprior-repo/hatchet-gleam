@@ -3136,75 +3136,75 @@ fetch_rpc_def(ServiceName, RpcName) ->
 
 %% Convert a a fully qualified (ie with package name) service name
 %% as a binary to a service name as an atom.
-fqbin_to_service_name(<<"hatchet.dispatcher.Dispatcher">>) -> 'Dispatcher';
+fqbin_to_service_name(<<"Dispatcher">>) -> 'Dispatcher';
 fqbin_to_service_name(X) -> error({gpb_error, {badservice, X}}).
 
 
 %% Convert a service name as an atom to a fully qualified
 %% (ie with package name) name as a binary.
-service_name_to_fqbin('Dispatcher') -> <<"hatchet.dispatcher.Dispatcher">>;
+service_name_to_fqbin('Dispatcher') -> <<"Dispatcher">>;
 service_name_to_fqbin(X) -> error({gpb_error, {badservice, X}}).
 
 
 %% Convert a a fully qualified (ie with package name) service name
 %% and an rpc name, both as binaries to a service name and an rpc
 %% name, as atoms.
-fqbins_to_service_and_rpc_name(<<"hatchet.dispatcher.Dispatcher">>, <<"Register">>) -> {'Dispatcher', 'Register'};
-fqbins_to_service_and_rpc_name(<<"hatchet.dispatcher.Dispatcher">>, <<"ListenV2">>) -> {'Dispatcher', 'ListenV2'};
-fqbins_to_service_and_rpc_name(<<"hatchet.dispatcher.Dispatcher">>, <<"SendStepActionEvent">>) -> {'Dispatcher', 'SendStepActionEvent'};
-fqbins_to_service_and_rpc_name(<<"hatchet.dispatcher.Dispatcher">>, <<"Heartbeat">>) -> {'Dispatcher', 'Heartbeat'};
+fqbins_to_service_and_rpc_name(<<"Dispatcher">>, <<"Register">>) -> {'Dispatcher', 'Register'};
+fqbins_to_service_and_rpc_name(<<"Dispatcher">>, <<"ListenV2">>) -> {'Dispatcher', 'ListenV2'};
+fqbins_to_service_and_rpc_name(<<"Dispatcher">>, <<"SendStepActionEvent">>) -> {'Dispatcher', 'SendStepActionEvent'};
+fqbins_to_service_and_rpc_name(<<"Dispatcher">>, <<"Heartbeat">>) -> {'Dispatcher', 'Heartbeat'};
 fqbins_to_service_and_rpc_name(S, R) -> error({gpb_error, {badservice_or_rpc, {S, R}}}).
 
 
 %% Convert a service name and an rpc name, both as atoms,
 %% to a fully qualified (ie with package name) service name and
 %% an rpc name as binaries.
-service_and_rpc_name_to_fqbins('Dispatcher', 'Register') -> {<<"hatchet.dispatcher.Dispatcher">>, <<"Register">>};
-service_and_rpc_name_to_fqbins('Dispatcher', 'ListenV2') -> {<<"hatchet.dispatcher.Dispatcher">>, <<"ListenV2">>};
-service_and_rpc_name_to_fqbins('Dispatcher', 'SendStepActionEvent') -> {<<"hatchet.dispatcher.Dispatcher">>, <<"SendStepActionEvent">>};
-service_and_rpc_name_to_fqbins('Dispatcher', 'Heartbeat') -> {<<"hatchet.dispatcher.Dispatcher">>, <<"Heartbeat">>};
+service_and_rpc_name_to_fqbins('Dispatcher', 'Register') -> {<<"Dispatcher">>, <<"Register">>};
+service_and_rpc_name_to_fqbins('Dispatcher', 'ListenV2') -> {<<"Dispatcher">>, <<"ListenV2">>};
+service_and_rpc_name_to_fqbins('Dispatcher', 'SendStepActionEvent') -> {<<"Dispatcher">>, <<"SendStepActionEvent">>};
+service_and_rpc_name_to_fqbins('Dispatcher', 'Heartbeat') -> {<<"Dispatcher">>, <<"Heartbeat">>};
 service_and_rpc_name_to_fqbins(S, R) -> error({gpb_error, {badservice_or_rpc, {S, R}}}).
 
 
-fqbin_to_msg_name(<<"hatchet.dispatcher.WorkerRegisterRequest">>) -> 'WorkerRegisterRequest';
-fqbin_to_msg_name(<<"hatchet.dispatcher.WorkerLabels">>) -> 'WorkerLabels';
-fqbin_to_msg_name(<<"hatchet.dispatcher.RuntimeInfo">>) -> 'RuntimeInfo';
-fqbin_to_msg_name(<<"hatchet.dispatcher.WorkerRegisterResponse">>) -> 'WorkerRegisterResponse';
-fqbin_to_msg_name(<<"hatchet.dispatcher.WorkerListenRequest">>) -> 'WorkerListenRequest';
-fqbin_to_msg_name(<<"hatchet.dispatcher.AssignedAction">>) -> 'AssignedAction';
-fqbin_to_msg_name(<<"hatchet.dispatcher.StepActionEvent">>) -> 'StepActionEvent';
-fqbin_to_msg_name(<<"hatchet.dispatcher.ActionEventResponse">>) -> 'ActionEventResponse';
-fqbin_to_msg_name(<<"hatchet.dispatcher.HeartbeatRequest">>) -> 'HeartbeatRequest';
-fqbin_to_msg_name(<<"hatchet.dispatcher.HeartbeatResponse">>) -> 'HeartbeatResponse';
+fqbin_to_msg_name(<<"WorkerRegisterRequest">>) -> 'WorkerRegisterRequest';
+fqbin_to_msg_name(<<"WorkerLabels">>) -> 'WorkerLabels';
+fqbin_to_msg_name(<<"RuntimeInfo">>) -> 'RuntimeInfo';
+fqbin_to_msg_name(<<"WorkerRegisterResponse">>) -> 'WorkerRegisterResponse';
+fqbin_to_msg_name(<<"WorkerListenRequest">>) -> 'WorkerListenRequest';
+fqbin_to_msg_name(<<"AssignedAction">>) -> 'AssignedAction';
+fqbin_to_msg_name(<<"StepActionEvent">>) -> 'StepActionEvent';
+fqbin_to_msg_name(<<"ActionEventResponse">>) -> 'ActionEventResponse';
+fqbin_to_msg_name(<<"HeartbeatRequest">>) -> 'HeartbeatRequest';
+fqbin_to_msg_name(<<"HeartbeatResponse">>) -> 'HeartbeatResponse';
 fqbin_to_msg_name(E) -> error({gpb_error, {badmsg, E}}).
 
 
-msg_name_to_fqbin('WorkerRegisterRequest') -> <<"hatchet.dispatcher.WorkerRegisterRequest">>;
-msg_name_to_fqbin('WorkerLabels') -> <<"hatchet.dispatcher.WorkerLabels">>;
-msg_name_to_fqbin('RuntimeInfo') -> <<"hatchet.dispatcher.RuntimeInfo">>;
-msg_name_to_fqbin('WorkerRegisterResponse') -> <<"hatchet.dispatcher.WorkerRegisterResponse">>;
-msg_name_to_fqbin('WorkerListenRequest') -> <<"hatchet.dispatcher.WorkerListenRequest">>;
-msg_name_to_fqbin('AssignedAction') -> <<"hatchet.dispatcher.AssignedAction">>;
-msg_name_to_fqbin('StepActionEvent') -> <<"hatchet.dispatcher.StepActionEvent">>;
-msg_name_to_fqbin('ActionEventResponse') -> <<"hatchet.dispatcher.ActionEventResponse">>;
-msg_name_to_fqbin('HeartbeatRequest') -> <<"hatchet.dispatcher.HeartbeatRequest">>;
-msg_name_to_fqbin('HeartbeatResponse') -> <<"hatchet.dispatcher.HeartbeatResponse">>;
+msg_name_to_fqbin('WorkerRegisterRequest') -> <<"WorkerRegisterRequest">>;
+msg_name_to_fqbin('WorkerLabels') -> <<"WorkerLabels">>;
+msg_name_to_fqbin('RuntimeInfo') -> <<"RuntimeInfo">>;
+msg_name_to_fqbin('WorkerRegisterResponse') -> <<"WorkerRegisterResponse">>;
+msg_name_to_fqbin('WorkerListenRequest') -> <<"WorkerListenRequest">>;
+msg_name_to_fqbin('AssignedAction') -> <<"AssignedAction">>;
+msg_name_to_fqbin('StepActionEvent') -> <<"StepActionEvent">>;
+msg_name_to_fqbin('ActionEventResponse') -> <<"ActionEventResponse">>;
+msg_name_to_fqbin('HeartbeatRequest') -> <<"HeartbeatRequest">>;
+msg_name_to_fqbin('HeartbeatResponse') -> <<"HeartbeatResponse">>;
 msg_name_to_fqbin(E) -> error({gpb_error, {badmsg, E}}).
 
 
-fqbin_to_enum_name(<<"hatchet.dispatcher.SDKS">>) -> 'SDKS';
-fqbin_to_enum_name(<<"hatchet.dispatcher.ActionType">>) -> 'ActionType';
-fqbin_to_enum_name(<<"hatchet.dispatcher.StepActionEventType">>) -> 'StepActionEventType';
+fqbin_to_enum_name(<<"SDKS">>) -> 'SDKS';
+fqbin_to_enum_name(<<"ActionType">>) -> 'ActionType';
+fqbin_to_enum_name(<<"StepActionEventType">>) -> 'StepActionEventType';
 fqbin_to_enum_name(E) -> error({gpb_error, {badenum, E}}).
 
 
-enum_name_to_fqbin('SDKS') -> <<"hatchet.dispatcher.SDKS">>;
-enum_name_to_fqbin('ActionType') -> <<"hatchet.dispatcher.ActionType">>;
-enum_name_to_fqbin('StepActionEventType') -> <<"hatchet.dispatcher.StepActionEventType">>;
+enum_name_to_fqbin('SDKS') -> <<"SDKS">>;
+enum_name_to_fqbin('ActionType') -> <<"ActionType">>;
+enum_name_to_fqbin('StepActionEventType') -> <<"StepActionEventType">>;
 enum_name_to_fqbin(E) -> error({gpb_error, {badenum, E}}).
 
 
-get_package_name() -> 'hatchet.dispatcher'.
+get_package_name() -> undefined.
 
 
 %% Whether or not the message names
@@ -3251,26 +3251,26 @@ get_enum_containment("dispatcher") -> ['ActionType', 'SDKS', 'StepActionEventTyp
 get_enum_containment(P) -> error({gpb_error, {badproto, P}}).
 
 
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.WorkerLabels">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.WorkerRegisterRequest">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.WorkerListenRequest">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.StepActionEvent">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.HeartbeatRequest">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.WorkerRegisterResponse">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.HeartbeatResponse">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.ActionEventResponse">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.AssignedAction">>) -> "dispatcher";
-get_proto_by_msg_name_as_fqbin(<<"hatchet.dispatcher.RuntimeInfo">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"WorkerLabels">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"WorkerRegisterRequest">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"WorkerListenRequest">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"StepActionEvent">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"HeartbeatRequest">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"WorkerRegisterResponse">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"HeartbeatResponse">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"ActionEventResponse">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"AssignedAction">>) -> "dispatcher";
+get_proto_by_msg_name_as_fqbin(<<"RuntimeInfo">>) -> "dispatcher";
 get_proto_by_msg_name_as_fqbin(E) -> error({gpb_error, {badmsg, E}}).
 
 
-get_proto_by_service_name_as_fqbin(<<"hatchet.dispatcher.Dispatcher">>) -> "dispatcher";
+get_proto_by_service_name_as_fqbin(<<"Dispatcher">>) -> "dispatcher";
 get_proto_by_service_name_as_fqbin(E) -> error({gpb_error, {badservice, E}}).
 
 
-get_proto_by_enum_name_as_fqbin(<<"hatchet.dispatcher.SDKS">>) -> "dispatcher";
-get_proto_by_enum_name_as_fqbin(<<"hatchet.dispatcher.StepActionEventType">>) -> "dispatcher";
-get_proto_by_enum_name_as_fqbin(<<"hatchet.dispatcher.ActionType">>) -> "dispatcher";
+get_proto_by_enum_name_as_fqbin(<<"SDKS">>) -> "dispatcher";
+get_proto_by_enum_name_as_fqbin(<<"StepActionEventType">>) -> "dispatcher";
+get_proto_by_enum_name_as_fqbin(<<"ActionType">>) -> "dispatcher";
 get_proto_by_enum_name_as_fqbin(E) -> error({gpb_error, {badenum, E}}).
 
 

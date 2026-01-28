@@ -401,17 +401,22 @@ fn register_worker(
   channel: grpc.Channel,
   state: WorkerState,
 ) -> Result(String, String) {
-  // Get list of action names
-  let actions = dict.keys(state.action_registry)
+  // Get list of action names (only fully-qualified ones with ':' separator)
+  let actions =
+    dict.keys(state.action_registry)
+    |> list.filter(fn(name) { string.contains(name, ":") })
 
   // Build runtime info
+  // Use GO as SDK language since upstream doesn't have a GLEAM enum value.
+  // Both run on BEAM/compiled, so GO is the closest match for "compiled language".
+  // Identify as Gleam via the extra field.
   let runtime_info =
     protobuf.RuntimeInfo(
       sdk_version: sdk_version,
-      language: protobuf.Gleam,
+      language: protobuf.Go,
       language_version: gleam_version,
       os: get_os_info(),
-      extra: None,
+      extra: Some("gleam"),
     )
 
   // Convert string labels to WorkerLabel type
@@ -435,7 +440,7 @@ fn register_worker(
   // Encode and send
   case protobuf.encode_worker_register_request(request) {
     Ok(encoded) -> {
-      case grpc.register_worker(channel, encoded) {
+      case grpc.register_worker(channel, encoded, state.token) {
         Ok(response) -> Ok(response.worker_id)
         Error(e) -> Error(e)
       }

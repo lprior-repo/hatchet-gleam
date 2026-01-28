@@ -155,19 +155,13 @@ fn error_to_string(err: grpcbox.GrpcError) -> String {
 pub fn register_worker(
   channel: Channel,
   request: protobuf.ProtobufMessage,
+  auth_token: String,
 ) -> Result(RegisterResponse, String) {
   let Channel(ch) = channel
   let data = protobuf.protobuf_message_to_bits(request)
-  let rpc_opts = grpcbox.RpcOptions(timeout_ms: 5000, metadata: [])
-  case
-    grpcbox.unary_call(
-      ch,
-      "hatchet.dispatcher.Dispatcher",
-      "Register",
-      data,
-      rpc_opts,
-    )
-  {
+  let metadata = [#("authorization", "Bearer " <> auth_token)]
+  let rpc_opts = grpcbox.RpcOptions(timeout_ms: 5000, metadata: metadata)
+  case grpcbox.unary_call(ch, "Dispatcher", "Register", data, rpc_opts) {
     Ok(resp_data) ->
       case
         protobuf.decode_worker_register_response(
@@ -215,29 +209,24 @@ pub fn listen_v2(
   let stream_opts =
     grpcbox.StreamOptions(
       channel: ch,
-      service: "hatchet.dispatcher.Dispatcher",
+      service: "Dispatcher",
       rpc: "ListenV2",
       metadata: metadata,
     )
 
-  // Start the bidirectional stream
-  case grpcbox.start_bidirectional_stream(stream_opts) {
-    Ok(#(stream, _stream_ref)) -> {
-      // Send the initial WorkerListenRequest
-      let listen_request = protobuf.WorkerListenRequest(worker_id: worker_id)
-      case protobuf.encode_worker_listen_request(listen_request) {
-        Ok(encoded) -> {
-          let data = protobuf.protobuf_message_to_bits(encoded)
-          case grpcbox.stream_send(stream, data) {
-            Ok(_) -> Ok(Stream(stream))
-            Error(e) -> Error(error_to_string(e))
-          }
-        }
-        Error(e) ->
-          Error("Failed to encode listen request: " <> pb_error_message(e))
+  // Encode the WorkerListenRequest
+  let listen_request = protobuf.WorkerListenRequest(worker_id: worker_id)
+  case protobuf.encode_worker_listen_request(listen_request) {
+    Ok(encoded) -> {
+      let data = protobuf.protobuf_message_to_bits(encoded)
+      // Start server-streaming RPC (sends request, then reads stream of responses)
+      case grpcbox.start_server_stream(stream_opts, data) {
+        Ok(#(stream, _stream_ref)) -> Ok(Stream(stream))
+        Error(e) -> Error(error_to_string(e))
       }
     }
-    Error(e) -> Error(error_to_string(e))
+    Error(e) ->
+      Error("Failed to encode listen request: " <> pb_error_message(e))
   }
 }
 
@@ -316,7 +305,7 @@ pub fn send_step_action_event(
       case
         grpcbox.unary_call(
           ch,
-          "hatchet.dispatcher.Dispatcher",
+          "Dispatcher",
           "SendStepActionEvent",
           data,
           rpc_opts,
@@ -357,15 +346,7 @@ pub fn send_heartbeat(
           #("authorization", "Bearer " <> auth_token),
         ])
 
-      case
-        grpcbox.unary_call(
-          ch,
-          "hatchet.dispatcher.Dispatcher",
-          "Heartbeat",
-          data,
-          rpc_opts,
-        )
-      {
+      case grpcbox.unary_call(ch, "Dispatcher", "Heartbeat", data, rpc_opts) {
         Ok(_) -> Ok(Nil)
         Error(e) -> Error(error_to_string(e))
       }

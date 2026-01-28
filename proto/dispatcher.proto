@@ -1,6 +1,7 @@
 syntax = "proto3";
 
-package hatchet.dispatcher;
+// No package declaration - matches upstream Hatchet proto.
+// gRPC service path is /Dispatcher/Method (not /hatchet.dispatcher.Dispatcher/Method)
 
 // The Hatchet dispatcher service for worker communication
 service Dispatcher {

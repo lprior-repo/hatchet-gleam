@@ -1,5 +1,5 @@
 -module(grpcbox_helper).
--export([connect/3, unary/5, start_stream/4, send/2, recv/2, close_stream/1, close_channel/1,
+-export([connect/3, unary/5, start_stream/4, server_stream/5, send/2, recv/2, close_stream/1, close_channel/1,
          dummy_channel/0, dummy_stream/0]).
 
 %% ==============================================================================
@@ -106,24 +106,35 @@ unary(Channel, Service, Rpc, Request, Opts) ->
 
     %% Await response
     case gun:await(GunPid, StreamRef, Timeout) of
-        {response, nofin, Status, _RespHeaders} ->
-            case Status of
-                200 ->
-                    %% Read body
-                    case gun:await_body(GunPid, StreamRef, Timeout) of
-                        {ok, ResponseBody} ->
-                            %% Strip gRPC frame prefix and return data
-                            case grpc_frame_decode(ResponseBody) of
-                                {ok, Data} -> {ok, Data};
-                                {error, _} = E -> E
-                            end;
-                        {error, Reason} ->
-                            {error, format_error(Reason)}
+        {response, nofin, 200, _RespHeaders} ->
+            %% Normal response with body following
+            case gun:await_body(GunPid, StreamRef, Timeout) of
+                {ok, ResponseBody} ->
+                    case grpc_frame_decode(ResponseBody) of
+                        {ok, Data} -> {ok, Data};
+                        {error, _} = E -> E
                     end;
+                {ok, ResponseBody, _Trailers} ->
+                    %% Response with trailers (gRPC typically sends trailers)
+                    case grpc_frame_decode(ResponseBody) of
+                        {ok, Data} -> {ok, Data};
+                        {error, _} = E -> E
+                    end;
+                {error, Reason} ->
+                    {error, format_error(Reason)}
+            end;
+        {response, nofin, Status, _RespHeaders} ->
+            %% Non-200 with body
+            gun:await_body(GunPid, StreamRef, Timeout),
+            {error, iolist_to_binary([<<"HTTP status ">>, integer_to_binary(Status)])};
+        {response, fin, _Status, RespHeaders} ->
+            %% Trailers-only response (common for gRPC errors)
+            GrpcStatus = proplists:get_value(<<"grpc-status">>, RespHeaders, <<"0">>),
+            case GrpcStatus of
+                <<"0">> -> {ok, <<>>};
                 _ ->
-                    %% Read error body and close
-                    gun:await_body(GunPid, StreamRef, Timeout),
-                    {error, iolist_to_binary([<<"HTTP status ">>, integer_to_binary(Status)])}
+                    GrpcMsg = proplists:get_value(<<"grpc-message">>, RespHeaders, <<"unknown gRPC error">>),
+                    {error, iolist_to_binary([<<"gRPC error ">>, GrpcStatus, <<": ">>, GrpcMsg])}
             end;
         {error, Reason} ->
             {error, format_error(Reason)}
@@ -163,7 +174,7 @@ extract_rpc_opts(_) ->
 %% Bidirectional Streaming
 %% ==============================================================================
 
-%% Start a bidirectional stream
+%% Start a bidirectional stream (headers only, body sent later via send/2)
 start_stream(dummy, _Service, _Rpc, _Metadata) ->
     {error, <<"Mock channel">>};
 start_stream(Channel, Service, Rpc, Metadata) ->
@@ -180,10 +191,34 @@ start_stream(Channel, Service, Rpc, Metadata) ->
         | metadata_to_headers(Metadata)
     ],
 
-    %% Start stream
-    StreamRef = gun:request(GunPid, <<"POST">>, list_to_binary(Path), Headers, <<>>),
+    %% Open stream with headers only (no body yet) for bidirectional streaming
+    StreamRef = gun:headers(GunPid, <<"POST">>, list_to_binary(Path), Headers),
 
     %% Return as 2-tuple matching Gleam's #(Stream, StreamRef)
+    Stream = {gun_stream, GunPid, StreamRef},
+    {ok, {Stream, StreamRef}}.
+
+%% Start a server-streaming RPC (send request body, then read responses)
+server_stream(dummy, _Service, _Rpc, _Request, _Metadata) ->
+    {error, <<"Mock channel">>};
+server_stream(Channel, Service, Rpc, Request, Metadata) ->
+    {gun_channel, GunPid, _Host, _Port, _IsSecure} = Channel,
+
+    %% Build gRPC path
+    Path = "/" ++ binary_to_list(Service) ++ "/" ++ binary_to_list(Rpc),
+
+    %% Build headers
+    Headers = [
+        {<<"content-type">>, <<"application/grpc+proto">>},
+        {<<"grpc-accept-encoding">>, <<"identity,deflate,gzip">>},
+        {<<"te">>, <<"trailers">>}
+        | metadata_to_headers(Metadata)
+    ],
+
+    %% Send request with full body (server-streaming: one request, stream of responses)
+    Body = grpc_frame_encode(Request),
+    StreamRef = gun:request(GunPid, <<"POST">>, list_to_binary(Path), Headers, Body),
+
     Stream = {gun_stream, GunPid, StreamRef},
     {ok, {Stream, StreamRef}}.
 
@@ -193,7 +228,7 @@ send(Stream, Data) when is_tuple(Stream) ->
     Body = grpc_frame_encode(Data),
     case gun:data(GunPid, StreamRef, nofin, Body) of
         {error, Reason} -> {error, format_error(Reason)};
-        _ -> ok
+        _ -> {ok, nil}
     end;
 send(dummy, _Data) ->
     {error, <<"Mock stream">>}.
@@ -213,14 +248,14 @@ recv(Stream, Timeout) when is_tuple(Stream) ->
                 {error, _} = E -> E
             end;
         {trailers, _Trailers} ->
-            {error, stream_closed};
+            {error, <<"stream closed">>};
         {error, timeout} ->
-            {error, timeout};
+            {error, <<"timeout">>};
         {error, Reason} ->
             {error, format_error(Reason)}
     end;
 recv(dummy, _Timeout) ->
-    {error, timeout}.
+    {error, <<"timeout">>}.
 
 %% ==============================================================================
 %% Cleanup
@@ -229,16 +264,16 @@ recv(dummy, _Timeout) ->
 %% Close a stream
 close_stream(Stream) when is_tuple(Stream) ->
     {gun_stream, GunPid, StreamRef} = Stream,
-    try gun:cancel(GunPid, StreamRef), ok catch _:_ -> ok end;
+    try gun:cancel(GunPid, StreamRef), nil catch _:_ -> nil end;
 close_stream(dummy) ->
-    ok.
+    nil.
 
 %% Close a channel
 close_channel(Channel) when is_tuple(Channel) ->
     {gun_channel, GunPid, _Host, _Port, _IsSecure} = Channel,
-    try gun:close(GunPid), ok catch _:_ -> ok end;
+    try gun:close(GunPid), nil catch _:_ -> nil end;
 close_channel(dummy) ->
-    ok.
+    nil.
 
 %% ==============================================================================
 %% Dummy functions for mock/testing (kept for compatibility)

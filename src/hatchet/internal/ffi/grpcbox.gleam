@@ -149,6 +149,34 @@ fn grpcbox_start_stream(
   metadata: List(#(String, String)),
 ) -> Result(#(Stream, StreamRef), String)
 
+/// Start a server-streaming RPC (send request, receive stream of responses)
+pub fn start_server_stream(
+  opts: StreamOptions,
+  request_data: BitArray,
+) -> Result(#(Stream, StreamRef), GrpcError) {
+  case
+    grpcbox_server_stream(
+      opts.channel,
+      opts.service,
+      opts.rpc,
+      request_data,
+      opts.metadata,
+    )
+  {
+    Ok(tuple) -> Ok(tuple)
+    Error(e) -> Error(GrpcStreamError(e))
+  }
+}
+
+@external(erlang, "grpcbox_helper", "server_stream")
+fn grpcbox_server_stream(
+  channel: Channel,
+  service: String,
+  rpc: String,
+  request: BitArray,
+  metadata: List(#(String, String)),
+) -> Result(#(Stream, StreamRef), String)
+
 pub fn stream_send(stream: Stream, data: BitArray) -> Result(Nil, GrpcError) {
   case grpcbox_send(stream, data) {
     Ok(_) -> Ok(Nil)

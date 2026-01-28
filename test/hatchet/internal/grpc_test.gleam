@@ -105,7 +105,7 @@ pub fn register_worker_with_protobuf_test() {
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
-  let result = grpc.register_worker(channel, pb_msg)
+  let result = grpc.register_worker(channel, pb_msg, "test-token")
 
   case result {
     Ok(_) -> {
@@ -140,7 +140,7 @@ pub fn register_worker_with_empty_actions_test() {
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
-  let result = grpc.register_worker(channel, pb_msg)
+  let result = grpc.register_worker(channel, pb_msg, "test-token")
 
   // Result should be defined (Ok or Error)
   case result {
@@ -179,7 +179,7 @@ pub fn register_worker_with_runtime_info_test() {
 
   let assert Ok(pb_msg) = protobuf.encode_worker_register_request(req)
 
-  let result = grpc.register_worker(channel, pb_msg)
+  let result = grpc.register_worker(channel, pb_msg, "test-token")
 
   case result {
     Ok(_) -> should.be_true(True)
