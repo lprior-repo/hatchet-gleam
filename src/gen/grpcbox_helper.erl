@@ -7,18 +7,22 @@
 %% ==============================================================================
 
 %% Connect to a gRPC server
-connect(Uri, TimeoutMs, _TLSConfig) ->
+connect(Uri, TimeoutMs, TLSConfig) ->
     %% Parse URI to get host and port
     case parse_uri(Uri) of
         {ok, Host, Port, IsSecure} ->
             %% Try to use gun, handle if not available
             try
+                %% Build TLS options if TLS config is provided
+                TlsOpts = build_tls_opts(TLSConfig),
+                
                 %% Gun options for HTTP/2
                 GunOpts = #{
                     protocols => [http2],
-                    transport => if IsSecure -> tls; true -> tcp end,
+                    transport => if TlsOpts =/= [] -> tls; IsSecure -> tls; true -> tcp end,
                     retry => 0,
-                    retry_timeout => TimeoutMs
+                    retry_timeout => TimeoutMs,
+                    tls_opts => TlsOpts
                 },
 
                 HostStr = if is_binary(Host) -> binary_to_list(Host); true -> Host end,
@@ -46,6 +50,119 @@ connect(Uri, TimeoutMs, _TLSConfig) ->
             end;
         {error, Reason} ->
             {error, Reason}
+    end.
+
+%% Build TLS options for gun from TLSConfig
+build_tls_opts(undefined) ->
+    [];
+build_tls_opts({tls_config, CaFile, CertFile, KeyFile, Verify}) ->
+    BaseOpts = [{verify, case Verify of
+        undefined -> verify_none;
+        true -> verify_peer;
+        false -> verify_none
+    end}],
+    
+    %% Add CA cert if provided
+    CertsOpts = case CaFile of
+        undefined -> [];
+        _ -> case load_ca_certs(CaFile) of
+            {ok, CaCerts} -> [{cacerts, CaCerts}];
+            {error, _} -> []
+        end
+    end,
+    
+    %% Add client cert and key for mTLS
+    ClientOpts = case CertFile of
+        undefined -> [];
+        _ -> 
+            CertKeyOpts = case load_client_cert_key(CertFile, KeyFile) of
+                {ok, Cert, Key} -> [{cert, Cert}, {key, Key}];
+                {error, _} -> []
+            end,
+            CertKeyOpts
+    end,
+    
+    BaseOpts ++ CertsOpts ++ ClientOpts.
+
+%% Load CA certificates from PEM file
+load_ca_certs(File) ->
+    case file:read_file(File) of
+        {ok, PemData} ->
+            case extract_certs_from_pem(PemData) of
+                {ok, Certs} -> {ok, Certs};
+                {error, Reason} -> {error, Reason}
+            end;
+        {error, Reason} ->
+            {error, {file_error, Reason}}
+    end.
+
+%% Load client certificate and key from PEM files
+load_client_cert_key(CertFile, KeyFile) ->
+    case file:read_file(CertFile) of
+        {ok, CertPem} ->
+            case extract_cert_from_pem(CertPem) of
+                {ok, CertDer} ->
+                    case file:read_file(KeyFile) of
+                        {ok, KeyPem} ->
+                            case extract_key_from_pem(KeyPem) of
+                                {ok, KeyDer} -> {ok, CertDer, KeyDer};
+                                {error, Reason} -> {error, Reason}
+                            end;
+                        {error, Reason} ->
+                            {error, {file_error, Reason}}
+                    end;
+                {error, Reason} ->
+                    {error, Reason}
+            end;
+        {error, Reason} ->
+            {error, {file_error, Reason}}
+    end.
+
+%% Extract DER-encoded certificates from PEM data
+extract_certs_from_pem(PemData) ->
+    PemEntries = public_key:pem_decode(PemData),
+    Certs = lists:foldl(
+        fun(Entry, Acc) ->
+            case Entry of
+                {'Certificate', Der, not_encrypted} ->
+                    [Der | Acc];
+                _ ->
+                    Acc
+            end
+        end,
+        [],
+        PemEntries
+    ),
+    case Certs of
+        [] -> {error, no_certificates};
+        _ -> {ok, lists:reverse(Certs)}
+    end.
+
+%% Extract first DER-encoded certificate from PEM data
+extract_cert_from_pem(PemData) ->
+    case public_key:pem_decode(PemData) of
+        [{'Certificate', Der, not_encrypted} | _] ->
+            {ok, Der};
+        _ ->
+            {error, no_certificate}
+    end.
+
+%% Extract DER-encoded private key from PEM data
+extract_key_from_pem(PemData) ->
+    case public_key:pem_decode(PemData) of
+        [Entry | _] ->
+            case Entry of
+                {'RSAPrivateKey', Der, not_encrypted} ->
+                    {ok, Der};
+                {'PrivateKeyInfo', Der, not_encrypted} ->
+                    {ok, Der};
+                {'ECPrivateKey', Der, not_encrypted} ->
+                    {ok, Der};
+                _ ->
+                    {error, unsupported_key_type}
+            end;
+        _ ->
+            {error, no_key}
     end.
 
 %% Parse URI (e.g., "http://localhost:7077" or "localhost:7077")
