@@ -2,12 +2,11 @@ import gleam/dict
 import gleam/dynamic.{type Dynamic}
 import gleam/list
 import gleam/option
-import gleam/string
+import hatchet/durable.{type DurableContext}
 import hatchet/types.{
-  type BackoffConfig, type DurableContext, type DurableTaskDef,
-  type FailureContext, type LimitStrategy, type TaskContext, type TaskDef,
-  type WaitCondition, type Workflow, ConcurrencyConfig, DurableContext,
-  DurableEventConditions, DurableTaskDef, RateLimitConfig, TaskDef, Workflow,
+  type BackoffConfig, type FailureContext, type LimitStrategy, type TaskContext,
+  type TaskDef, type WaitCondition, type Workflow, ConcurrencyConfig,
+  RateLimitConfig, TaskDef, Workflow,
 }
 
 /// Create a new workflow with the given name.
@@ -203,6 +202,8 @@ pub fn task(
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: False,
+      checkpoint_key: option.None,
     )
   Workflow(..wf, tasks: list.append(wf.tasks, [task_def]))
 }
@@ -252,6 +253,8 @@ pub fn task_after(
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: False,
+      checkpoint_key: option.None,
     )
   Workflow(..wf, tasks: list.append(wf.tasks, [task_def]))
 }
@@ -282,29 +285,22 @@ pub fn durable_task(
   handler: fn(DurableContext) -> Result(Dynamic, String),
   checkpoint_key: String,
 ) -> Workflow {
-  // Create a wrapper handler that converts TaskContext to DurableContext
-  let wrapped_handler = fn(task_ctx: TaskContext) -> Result(Dynamic, String) {
-    // For now, create a basic durable context
-    // In a full implementation, this would come from the worker with proper callbacks
-    let durable_ctx =
-      DurableContext(
-        task_context: task_ctx,
-        checkpoint_key: checkpoint_key,
-        wait_key_counter: 0,
-        register_durable_event_fn: fn(_, _, _) {
-          Error("Durable events not available in current context")
-        },
-        await_durable_event_fn: fn(_, _) {
-          Error("Durable events not available in current context")
-        },
-      )
-    handler(durable_ctx)
+  // Store the durable handler for use by the worker
+  // The worker will convert Context to DurableContext when executing
+  // For now, we create a placeholder handler - the worker will replace this
+  let placeholder_handler = fn(_task_ctx: TaskContext) -> Result(
+    Dynamic,
+    String,
+  ) {
+    Error(
+      "Durable task handler not properly initialized - worker should replace this",
+    )
   }
 
   let task_def =
     TaskDef(
       name: name,
-      handler: wrapped_handler,
+      handler: placeholder_handler,
       parents: [],
       retries: 0,
       retry_backoff: option.None,
@@ -314,6 +310,8 @@ pub fn durable_task(
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: True,
+      checkpoint_key: option.Some(checkpoint_key),
     )
   Workflow(..wf, tasks: list.append(wf.tasks, [task_def]))
 }

@@ -76,6 +76,8 @@ pub fn live_worker_registration_test() {
             concurrency: None,
             skip_if: None,
             wait_for: None,
+            is_durable: False,
+            checkpoint_key: None,
           ),
         ],
         on_failure: None,

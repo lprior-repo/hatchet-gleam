@@ -284,6 +284,8 @@ pub fn task_with_retry_backoff_test() {
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: False,
+      checkpoint_key: option.None,
     )
 
   let updated = task.with_retry_backoff(base_task, backoff)
@@ -308,6 +310,8 @@ pub fn task_with_schedule_timeout_test() {
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: False,
+      checkpoint_key: option.None,
     )
 
   let updated = task.with_schedule_timeout(base_task, 10_000)
@@ -333,6 +337,8 @@ pub fn task_with_rate_limit_test() {
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: False,
+      checkpoint_key: option.None,
     )
 
   let updated = task.with_rate_limit(base_task, limit)
@@ -357,6 +363,8 @@ pub fn task_with_concurrency_test() {
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: False,
+      checkpoint_key: option.None,
     )
 
   let updated = task.with_task_concurrency(base_task, 5, DropNew)
@@ -388,6 +396,8 @@ pub fn durable_task_test() {
       concurrency: option.None,
       skip_if: option.None,
       wait_for: option.None,
+      is_durable: False,
+      checkpoint_key: option.None,
     )
 
   let durable = task.durable(task_def, "checkpoint-key")

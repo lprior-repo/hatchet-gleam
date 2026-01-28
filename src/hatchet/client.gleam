@@ -159,6 +159,105 @@ pub fn new_worker_from_config(
   }
 }
 
+/// Create a client with TLS encryption and server verification.
+///
+/// Use this for production connections where you want encrypted communication
+/// with server certificate verification. You must provide a path to the CA
+/// certificate that signed the server's certificate.
+///
+/// **Parameters:**
+///   - `client`: The base client configuration
+///   - `ca_path`: Path to the CA certificate file for server verification
+///
+/// **Returns:** A new `Client` with TLS enabled
+///
+/// **Examples:**
+/// ```gleam
+/// client.new("api.hatchet.run", "token")
+///   |> result.map(fn(c) { client.with_tls(c, "/etc/ssl/certs/ca.pem") })
+/// ```
+pub fn with_tls(client: Client, ca_path: String) -> Client {
+  let tls_config = tls.Tls(ca_path: ca_path)
+  types.create_client_with_tls(
+    types.get_host(client),
+    types.get_port(client),
+    types.get_token(client),
+    types.get_namespace(client),
+    tls_config,
+  )
+}
+
+/// Create a client with mutual TLS (mTLS) authentication.
+///
+/// Use this for production connections requiring both server and client
+/// certificate verification. You must provide paths to:
+/// - The CA certificate (verifies the server)
+/// - The client certificate (authenticates the client)
+/// - The client private key (signs the client handshake)
+///
+/// **Parameters:**
+///   - `client`: The base client configuration
+///   - `ca_path`: Path to the CA certificate file
+///   - `cert_path`: Path to the client certificate file
+///   - `key_path`: Path to the client private key file
+///
+/// **Returns:** A new `Client` with mTLS enabled
+///
+/// **Examples:**
+/// ```gleam
+/// client.new("api.hatchet.run", "token")
+///   |> result.map(fn(c) {
+///     client.with_mtls(
+///       c,
+///       "/etc/ssl/certs/ca.pem",
+///       "/etc/hatchet/client.pem",
+///       "/etc/hatchet/client-key.pem",
+///     )
+///   })
+/// ```
+pub fn with_mtls(
+  client: Client,
+  ca_path: String,
+  cert_path: String,
+  key_path: String,
+) -> Client {
+  let tls_config =
+    tls.Mtls(ca_path: ca_path, cert_path: cert_path, key_path: key_path)
+  types.create_client_with_tls(
+    types.get_host(client),
+    types.get_port(client),
+    types.get_token(client),
+    types.get_namespace(client),
+    tls_config,
+  )
+}
+
+/// Create a client with insecure (no TLS) connection.
+///
+/// This explicitly sets the client to use plain HTTP/gRPC without encryption.
+/// Only use this for local development and testing. Never use in production.
+///
+/// **Parameters:**
+///   - `client`: The base client configuration
+///
+/// **Returns:** A new `Client` with insecure mode enabled
+///
+/// **Examples:**
+/// ```gleam
+/// // For local development
+/// client.new("localhost", "dev-token")
+///   |> result.map(fn(c) { client.with_insecure(c) })
+/// ```
+pub fn with_insecure(client: Client) -> Client {
+  types.create_client_with_tls(
+    types.get_host(client),
+    types.get_port(client),
+    types.get_token(client),
+    types.get_namespace(client),
+    tls.Insecure,
+  )
+}
+
 fn tls_error_to_string(err: tls.TLSConfigError) -> String {
   case err {
     tls.MissingCA -> "TLS requires CA certificate"
