@@ -50,7 +50,8 @@ def main():
     upstream_fields = extract_field_names("\n".join(upstream_proto_lines))
 
     # Check for snake_case fields (should NOT exist in aligned proto)
-    snake_case_fields = [f for f in local_fields if "_" in f]
+    # Exclude enum values (typically ALL_CAPS_WITH_UNDERSCORES)
+    snake_case_fields = [f for f in local_fields if "_" in f and not f.isupper()]
     if snake_case_fields:
         print(f"❌ FAIL: Found snake_case field names: {snake_case_fields}")
         print("Expected: All fields should be camelCase to match upstream")

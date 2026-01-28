@@ -51,14 +51,14 @@
 
 
 %% enumerated types
--type 'SDKS'() :: 'UNKNOWN' | 'GO' | 'PYTHON' | 'TYPESCRIPT' | 'GLEAM'.
+-type 'SDKS'() :: 'UNKNOWN' | 'GO' | 'PYTHON' | 'TYPESCRIPT'.
 -type 'ActionType'() :: 'START_STEP_RUN' | 'CANCEL_STEP_RUN' | 'START_GET_GROUP_KEY'.
 -type 'StepActionEventType'() :: 'STEP_EVENT_TYPE_UNKNOWN' | 'STEP_EVENT_TYPE_STARTED' | 'STEP_EVENT_TYPE_COMPLETED' | 'STEP_EVENT_TYPE_FAILED' | 'STEP_EVENT_TYPE_ACKNOWLEDGED'.
 -export_type(['SDKS'/0, 'ActionType'/0, 'StepActionEventType'/0]).
 
 %% message types
 -type 'WorkerRegisterRequest'() ::
-      #{worker_name             => unicode:chardata(), % = 1, optional
+      #{workerName              => unicode:chardata(), % = 1, optional
         actions                 => [unicode:chardata()], % = 2, repeated
         services                => [unicode:chardata()], % = 3, repeated
         max_runs                => integer(),       % = 4, optional, 32 bits
@@ -68,42 +68,42 @@
        }.
 
 -type 'WorkerLabels'() ::
-      #{str_value               => unicode:chardata(), % = 1, optional
-        int_value               => integer()        % = 2, optional, 32 bits
+      #{strValue                => unicode:chardata(), % = 1, optional
+        intValue                => integer()        % = 2, optional, 32 bits
        }.
 
 -type 'RuntimeInfo'() ::
-      #{sdk_version             => unicode:chardata(), % = 1, optional
-        language                => 'UNKNOWN' | 'GO' | 'PYTHON' | 'TYPESCRIPT' | 'GLEAM' | integer(), % = 2, optional, enum SDKS
-        language_version        => unicode:chardata(), % = 3, optional
+      #{sdkVersion              => unicode:chardata(), % = 1, optional
+        language                => 'UNKNOWN' | 'GO' | 'PYTHON' | 'TYPESCRIPT' | integer(), % = 2, optional, enum SDKS
+        languageVersion         => unicode:chardata(), % = 3, optional
         os                      => unicode:chardata(), % = 4, optional
         extra                   => unicode:chardata() % = 5, optional
        }.
 
 -type 'WorkerRegisterResponse'() ::
-      #{tenant_id               => unicode:chardata(), % = 1, optional
-        worker_id               => unicode:chardata(), % = 2, optional
-        worker_name             => unicode:chardata() % = 3, optional
+      #{tenantId                => unicode:chardata(), % = 1, optional
+        workerId                => unicode:chardata(), % = 2, optional
+        workerName              => unicode:chardata() % = 3, optional
        }.
 
 -type 'WorkerListenRequest'() ::
-      #{worker_id               => unicode:chardata() % = 1, optional
+      #{workerId                => unicode:chardata() % = 1, optional
        }.
 
 -type 'AssignedAction'() ::
-      #{tenant_id               => unicode:chardata(), % = 1, optional
-        workflow_run_id         => unicode:chardata(), % = 2, optional
-        get_group_key_run_id    => unicode:chardata(), % = 3, optional
-        job_id                  => unicode:chardata(), % = 4, optional
-        job_name                => unicode:chardata(), % = 5, optional
-        job_run_id              => unicode:chardata(), % = 6, optional
-        step_id                 => unicode:chardata(), % = 7, optional
-        step_run_id             => unicode:chardata(), % = 8, optional
-        action_id               => unicode:chardata(), % = 9, optional
+      #{tenantId                => unicode:chardata(), % = 1, optional
+        workflowRunId           => unicode:chardata(), % = 2, optional
+        getGroupKeyRunId        => unicode:chardata(), % = 3, optional
+        jobId                   => unicode:chardata(), % = 4, optional
+        jobName                 => unicode:chardata(), % = 5, optional
+        jobRunId                => unicode:chardata(), % = 6, optional
+        stepId                  => unicode:chardata(), % = 7, optional
+        stepRunId               => unicode:chardata(), % = 8, optional
+        actionId                => unicode:chardata(), % = 9, optional
         action_type             => 'START_STEP_RUN' | 'CANCEL_STEP_RUN' | 'START_GET_GROUP_KEY' | integer(), % = 10, optional, enum ActionType
-        action_payload          => unicode:chardata(), % = 11, optional
-        step_name               => unicode:chardata(), % = 12, optional
-        retry_count             => integer(),       % = 13, optional, 32 bits
+        actionPayload           => unicode:chardata(), % = 11, optional
+        stepName                => unicode:chardata(), % = 12, optional
+        retryCount              => integer(),       % = 13, optional, 32 bits
         additional_metadata     => unicode:chardata(), % = 14, optional
         child_workflow_index    => integer(),       % = 15, optional, 32 bits
         child_workflow_key      => unicode:chardata(), % = 16, optional
@@ -114,27 +114,27 @@
        }.
 
 -type 'StepActionEvent'() ::
-      #{worker_id               => unicode:chardata(), % = 1, optional
-        job_id                  => unicode:chardata(), % = 2, optional
-        job_run_id              => unicode:chardata(), % = 3, optional
-        step_id                 => unicode:chardata(), % = 4, optional
-        step_run_id             => unicode:chardata(), % = 5, optional
-        action_id               => unicode:chardata(), % = 6, optional
-        event_timestamp         => integer(),       % = 7, optional, 64 bits
+      #{workerId                => unicode:chardata(), % = 1, optional
+        jobId                   => unicode:chardata(), % = 2, optional
+        jobRunId                => unicode:chardata(), % = 3, optional
+        stepId                  => unicode:chardata(), % = 4, optional
+        stepRunId               => unicode:chardata(), % = 5, optional
+        actionId                => unicode:chardata(), % = 6, optional
+        eventTimestamp          => integer(),       % = 7, optional, 64 bits
         event_type              => 'STEP_EVENT_TYPE_UNKNOWN' | 'STEP_EVENT_TYPE_STARTED' | 'STEP_EVENT_TYPE_COMPLETED' | 'STEP_EVENT_TYPE_FAILED' | 'STEP_EVENT_TYPE_ACKNOWLEDGED' | integer(), % = 8, optional, enum StepActionEventType
-        event_payload           => unicode:chardata(), % = 9, optional
+        eventPayload            => unicode:chardata(), % = 9, optional
         retry_count             => integer(),       % = 10, optional, 32 bits
         should_not_retry        => boolean() | 0 | 1 % = 11, optional
        }.
 
 -type 'ActionEventResponse'() ::
-      #{tenant_id               => unicode:chardata(), % = 1, optional
-        worker_id               => unicode:chardata() % = 2, optional
+      #{tenantId                => unicode:chardata(), % = 1, optional
+        workerId                => unicode:chardata() % = 2, optional
        }.
 
 -type 'HeartbeatRequest'() ::
-      #{worker_id               => unicode:chardata(), % = 1, optional
-        heartbeat_at            => integer()        % = 2, optional, 64 bits
+      #{workerId                => unicode:chardata(), % = 1, optional
+        heartbeatAt             => integer()        % = 2, optional, 64 bits
        }.
 
 -type 'HeartbeatResponse'() ::
@@ -181,7 +181,7 @@ encode_msg_WorkerRegisterRequest(Msg, TrUserData) -> encode_msg_WorkerRegisterRe
 
 encode_msg_WorkerRegisterRequest(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{worker_name := F1} ->
+             #{workerName := F1} ->
                  begin
                      TrF1 = id(F1, TrUserData),
                      case is_empty_string(TrF1) of
@@ -239,11 +239,11 @@ encode_msg_WorkerLabels(Msg, TrUserData) -> encode_msg_WorkerLabels(Msg, <<>>, T
 
 encode_msg_WorkerLabels(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{str_value := F1} -> begin TrF1 = id(F1, TrUserData), e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData) end;
+             #{strValue := F1} -> begin TrF1 = id(F1, TrUserData), e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData) end;
              _ -> Bin
          end,
     case M of
-        #{int_value := F2} -> begin TrF2 = id(F2, TrUserData), e_type_int32(TrF2, <<B1/binary, 16>>, TrUserData) end;
+        #{intValue := F2} -> begin TrF2 = id(F2, TrUserData), e_type_int32(TrF2, <<B1/binary, 16>>, TrUserData) end;
         _ -> B1
     end.
 
@@ -252,7 +252,7 @@ encode_msg_RuntimeInfo(Msg, TrUserData) -> encode_msg_RuntimeInfo(Msg, <<>>, TrU
 
 encode_msg_RuntimeInfo(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{sdk_version := F1} -> begin TrF1 = id(F1, TrUserData), e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData) end;
+             #{sdkVersion := F1} -> begin TrF1 = id(F1, TrUserData), e_type_string(TrF1, <<Bin/binary, 10>>, TrUserData) end;
              _ -> Bin
          end,
     B2 = case M of
@@ -260,7 +260,7 @@ encode_msg_RuntimeInfo(#{} = M, Bin, TrUserData) ->
              _ -> B1
          end,
     B3 = case M of
-             #{language_version := F3} -> begin TrF3 = id(F3, TrUserData), e_type_string(TrF3, <<B2/binary, 26>>, TrUserData) end;
+             #{languageVersion := F3} -> begin TrF3 = id(F3, TrUserData), e_type_string(TrF3, <<B2/binary, 26>>, TrUserData) end;
              _ -> B2
          end,
     B4 = case M of
@@ -277,7 +277,7 @@ encode_msg_WorkerRegisterResponse(Msg, TrUserData) -> encode_msg_WorkerRegisterR
 
 encode_msg_WorkerRegisterResponse(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{tenant_id := F1} ->
+             #{tenantId := F1} ->
                  begin
                      TrF1 = id(F1, TrUserData),
                      case is_empty_string(TrF1) of
@@ -288,7 +288,7 @@ encode_msg_WorkerRegisterResponse(#{} = M, Bin, TrUserData) ->
              _ -> Bin
          end,
     B2 = case M of
-             #{worker_id := F2} ->
+             #{workerId := F2} ->
                  begin
                      TrF2 = id(F2, TrUserData),
                      case is_empty_string(TrF2) of
@@ -299,7 +299,7 @@ encode_msg_WorkerRegisterResponse(#{} = M, Bin, TrUserData) ->
              _ -> B1
          end,
     case M of
-        #{worker_name := F3} ->
+        #{workerName := F3} ->
             begin
                 TrF3 = id(F3, TrUserData),
                 case is_empty_string(TrF3) of
@@ -315,7 +315,7 @@ encode_msg_WorkerListenRequest(Msg, TrUserData) -> encode_msg_WorkerListenReques
 
 encode_msg_WorkerListenRequest(#{} = M, Bin, TrUserData) ->
     case M of
-        #{worker_id := F1} ->
+        #{workerId := F1} ->
             begin
                 TrF1 = id(F1, TrUserData),
                 case is_empty_string(TrF1) of
@@ -331,7 +331,7 @@ encode_msg_AssignedAction(Msg, TrUserData) -> encode_msg_AssignedAction(Msg, <<>
 
 encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{tenant_id := F1} ->
+             #{tenantId := F1} ->
                  begin
                      TrF1 = id(F1, TrUserData),
                      case is_empty_string(TrF1) of
@@ -342,7 +342,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> Bin
          end,
     B2 = case M of
-             #{workflow_run_id := F2} ->
+             #{workflowRunId := F2} ->
                  begin
                      TrF2 = id(F2, TrUserData),
                      case is_empty_string(TrF2) of
@@ -353,7 +353,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> B1
          end,
     B3 = case M of
-             #{get_group_key_run_id := F3} ->
+             #{getGroupKeyRunId := F3} ->
                  begin
                      TrF3 = id(F3, TrUserData),
                      case is_empty_string(TrF3) of
@@ -364,7 +364,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> B2
          end,
     B4 = case M of
-             #{job_id := F4} ->
+             #{jobId := F4} ->
                  begin
                      TrF4 = id(F4, TrUserData),
                      case is_empty_string(TrF4) of
@@ -375,7 +375,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> B3
          end,
     B5 = case M of
-             #{job_name := F5} ->
+             #{jobName := F5} ->
                  begin
                      TrF5 = id(F5, TrUserData),
                      case is_empty_string(TrF5) of
@@ -386,7 +386,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> B4
          end,
     B6 = case M of
-             #{job_run_id := F6} ->
+             #{jobRunId := F6} ->
                  begin
                      TrF6 = id(F6, TrUserData),
                      case is_empty_string(TrF6) of
@@ -397,7 +397,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> B5
          end,
     B7 = case M of
-             #{step_id := F7} ->
+             #{stepId := F7} ->
                  begin
                      TrF7 = id(F7, TrUserData),
                      case is_empty_string(TrF7) of
@@ -408,7 +408,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> B6
          end,
     B8 = case M of
-             #{step_run_id := F8} ->
+             #{stepRunId := F8} ->
                  begin
                      TrF8 = id(F8, TrUserData),
                      case is_empty_string(TrF8) of
@@ -419,7 +419,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
              _ -> B7
          end,
     B9 = case M of
-             #{action_id := F9} ->
+             #{actionId := F9} ->
                  begin
                      TrF9 = id(F9, TrUserData),
                      case is_empty_string(TrF9) of
@@ -440,7 +440,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
               _ -> B9
           end,
     B11 = case M of
-              #{action_payload := F11} ->
+              #{actionPayload := F11} ->
                   begin
                       TrF11 = id(F11, TrUserData),
                       case is_empty_string(TrF11) of
@@ -451,7 +451,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
               _ -> B10
           end,
     B12 = case M of
-              #{step_name := F12} ->
+              #{stepName := F12} ->
                   begin
                       TrF12 = id(F12, TrUserData),
                       case is_empty_string(TrF12) of
@@ -462,7 +462,7 @@ encode_msg_AssignedAction(#{} = M, Bin, TrUserData) ->
               _ -> B11
           end,
     B13 = case M of
-              #{retry_count := F13} ->
+              #{retryCount := F13} ->
                   begin
                       TrF13 = id(F13, TrUserData),
                       if TrF13 =:= 0 -> B12;
@@ -511,7 +511,7 @@ encode_msg_StepActionEvent(Msg, TrUserData) -> encode_msg_StepActionEvent(Msg, <
 
 encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{worker_id := F1} ->
+             #{workerId := F1} ->
                  begin
                      TrF1 = id(F1, TrUserData),
                      case is_empty_string(TrF1) of
@@ -522,7 +522,7 @@ encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
              _ -> Bin
          end,
     B2 = case M of
-             #{job_id := F2} ->
+             #{jobId := F2} ->
                  begin
                      TrF2 = id(F2, TrUserData),
                      case is_empty_string(TrF2) of
@@ -533,7 +533,7 @@ encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
              _ -> B1
          end,
     B3 = case M of
-             #{job_run_id := F3} ->
+             #{jobRunId := F3} ->
                  begin
                      TrF3 = id(F3, TrUserData),
                      case is_empty_string(TrF3) of
@@ -544,7 +544,7 @@ encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
              _ -> B2
          end,
     B4 = case M of
-             #{step_id := F4} ->
+             #{stepId := F4} ->
                  begin
                      TrF4 = id(F4, TrUserData),
                      case is_empty_string(TrF4) of
@@ -555,7 +555,7 @@ encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
              _ -> B3
          end,
     B5 = case M of
-             #{step_run_id := F5} ->
+             #{stepRunId := F5} ->
                  begin
                      TrF5 = id(F5, TrUserData),
                      case is_empty_string(TrF5) of
@@ -566,7 +566,7 @@ encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
              _ -> B4
          end,
     B6 = case M of
-             #{action_id := F6} ->
+             #{actionId := F6} ->
                  begin
                      TrF6 = id(F6, TrUserData),
                      case is_empty_string(TrF6) of
@@ -577,7 +577,7 @@ encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
              _ -> B5
          end,
     B7 = case M of
-             #{event_timestamp := F7} ->
+             #{eventTimestamp := F7} ->
                  begin
                      TrF7 = id(F7, TrUserData),
                      if TrF7 =:= 0 -> B6;
@@ -597,7 +597,7 @@ encode_msg_StepActionEvent(#{} = M, Bin, TrUserData) ->
              _ -> B7
          end,
     B9 = case M of
-             #{event_payload := F9} ->
+             #{eventPayload := F9} ->
                  begin
                      TrF9 = id(F9, TrUserData),
                      case is_empty_string(TrF9) of
@@ -621,7 +621,7 @@ encode_msg_ActionEventResponse(Msg, TrUserData) -> encode_msg_ActionEventRespons
 
 encode_msg_ActionEventResponse(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{tenant_id := F1} ->
+             #{tenantId := F1} ->
                  begin
                      TrF1 = id(F1, TrUserData),
                      case is_empty_string(TrF1) of
@@ -632,7 +632,7 @@ encode_msg_ActionEventResponse(#{} = M, Bin, TrUserData) ->
              _ -> Bin
          end,
     case M of
-        #{worker_id := F2} ->
+        #{workerId := F2} ->
             begin
                 TrF2 = id(F2, TrUserData),
                 case is_empty_string(TrF2) of
@@ -648,7 +648,7 @@ encode_msg_HeartbeatRequest(Msg, TrUserData) -> encode_msg_HeartbeatRequest(Msg,
 
 encode_msg_HeartbeatRequest(#{} = M, Bin, TrUserData) ->
     B1 = case M of
-             #{worker_id := F1} ->
+             #{workerId := F1} ->
                  begin
                      TrF1 = id(F1, TrUserData),
                      case is_empty_string(TrF1) of
@@ -659,7 +659,7 @@ encode_msg_HeartbeatRequest(#{} = M, Bin, TrUserData) ->
              _ -> Bin
          end,
     case M of
-        #{heartbeat_at := F2} ->
+        #{heartbeatAt := F2} ->
             begin
                 TrF2 = id(F2, TrUserData),
                 if TrF2 =:= 0 -> B1;
@@ -712,7 +712,6 @@ e_enum_SDKS('UNKNOWN', Bin, _TrUserData) -> <<Bin/binary, 0>>;
 e_enum_SDKS('GO', Bin, _TrUserData) -> <<Bin/binary, 1>>;
 e_enum_SDKS('PYTHON', Bin, _TrUserData) -> <<Bin/binary, 2>>;
 e_enum_SDKS('TYPESCRIPT', Bin, _TrUserData) -> <<Bin/binary, 3>>;
-e_enum_SDKS('GLEAM', Bin, _TrUserData) -> <<Bin/binary, 4>>;
 e_enum_SDKS(V, Bin, _TrUserData) -> e_varint(V, Bin).
 
 e_enum_ActionType('START_STEP_RUN', Bin, _TrUserData) -> <<Bin/binary, 0>>;
@@ -892,7 +891,7 @@ decode_msg_WorkerRegisterRequest(Bin, TrUserData) ->
                                              id('$undef', TrUserData),
                                              TrUserData).
 
-dfp_read_field_def_WorkerRegisterRequest(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) -> d_field_WorkerRegisterRequest_worker_name(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
+dfp_read_field_def_WorkerRegisterRequest(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) -> d_field_WorkerRegisterRequest_workerName(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
 dfp_read_field_def_WorkerRegisterRequest(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) -> d_field_WorkerRegisterRequest_actions(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
 dfp_read_field_def_WorkerRegisterRequest(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) -> d_field_WorkerRegisterRequest_services(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
 dfp_read_field_def_WorkerRegisterRequest(<<32, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) -> d_field_WorkerRegisterRequest_max_runs(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
@@ -900,7 +899,7 @@ dfp_read_field_def_WorkerRegisterRequest(<<42, Rest/binary>>, Z1, Z2, F, F@_1, F
 dfp_read_field_def_WorkerRegisterRequest(<<50, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) -> d_field_WorkerRegisterRequest_webhook_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
 dfp_read_field_def_WorkerRegisterRequest(<<58, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) -> d_field_WorkerRegisterRequest_runtime_info(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
 dfp_read_field_def_WorkerRegisterRequest(<<>>, 0, 0, _, F@_1, R1, R2, F@_4, R3, F@_6, F@_7, TrUserData) ->
-    S1 = #{worker_name => F@_1, actions => lists_reverse(R1, TrUserData), services => lists_reverse(R2, TrUserData), labels => 'tr_decode_repeated_finalize_WorkerRegisterRequest.labels'(R3, TrUserData)},
+    S1 = #{workerName => F@_1, actions => lists_reverse(R1, TrUserData), services => lists_reverse(R2, TrUserData), labels => 'tr_decode_repeated_finalize_WorkerRegisterRequest.labels'(R3, TrUserData)},
     S2 = if F@_4 == '$undef' -> S1;
             true -> S1#{max_runs => F@_4}
          end,
@@ -917,7 +916,7 @@ dg_read_field_def_WorkerRegisterRequest(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@
 dg_read_field_def_WorkerRegisterRequest(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_WorkerRegisterRequest_worker_name(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
+        10 -> d_field_WorkerRegisterRequest_workerName(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
         18 -> d_field_WorkerRegisterRequest_actions(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
         26 -> d_field_WorkerRegisterRequest_services(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
         32 -> d_field_WorkerRegisterRequest_max_runs(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
@@ -934,7 +933,7 @@ dg_read_field_def_WorkerRegisterRequest(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@
             end
     end;
 dg_read_field_def_WorkerRegisterRequest(<<>>, 0, 0, _, F@_1, R1, R2, F@_4, R3, F@_6, F@_7, TrUserData) ->
-    S1 = #{worker_name => F@_1, actions => lists_reverse(R1, TrUserData), services => lists_reverse(R2, TrUserData), labels => 'tr_decode_repeated_finalize_WorkerRegisterRequest.labels'(R3, TrUserData)},
+    S1 = #{workerName => F@_1, actions => lists_reverse(R1, TrUserData), services => lists_reverse(R2, TrUserData), labels => 'tr_decode_repeated_finalize_WorkerRegisterRequest.labels'(R3, TrUserData)},
     S2 = if F@_4 == '$undef' -> S1;
             true -> S1#{max_runs => F@_4}
          end,
@@ -945,9 +944,9 @@ dg_read_field_def_WorkerRegisterRequest(<<>>, 0, 0, _, F@_1, R1, R2, F@_4, R3, F
        true -> S3#{runtime_info => F@_7}
     end.
 
-d_field_WorkerRegisterRequest_worker_name(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) when N < 57 ->
-    d_field_WorkerRegisterRequest_worker_name(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
-d_field_WorkerRegisterRequest_worker_name(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) ->
+d_field_WorkerRegisterRequest_workerName(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) when N < 57 ->
+    d_field_WorkerRegisterRequest_workerName(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData);
+d_field_WorkerRegisterRequest_workerName(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_WorkerRegisterRequest(RestF, 0, 0, F, NewFValue, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, TrUserData).
 
@@ -1020,15 +1019,15 @@ skip_64_WorkerRegisterRequest(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3
 
 decode_msg_WorkerLabels(Bin, TrUserData) -> dfp_read_field_def_WorkerLabels(Bin, 0, 0, 0, id('$undef', TrUserData), id('$undef', TrUserData), TrUserData).
 
-dfp_read_field_def_WorkerLabels(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_WorkerLabels_str_value(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
-dfp_read_field_def_WorkerLabels(<<16, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_WorkerLabels_int_value(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
+dfp_read_field_def_WorkerLabels(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_WorkerLabels_strValue(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
+dfp_read_field_def_WorkerLabels(<<16, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_WorkerLabels_intValue(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
 dfp_read_field_def_WorkerLabels(<<>>, 0, 0, _, F@_1, F@_2, _) ->
     S1 = #{},
     S2 = if F@_1 == '$undef' -> S1;
-            true -> S1#{str_value => F@_1}
+            true -> S1#{strValue => F@_1}
          end,
     if F@_2 == '$undef' -> S2;
-       true -> S2#{int_value => F@_2}
+       true -> S2#{intValue => F@_2}
     end;
 dfp_read_field_def_WorkerLabels(Other, Z1, Z2, F, F@_1, F@_2, TrUserData) -> dg_read_field_def_WorkerLabels(Other, Z1, Z2, F, F@_1, F@_2, TrUserData).
 
@@ -1036,8 +1035,8 @@ dg_read_field_def_WorkerLabels(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2,
 dg_read_field_def_WorkerLabels(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_WorkerLabels_str_value(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
-        16 -> d_field_WorkerLabels_int_value(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
+        10 -> d_field_WorkerLabels_strValue(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
+        16 -> d_field_WorkerLabels_intValue(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
         _ ->
             case Key band 7 of
                 0 -> skip_varint_WorkerLabels(Rest, 0, 0, Key bsr 3, F@_1, F@_2, TrUserData);
@@ -1050,19 +1049,19 @@ dg_read_field_def_WorkerLabels(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2,
 dg_read_field_def_WorkerLabels(<<>>, 0, 0, _, F@_1, F@_2, _) ->
     S1 = #{},
     S2 = if F@_1 == '$undef' -> S1;
-            true -> S1#{str_value => F@_1}
+            true -> S1#{strValue => F@_1}
          end,
     if F@_2 == '$undef' -> S2;
-       true -> S2#{int_value => F@_2}
+       true -> S2#{intValue => F@_2}
     end.
 
-d_field_WorkerLabels_str_value(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_WorkerLabels_str_value(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
-d_field_WorkerLabels_str_value(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, TrUserData) ->
+d_field_WorkerLabels_strValue(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_WorkerLabels_strValue(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
+d_field_WorkerLabels_strValue(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_WorkerLabels(RestF, 0, 0, F, NewFValue, F@_2, TrUserData).
 
-d_field_WorkerLabels_int_value(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_WorkerLabels_int_value(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
-d_field_WorkerLabels_int_value(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, TrUserData) ->
+d_field_WorkerLabels_intValue(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_WorkerLabels_intValue(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
+d_field_WorkerLabels_intValue(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, TrUserData) ->
     {NewFValue, RestF} = {begin <<Res:32/signed-native>> = <<(X bsl N + Acc):32/unsigned-native>>, id(Res, TrUserData) end, Rest},
     dfp_read_field_def_WorkerLabels(RestF, 0, 0, F, F@_1, NewFValue, TrUserData).
 
@@ -1085,21 +1084,21 @@ skip_64_WorkerLabels(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -
 
 decode_msg_RuntimeInfo(Bin, TrUserData) -> dfp_read_field_def_RuntimeInfo(Bin, 0, 0, 0, id('$undef', TrUserData), id('$undef', TrUserData), id('$undef', TrUserData), id('$undef', TrUserData), id('$undef', TrUserData), TrUserData).
 
-dfp_read_field_def_RuntimeInfo(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) -> d_field_RuntimeInfo_sdk_version(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
+dfp_read_field_def_RuntimeInfo(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) -> d_field_RuntimeInfo_sdkVersion(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
 dfp_read_field_def_RuntimeInfo(<<16, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) -> d_field_RuntimeInfo_language(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
-dfp_read_field_def_RuntimeInfo(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) -> d_field_RuntimeInfo_language_version(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
+dfp_read_field_def_RuntimeInfo(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) -> d_field_RuntimeInfo_languageVersion(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
 dfp_read_field_def_RuntimeInfo(<<34, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) -> d_field_RuntimeInfo_os(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
 dfp_read_field_def_RuntimeInfo(<<42, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) -> d_field_RuntimeInfo_extra(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
 dfp_read_field_def_RuntimeInfo(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, _) ->
     S1 = #{},
     S2 = if F@_1 == '$undef' -> S1;
-            true -> S1#{sdk_version => F@_1}
+            true -> S1#{sdkVersion => F@_1}
          end,
     S3 = if F@_2 == '$undef' -> S2;
             true -> S2#{language => F@_2}
          end,
     S4 = if F@_3 == '$undef' -> S3;
-            true -> S3#{language_version => F@_3}
+            true -> S3#{languageVersion => F@_3}
          end,
     S5 = if F@_4 == '$undef' -> S4;
             true -> S4#{os => F@_4}
@@ -1113,9 +1112,9 @@ dg_read_field_def_RuntimeInfo(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, 
 dg_read_field_def_RuntimeInfo(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_RuntimeInfo_sdk_version(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
+        10 -> d_field_RuntimeInfo_sdkVersion(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
         16 -> d_field_RuntimeInfo_language(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
-        26 -> d_field_RuntimeInfo_language_version(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
+        26 -> d_field_RuntimeInfo_languageVersion(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
         34 -> d_field_RuntimeInfo_os(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
         42 -> d_field_RuntimeInfo_extra(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
         _ ->
@@ -1130,13 +1129,13 @@ dg_read_field_def_RuntimeInfo(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, 
 dg_read_field_def_RuntimeInfo(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, _) ->
     S1 = #{},
     S2 = if F@_1 == '$undef' -> S1;
-            true -> S1#{sdk_version => F@_1}
+            true -> S1#{sdkVersion => F@_1}
          end,
     S3 = if F@_2 == '$undef' -> S2;
             true -> S2#{language => F@_2}
          end,
     S4 = if F@_3 == '$undef' -> S3;
-            true -> S3#{language_version => F@_3}
+            true -> S3#{languageVersion => F@_3}
          end,
     S5 = if F@_4 == '$undef' -> S4;
             true -> S4#{os => F@_4}
@@ -1145,8 +1144,8 @@ dg_read_field_def_RuntimeInfo(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, _) ->
        true -> S5#{extra => F@_5}
     end.
 
-d_field_RuntimeInfo_sdk_version(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) when N < 57 -> d_field_RuntimeInfo_sdk_version(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
-d_field_RuntimeInfo_sdk_version(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, TrUserData) ->
+d_field_RuntimeInfo_sdkVersion(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) when N < 57 -> d_field_RuntimeInfo_sdkVersion(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
+d_field_RuntimeInfo_sdkVersion(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_RuntimeInfo(RestF, 0, 0, F, NewFValue, F@_2, F@_3, F@_4, F@_5, TrUserData).
 
@@ -1155,8 +1154,8 @@ d_field_RuntimeInfo_language(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3
     {NewFValue, RestF} = {id(d_enum_SDKS(begin <<Res:32/signed-native>> = <<(X bsl N + Acc):32/unsigned-native>>, id(Res, TrUserData) end), TrUserData), Rest},
     dfp_read_field_def_RuntimeInfo(RestF, 0, 0, F, F@_1, NewFValue, F@_3, F@_4, F@_5, TrUserData).
 
-d_field_RuntimeInfo_language_version(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) when N < 57 -> d_field_RuntimeInfo_language_version(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
-d_field_RuntimeInfo_language_version(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, F@_4, F@_5, TrUserData) ->
+d_field_RuntimeInfo_languageVersion(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData) when N < 57 -> d_field_RuntimeInfo_languageVersion(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, TrUserData);
+d_field_RuntimeInfo_languageVersion(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, F@_4, F@_5, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_RuntimeInfo(RestF, 0, 0, F, F@_1, F@_2, NewFValue, F@_4, F@_5, TrUserData).
 
@@ -1189,19 +1188,19 @@ skip_64_RuntimeInfo(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@
 
 decode_msg_WorkerRegisterResponse(Bin, TrUserData) -> dfp_read_field_def_WorkerRegisterResponse(Bin, 0, 0, 0, id(<<>>, TrUserData), id(<<>>, TrUserData), id(<<>>, TrUserData), TrUserData).
 
-dfp_read_field_def_WorkerRegisterResponse(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_WorkerRegisterResponse_tenant_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
-dfp_read_field_def_WorkerRegisterResponse(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_WorkerRegisterResponse_worker_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
-dfp_read_field_def_WorkerRegisterResponse(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_WorkerRegisterResponse_worker_name(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
-dfp_read_field_def_WorkerRegisterResponse(<<>>, 0, 0, _, F@_1, F@_2, F@_3, _) -> #{tenant_id => F@_1, worker_id => F@_2, worker_name => F@_3};
+dfp_read_field_def_WorkerRegisterResponse(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_WorkerRegisterResponse_tenantId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_WorkerRegisterResponse(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_WorkerRegisterResponse_workerId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_WorkerRegisterResponse(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> d_field_WorkerRegisterResponse_workerName(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData);
+dfp_read_field_def_WorkerRegisterResponse(<<>>, 0, 0, _, F@_1, F@_2, F@_3, _) -> #{tenantId => F@_1, workerId => F@_2, workerName => F@_3};
 dfp_read_field_def_WorkerRegisterResponse(Other, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData) -> dg_read_field_def_WorkerRegisterResponse(Other, Z1, Z2, F, F@_1, F@_2, F@_3, TrUserData).
 
 dg_read_field_def_WorkerRegisterResponse(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 32 - 7 -> dg_read_field_def_WorkerRegisterResponse(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
 dg_read_field_def_WorkerRegisterResponse(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, F@_3, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_WorkerRegisterResponse_tenant_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
-        18 -> d_field_WorkerRegisterResponse_worker_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
-        26 -> d_field_WorkerRegisterResponse_worker_name(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        10 -> d_field_WorkerRegisterResponse_tenantId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        18 -> d_field_WorkerRegisterResponse_workerId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
+        26 -> d_field_WorkerRegisterResponse_workerName(Rest, 0, 0, 0, F@_1, F@_2, F@_3, TrUserData);
         _ ->
             case Key band 7 of
                 0 -> skip_varint_WorkerRegisterResponse(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData);
@@ -1211,20 +1210,20 @@ dg_read_field_def_WorkerRegisterResponse(<<0:1, X:7, Rest/binary>>, N, Acc, _, F
                 5 -> skip_32_WorkerRegisterResponse(Rest, 0, 0, Key bsr 3, F@_1, F@_2, F@_3, TrUserData)
             end
     end;
-dg_read_field_def_WorkerRegisterResponse(<<>>, 0, 0, _, F@_1, F@_2, F@_3, _) -> #{tenant_id => F@_1, worker_id => F@_2, worker_name => F@_3}.
+dg_read_field_def_WorkerRegisterResponse(<<>>, 0, 0, _, F@_1, F@_2, F@_3, _) -> #{tenantId => F@_1, workerId => F@_2, workerName => F@_3}.
 
-d_field_WorkerRegisterResponse_tenant_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_WorkerRegisterResponse_tenant_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
-d_field_WorkerRegisterResponse_tenant_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, TrUserData) ->
+d_field_WorkerRegisterResponse_tenantId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_WorkerRegisterResponse_tenantId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+d_field_WorkerRegisterResponse_tenantId(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_WorkerRegisterResponse(RestF, 0, 0, F, NewFValue, F@_2, F@_3, TrUserData).
 
-d_field_WorkerRegisterResponse_worker_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_WorkerRegisterResponse_worker_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
-d_field_WorkerRegisterResponse_worker_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3, TrUserData) ->
+d_field_WorkerRegisterResponse_workerId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_WorkerRegisterResponse_workerId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+d_field_WorkerRegisterResponse_workerId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_WorkerRegisterResponse(RestF, 0, 0, F, F@_1, NewFValue, F@_3, TrUserData).
 
-d_field_WorkerRegisterResponse_worker_name(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_WorkerRegisterResponse_worker_name(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
-d_field_WorkerRegisterResponse_worker_name(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, TrUserData) ->
+d_field_WorkerRegisterResponse_workerName(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, TrUserData) when N < 57 -> d_field_WorkerRegisterResponse_workerName(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, TrUserData);
+d_field_WorkerRegisterResponse_workerName(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_WorkerRegisterResponse(RestF, 0, 0, F, F@_1, F@_2, NewFValue, TrUserData).
 
@@ -1247,15 +1246,15 @@ skip_64_WorkerRegisterResponse(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_
 
 decode_msg_WorkerListenRequest(Bin, TrUserData) -> dfp_read_field_def_WorkerListenRequest(Bin, 0, 0, 0, id(<<>>, TrUserData), TrUserData).
 
-dfp_read_field_def_WorkerListenRequest(<<10, Rest/binary>>, Z1, Z2, F, F@_1, TrUserData) -> d_field_WorkerListenRequest_worker_id(Rest, Z1, Z2, F, F@_1, TrUserData);
-dfp_read_field_def_WorkerListenRequest(<<>>, 0, 0, _, F@_1, _) -> #{worker_id => F@_1};
+dfp_read_field_def_WorkerListenRequest(<<10, Rest/binary>>, Z1, Z2, F, F@_1, TrUserData) -> d_field_WorkerListenRequest_workerId(Rest, Z1, Z2, F, F@_1, TrUserData);
+dfp_read_field_def_WorkerListenRequest(<<>>, 0, 0, _, F@_1, _) -> #{workerId => F@_1};
 dfp_read_field_def_WorkerListenRequest(Other, Z1, Z2, F, F@_1, TrUserData) -> dg_read_field_def_WorkerListenRequest(Other, Z1, Z2, F, F@_1, TrUserData).
 
 dg_read_field_def_WorkerListenRequest(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, TrUserData) when N < 32 - 7 -> dg_read_field_def_WorkerListenRequest(Rest, N + 7, X bsl N + Acc, F, F@_1, TrUserData);
 dg_read_field_def_WorkerListenRequest(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_WorkerListenRequest_worker_id(Rest, 0, 0, 0, F@_1, TrUserData);
+        10 -> d_field_WorkerListenRequest_workerId(Rest, 0, 0, 0, F@_1, TrUserData);
         _ ->
             case Key band 7 of
                 0 -> skip_varint_WorkerListenRequest(Rest, 0, 0, Key bsr 3, F@_1, TrUserData);
@@ -1265,10 +1264,10 @@ dg_read_field_def_WorkerListenRequest(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1
                 5 -> skip_32_WorkerListenRequest(Rest, 0, 0, Key bsr 3, F@_1, TrUserData)
             end
     end;
-dg_read_field_def_WorkerListenRequest(<<>>, 0, 0, _, F@_1, _) -> #{worker_id => F@_1}.
+dg_read_field_def_WorkerListenRequest(<<>>, 0, 0, _, F@_1, _) -> #{workerId => F@_1}.
 
-d_field_WorkerListenRequest_worker_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, TrUserData) when N < 57 -> d_field_WorkerListenRequest_worker_id(Rest, N + 7, X bsl N + Acc, F, F@_1, TrUserData);
-d_field_WorkerListenRequest_worker_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, TrUserData) ->
+d_field_WorkerListenRequest_workerId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, TrUserData) when N < 57 -> d_field_WorkerListenRequest_workerId(Rest, N + 7, X bsl N + Acc, F, F@_1, TrUserData);
+d_field_WorkerListenRequest_workerId(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_WorkerListenRequest(RestF, 0, 0, F, NewFValue, TrUserData).
 
@@ -1317,31 +1316,31 @@ decode_msg_AssignedAction(Bin, TrUserData) ->
                                       TrUserData).
 
 dfp_read_field_def_AssignedAction(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_tenant_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_tenantId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_workflow_run_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_workflowRunId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_get_group_key_run_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_getGroupKeyRunId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<34, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_job_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_jobId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<42, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_job_name(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_jobName(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<50, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_job_run_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_jobRunId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<58, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_step_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_stepId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<66, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_step_run_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_stepRunId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<74, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_action_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_actionId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<80, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     d_field_AssignedAction_action_type(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<90, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_action_payload(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_actionPayload(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<98, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_step_name(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_stepName(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<104, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
-    d_field_AssignedAction_retry_count(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+    d_field_AssignedAction_retryCount(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<114, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     d_field_AssignedAction_additional_metadata(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<120, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
@@ -1357,8 +1356,8 @@ dfp_read_field_def_AssignedAction(<<154, 1, Rest/binary>>, Z1, Z2, F, F@_1, F@_2
 dfp_read_field_def_AssignedAction(<<162, 1, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     d_field_AssignedAction_workflow_version_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
 dfp_read_field_def_AssignedAction(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, _) ->
-    S1 = #{tenant_id => F@_1, workflow_run_id => F@_2, get_group_key_run_id => F@_3, job_id => F@_4, job_name => F@_5, job_run_id => F@_6, step_id => F@_7, step_run_id => F@_8, action_id => F@_9, action_type => F@_10, action_payload => F@_11,
-           step_name => F@_12, retry_count => F@_13, priority => F@_18},
+    S1 = #{tenantId => F@_1, workflowRunId => F@_2, getGroupKeyRunId => F@_3, jobId => F@_4, jobName => F@_5, jobRunId => F@_6, stepId => F@_7, stepRunId => F@_8, actionId => F@_9, action_type => F@_10, actionPayload => F@_11, stepName => F@_12,
+           retryCount => F@_13, priority => F@_18},
     S2 = if F@_14 == '$undef' -> S1;
             true -> S1#{additional_metadata => F@_14}
          end,
@@ -1385,19 +1384,19 @@ dg_read_field_def_AssignedAction(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_
 dg_read_field_def_AssignedAction(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_AssignedAction_tenant_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        18 -> d_field_AssignedAction_workflow_run_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        26 -> d_field_AssignedAction_get_group_key_run_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        34 -> d_field_AssignedAction_job_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        42 -> d_field_AssignedAction_job_name(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        50 -> d_field_AssignedAction_job_run_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        58 -> d_field_AssignedAction_step_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        66 -> d_field_AssignedAction_step_run_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        74 -> d_field_AssignedAction_action_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        10 -> d_field_AssignedAction_tenantId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        18 -> d_field_AssignedAction_workflowRunId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        26 -> d_field_AssignedAction_getGroupKeyRunId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        34 -> d_field_AssignedAction_jobId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        42 -> d_field_AssignedAction_jobName(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        50 -> d_field_AssignedAction_jobRunId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        58 -> d_field_AssignedAction_stepId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        66 -> d_field_AssignedAction_stepRunId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        74 -> d_field_AssignedAction_actionId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
         80 -> d_field_AssignedAction_action_type(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        90 -> d_field_AssignedAction_action_payload(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        98 -> d_field_AssignedAction_step_name(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-        104 -> d_field_AssignedAction_retry_count(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        90 -> d_field_AssignedAction_actionPayload(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        98 -> d_field_AssignedAction_stepName(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+        104 -> d_field_AssignedAction_retryCount(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
         114 -> d_field_AssignedAction_additional_metadata(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
         120 -> d_field_AssignedAction_child_workflow_index(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
         130 -> d_field_AssignedAction_child_workflow_key(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
@@ -1415,8 +1414,8 @@ dg_read_field_def_AssignedAction(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_
             end
     end;
 dg_read_field_def_AssignedAction(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, _) ->
-    S1 = #{tenant_id => F@_1, workflow_run_id => F@_2, get_group_key_run_id => F@_3, job_id => F@_4, job_name => F@_5, job_run_id => F@_6, step_id => F@_7, step_run_id => F@_8, action_id => F@_9, action_type => F@_10, action_payload => F@_11,
-           step_name => F@_12, retry_count => F@_13, priority => F@_18},
+    S1 = #{tenantId => F@_1, workflowRunId => F@_2, getGroupKeyRunId => F@_3, jobId => F@_4, jobName => F@_5, jobRunId => F@_6, stepId => F@_7, stepRunId => F@_8, actionId => F@_9, action_type => F@_10, actionPayload => F@_11, stepName => F@_12,
+           retryCount => F@_13, priority => F@_18},
     S2 = if F@_14 == '$undef' -> S1;
             true -> S1#{additional_metadata => F@_14}
          end,
@@ -1436,57 +1435,57 @@ dg_read_field_def_AssignedAction(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@
        true -> S6#{workflow_version_id => F@_20}
     end.
 
-d_field_AssignedAction_tenant_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_tenant_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_tenant_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_tenantId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_tenantId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_tenantId(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, NewFValue, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_workflow_run_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_workflow_run_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_workflow_run_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_workflowRunId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_workflowRunId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_workflowRunId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, NewFValue, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_get_group_key_run_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_get_group_key_run_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_get_group_key_run_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_getGroupKeyRunId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_getGroupKeyRunId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_getGroupKeyRunId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, NewFValue, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_job_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_job_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_job_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, _, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_jobId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_jobId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_jobId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, _, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, NewFValue, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_job_name(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_job_name(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_job_name(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, _, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_jobName(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_jobName(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_jobName(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, _, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, NewFValue, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_job_run_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_job_run_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_job_run_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, _, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_jobRunId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_jobRunId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_jobRunId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, _, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, NewFValue, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_step_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_step_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_step_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, _, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_stepId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_stepId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_stepId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, _, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, NewFValue, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_step_run_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_step_run_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_step_run_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, _, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_stepRunId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_stepRunId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_stepRunId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, _, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, NewFValue, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_action_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_action_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_action_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, _, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_actionId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_actionId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_actionId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, _, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, NewFValue, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
@@ -1496,21 +1495,21 @@ d_field_AssignedAction_action_type(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F
     {NewFValue, RestF} = {id(d_enum_ActionType(begin <<Res:32/signed-native>> = <<(X bsl N + Acc):32/unsigned-native>>, id(Res, TrUserData) end), TrUserData), Rest},
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, NewFValue, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_action_payload(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_action_payload(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_action_payload(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, _, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_actionPayload(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_actionPayload(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_actionPayload(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, _, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, NewFValue, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_step_name(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_step_name(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_step_name(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, _, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_stepName(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_stepName(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_stepName(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, _, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, NewFValue, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
-d_field_AssignedAction_retry_count(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
-    d_field_AssignedAction_retry_count(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
-d_field_AssignedAction_retry_count(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, _, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
+d_field_AssignedAction_retryCount(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) when N < 57 ->
+    d_field_AssignedAction_retryCount(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, F@_13, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData);
+d_field_AssignedAction_retryCount(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, _, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData) ->
     {NewFValue, RestF} = {begin <<Res:32/signed-native>> = <<(X bsl N + Acc):32/unsigned-native>>, id(Res, TrUserData) end, Rest},
     dfp_read_field_def_AssignedAction(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, F@_12, NewFValue, F@_14, F@_15, F@_16, F@_17, F@_18, F@_19, F@_20, TrUserData).
 
@@ -1597,29 +1596,29 @@ decode_msg_StepActionEvent(Bin, TrUserData) ->
                                        TrUserData).
 
 dfp_read_field_def_StepActionEvent(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_worker_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_workerId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_job_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_jobId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<26, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_job_run_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_jobRunId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<34, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_step_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_stepId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<42, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_step_run_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_stepRunId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<50, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_action_id(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_actionId(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<56, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_event_timestamp(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_eventTimestamp(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     d_field_StepActionEvent_event_type(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<74, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
-    d_field_StepActionEvent_event_payload(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+    d_field_StepActionEvent_eventPayload(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<80, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     d_field_StepActionEvent_retry_count(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<88, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     d_field_StepActionEvent_should_not_retry(Rest, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
 dfp_read_field_def_StepActionEvent(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, _) ->
-    S1 = #{worker_id => F@_1, job_id => F@_2, job_run_id => F@_3, step_id => F@_4, step_run_id => F@_5, action_id => F@_6, event_timestamp => F@_7, event_type => F@_8, event_payload => F@_9},
+    S1 = #{workerId => F@_1, jobId => F@_2, jobRunId => F@_3, stepId => F@_4, stepRunId => F@_5, actionId => F@_6, eventTimestamp => F@_7, event_type => F@_8, eventPayload => F@_9},
     S2 = if F@_10 == '$undef' -> S1;
             true -> S1#{retry_count => F@_10}
          end,
@@ -1634,15 +1633,15 @@ dg_read_field_def_StepActionEvent(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@
 dg_read_field_def_StepActionEvent(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_StepActionEvent_worker_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-        18 -> d_field_StepActionEvent_job_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-        26 -> d_field_StepActionEvent_job_run_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-        34 -> d_field_StepActionEvent_step_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-        42 -> d_field_StepActionEvent_step_run_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-        50 -> d_field_StepActionEvent_action_id(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-        56 -> d_field_StepActionEvent_event_timestamp(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        10 -> d_field_StepActionEvent_workerId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        18 -> d_field_StepActionEvent_jobId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        26 -> d_field_StepActionEvent_jobRunId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        34 -> d_field_StepActionEvent_stepId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        42 -> d_field_StepActionEvent_stepRunId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        50 -> d_field_StepActionEvent_actionId(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        56 -> d_field_StepActionEvent_eventTimestamp(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
         64 -> d_field_StepActionEvent_event_type(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-        74 -> d_field_StepActionEvent_event_payload(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+        74 -> d_field_StepActionEvent_eventPayload(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
         80 -> d_field_StepActionEvent_retry_count(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
         88 -> d_field_StepActionEvent_should_not_retry(Rest, 0, 0, 0, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
         _ ->
@@ -1655,7 +1654,7 @@ dg_read_field_def_StepActionEvent(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@
             end
     end;
 dg_read_field_def_StepActionEvent(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, _) ->
-    S1 = #{worker_id => F@_1, job_id => F@_2, job_run_id => F@_3, step_id => F@_4, step_run_id => F@_5, action_id => F@_6, event_timestamp => F@_7, event_type => F@_8, event_payload => F@_9},
+    S1 = #{workerId => F@_1, jobId => F@_2, jobRunId => F@_3, stepId => F@_4, stepRunId => F@_5, actionId => F@_6, eventTimestamp => F@_7, event_type => F@_8, eventPayload => F@_9},
     S2 = if F@_10 == '$undef' -> S1;
             true -> S1#{retry_count => F@_10}
          end,
@@ -1663,45 +1662,45 @@ dg_read_field_def_StepActionEvent(<<>>, 0, 0, _, F@_1, F@_2, F@_3, F@_4, F@_5, F
        true -> S2#{should_not_retry => F@_11}
     end.
 
-d_field_StepActionEvent_worker_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_worker_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_worker_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_workerId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_workerId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_workerId(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, NewFValue, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData).
 
-d_field_StepActionEvent_job_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_job_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_job_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_jobId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_jobId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_jobId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, NewFValue, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData).
 
-d_field_StepActionEvent_job_run_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_job_run_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_job_run_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_jobRunId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_jobRunId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_jobRunId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, _, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, F@_2, NewFValue, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData).
 
-d_field_StepActionEvent_step_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_step_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_step_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, _, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_stepId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_stepId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_stepId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, _, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, F@_2, F@_3, NewFValue, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData).
 
-d_field_StepActionEvent_step_run_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_step_run_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_step_run_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, _, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_stepRunId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_stepRunId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_stepRunId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, _, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, NewFValue, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData).
 
-d_field_StepActionEvent_action_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_action_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_action_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, _, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_actionId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_actionId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_actionId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, _, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, NewFValue, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData).
 
-d_field_StepActionEvent_event_timestamp(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_event_timestamp(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_event_timestamp(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, _, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_eventTimestamp(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_eventTimestamp(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_eventTimestamp(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, _, F@_8, F@_9, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = {begin <<Res:64/signed-native>> = <<(X bsl N + Acc):64/unsigned-native>>, id(Res, TrUserData) end, Rest},
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, NewFValue, F@_8, F@_9, F@_10, F@_11, TrUserData).
 
@@ -1711,9 +1710,9 @@ d_field_StepActionEvent_event_type(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F
     {NewFValue, RestF} = {id(d_enum_StepActionEventType(begin <<Res:32/signed-native>> = <<(X bsl N + Acc):32/unsigned-native>>, id(Res, TrUserData) end), TrUserData), Rest},
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, NewFValue, F@_9, F@_10, F@_11, TrUserData).
 
-d_field_StepActionEvent_event_payload(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
-    d_field_StepActionEvent_event_payload(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
-d_field_StepActionEvent_event_payload(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, _, F@_10, F@_11, TrUserData) ->
+d_field_StepActionEvent_eventPayload(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData) when N < 57 ->
+    d_field_StepActionEvent_eventPayload(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, F@_9, F@_10, F@_11, TrUserData);
+d_field_StepActionEvent_eventPayload(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, _, F@_10, F@_11, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_StepActionEvent(RestF, 0, 0, F, F@_1, F@_2, F@_3, F@_4, F@_5, F@_6, F@_7, F@_8, NewFValue, F@_10, F@_11, TrUserData).
 
@@ -1753,17 +1752,17 @@ skip_64_StepActionEvent(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, F@_3, F@_4
 
 decode_msg_ActionEventResponse(Bin, TrUserData) -> dfp_read_field_def_ActionEventResponse(Bin, 0, 0, 0, id(<<>>, TrUserData), id(<<>>, TrUserData), TrUserData).
 
-dfp_read_field_def_ActionEventResponse(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_ActionEventResponse_tenant_id(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
-dfp_read_field_def_ActionEventResponse(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_ActionEventResponse_worker_id(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
-dfp_read_field_def_ActionEventResponse(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{tenant_id => F@_1, worker_id => F@_2};
+dfp_read_field_def_ActionEventResponse(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_ActionEventResponse_tenantId(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
+dfp_read_field_def_ActionEventResponse(<<18, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_ActionEventResponse_workerId(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
+dfp_read_field_def_ActionEventResponse(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{tenantId => F@_1, workerId => F@_2};
 dfp_read_field_def_ActionEventResponse(Other, Z1, Z2, F, F@_1, F@_2, TrUserData) -> dg_read_field_def_ActionEventResponse(Other, Z1, Z2, F, F@_1, F@_2, TrUserData).
 
 dg_read_field_def_ActionEventResponse(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 32 - 7 -> dg_read_field_def_ActionEventResponse(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
 dg_read_field_def_ActionEventResponse(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_ActionEventResponse_tenant_id(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
-        18 -> d_field_ActionEventResponse_worker_id(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
+        10 -> d_field_ActionEventResponse_tenantId(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
+        18 -> d_field_ActionEventResponse_workerId(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
         _ ->
             case Key band 7 of
                 0 -> skip_varint_ActionEventResponse(Rest, 0, 0, Key bsr 3, F@_1, F@_2, TrUserData);
@@ -1773,15 +1772,15 @@ dg_read_field_def_ActionEventResponse(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1
                 5 -> skip_32_ActionEventResponse(Rest, 0, 0, Key bsr 3, F@_1, F@_2, TrUserData)
             end
     end;
-dg_read_field_def_ActionEventResponse(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{tenant_id => F@_1, worker_id => F@_2}.
+dg_read_field_def_ActionEventResponse(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{tenantId => F@_1, workerId => F@_2}.
 
-d_field_ActionEventResponse_tenant_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_ActionEventResponse_tenant_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
-d_field_ActionEventResponse_tenant_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, TrUserData) ->
+d_field_ActionEventResponse_tenantId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_ActionEventResponse_tenantId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
+d_field_ActionEventResponse_tenantId(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_ActionEventResponse(RestF, 0, 0, F, NewFValue, F@_2, TrUserData).
 
-d_field_ActionEventResponse_worker_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_ActionEventResponse_worker_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
-d_field_ActionEventResponse_worker_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, TrUserData) ->
+d_field_ActionEventResponse_workerId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_ActionEventResponse_workerId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
+d_field_ActionEventResponse_workerId(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_ActionEventResponse(RestF, 0, 0, F, F@_1, NewFValue, TrUserData).
 
@@ -1804,17 +1803,17 @@ skip_64_ActionEventResponse(<<_:64, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUser
 
 decode_msg_HeartbeatRequest(Bin, TrUserData) -> dfp_read_field_def_HeartbeatRequest(Bin, 0, 0, 0, id(<<>>, TrUserData), id(0, TrUserData), TrUserData).
 
-dfp_read_field_def_HeartbeatRequest(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_HeartbeatRequest_worker_id(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
-dfp_read_field_def_HeartbeatRequest(<<16, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_HeartbeatRequest_heartbeat_at(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
-dfp_read_field_def_HeartbeatRequest(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{worker_id => F@_1, heartbeat_at => F@_2};
+dfp_read_field_def_HeartbeatRequest(<<10, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_HeartbeatRequest_workerId(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
+dfp_read_field_def_HeartbeatRequest(<<16, Rest/binary>>, Z1, Z2, F, F@_1, F@_2, TrUserData) -> d_field_HeartbeatRequest_heartbeatAt(Rest, Z1, Z2, F, F@_1, F@_2, TrUserData);
+dfp_read_field_def_HeartbeatRequest(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{workerId => F@_1, heartbeatAt => F@_2};
 dfp_read_field_def_HeartbeatRequest(Other, Z1, Z2, F, F@_1, F@_2, TrUserData) -> dg_read_field_def_HeartbeatRequest(Other, Z1, Z2, F, F@_1, F@_2, TrUserData).
 
 dg_read_field_def_HeartbeatRequest(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 32 - 7 -> dg_read_field_def_HeartbeatRequest(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
 dg_read_field_def_HeartbeatRequest(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F@_2, TrUserData) ->
     Key = X bsl N + Acc,
     case Key of
-        10 -> d_field_HeartbeatRequest_worker_id(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
-        16 -> d_field_HeartbeatRequest_heartbeat_at(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
+        10 -> d_field_HeartbeatRequest_workerId(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
+        16 -> d_field_HeartbeatRequest_heartbeatAt(Rest, 0, 0, 0, F@_1, F@_2, TrUserData);
         _ ->
             case Key band 7 of
                 0 -> skip_varint_HeartbeatRequest(Rest, 0, 0, Key bsr 3, F@_1, F@_2, TrUserData);
@@ -1824,15 +1823,15 @@ dg_read_field_def_HeartbeatRequest(<<0:1, X:7, Rest/binary>>, N, Acc, _, F@_1, F
                 5 -> skip_32_HeartbeatRequest(Rest, 0, 0, Key bsr 3, F@_1, F@_2, TrUserData)
             end
     end;
-dg_read_field_def_HeartbeatRequest(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{worker_id => F@_1, heartbeat_at => F@_2}.
+dg_read_field_def_HeartbeatRequest(<<>>, 0, 0, _, F@_1, F@_2, _) -> #{workerId => F@_1, heartbeatAt => F@_2}.
 
-d_field_HeartbeatRequest_worker_id(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_HeartbeatRequest_worker_id(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
-d_field_HeartbeatRequest_worker_id(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, TrUserData) ->
+d_field_HeartbeatRequest_workerId(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_HeartbeatRequest_workerId(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
+d_field_HeartbeatRequest_workerId(<<0:1, X:7, Rest/binary>>, N, Acc, F, _, F@_2, TrUserData) ->
     {NewFValue, RestF} = begin Len = X bsl N + Acc, <<Bytes:Len/binary, Rest2/binary>> = Rest, Bytes2 = binary:copy(Bytes), {id(Bytes2, TrUserData), Rest2} end,
     dfp_read_field_def_HeartbeatRequest(RestF, 0, 0, F, NewFValue, F@_2, TrUserData).
 
-d_field_HeartbeatRequest_heartbeat_at(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_HeartbeatRequest_heartbeat_at(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
-d_field_HeartbeatRequest_heartbeat_at(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, TrUserData) ->
+d_field_HeartbeatRequest_heartbeatAt(<<1:1, X:7, Rest/binary>>, N, Acc, F, F@_1, F@_2, TrUserData) when N < 57 -> d_field_HeartbeatRequest_heartbeatAt(Rest, N + 7, X bsl N + Acc, F, F@_1, F@_2, TrUserData);
+d_field_HeartbeatRequest_heartbeatAt(<<0:1, X:7, Rest/binary>>, N, Acc, F, F@_1, _, TrUserData) ->
     {NewFValue, RestF} = {begin <<Res:64/signed-native>> = <<(X bsl N + Acc):64/unsigned-native>>, id(Res, TrUserData) end, Rest},
     dfp_read_field_def_HeartbeatRequest(RestF, 0, 0, F, F@_1, NewFValue, TrUserData).
 
@@ -1958,7 +1957,6 @@ d_enum_SDKS(0) -> 'UNKNOWN';
 d_enum_SDKS(1) -> 'GO';
 d_enum_SDKS(2) -> 'PYTHON';
 d_enum_SDKS(3) -> 'TYPESCRIPT';
-d_enum_SDKS(4) -> 'GLEAM';
 d_enum_SDKS(V) -> V.
 
 d_enum_ActionType(0) -> 'START_STEP_RUN';
@@ -2052,8 +2050,8 @@ merge_msgs(Prev, New, MsgName, Opts) ->
 merge_msg_WorkerRegisterRequest(PMsg, NMsg, TrUserData) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{worker_name := NFworker_name}} -> S1#{worker_name => NFworker_name};
-             {#{worker_name := PFworker_name}, _} -> S1#{worker_name => PFworker_name};
+             {_, #{workerName := NFworkerName}} -> S1#{workerName => NFworkerName};
+             {#{workerName := PFworkerName}, _} -> S1#{workerName => PFworkerName};
              _ -> S1
          end,
     S3 = case {PMsg, NMsg} of
@@ -2095,13 +2093,13 @@ merge_msg_WorkerRegisterRequest(PMsg, NMsg, TrUserData) ->
 merge_msg_WorkerLabels(PMsg, NMsg, _) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{str_value := NFstr_value}} -> S1#{str_value => NFstr_value};
-             {#{str_value := PFstr_value}, _} -> S1#{str_value => PFstr_value};
+             {_, #{strValue := NFstrValue}} -> S1#{strValue => NFstrValue};
+             {#{strValue := PFstrValue}, _} -> S1#{strValue => PFstrValue};
              _ -> S1
          end,
     case {PMsg, NMsg} of
-        {_, #{int_value := NFint_value}} -> S2#{int_value => NFint_value};
-        {#{int_value := PFint_value}, _} -> S2#{int_value => PFint_value};
+        {_, #{intValue := NFintValue}} -> S2#{intValue => NFintValue};
+        {#{intValue := PFintValue}, _} -> S2#{intValue => PFintValue};
         _ -> S2
     end.
 
@@ -2109,8 +2107,8 @@ merge_msg_WorkerLabels(PMsg, NMsg, _) ->
 merge_msg_RuntimeInfo(PMsg, NMsg, _) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{sdk_version := NFsdk_version}} -> S1#{sdk_version => NFsdk_version};
-             {#{sdk_version := PFsdk_version}, _} -> S1#{sdk_version => PFsdk_version};
+             {_, #{sdkVersion := NFsdkVersion}} -> S1#{sdkVersion => NFsdkVersion};
+             {#{sdkVersion := PFsdkVersion}, _} -> S1#{sdkVersion => PFsdkVersion};
              _ -> S1
          end,
     S3 = case {PMsg, NMsg} of
@@ -2119,8 +2117,8 @@ merge_msg_RuntimeInfo(PMsg, NMsg, _) ->
              _ -> S2
          end,
     S4 = case {PMsg, NMsg} of
-             {_, #{language_version := NFlanguage_version}} -> S3#{language_version => NFlanguage_version};
-             {#{language_version := PFlanguage_version}, _} -> S3#{language_version => PFlanguage_version};
+             {_, #{languageVersion := NFlanguageVersion}} -> S3#{languageVersion => NFlanguageVersion};
+             {#{languageVersion := PFlanguageVersion}, _} -> S3#{languageVersion => PFlanguageVersion};
              _ -> S3
          end,
     S5 = case {PMsg, NMsg} of
@@ -2138,18 +2136,18 @@ merge_msg_RuntimeInfo(PMsg, NMsg, _) ->
 merge_msg_WorkerRegisterResponse(PMsg, NMsg, _) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{tenant_id := NFtenant_id}} -> S1#{tenant_id => NFtenant_id};
-             {#{tenant_id := PFtenant_id}, _} -> S1#{tenant_id => PFtenant_id};
+             {_, #{tenantId := NFtenantId}} -> S1#{tenantId => NFtenantId};
+             {#{tenantId := PFtenantId}, _} -> S1#{tenantId => PFtenantId};
              _ -> S1
          end,
     S3 = case {PMsg, NMsg} of
-             {_, #{worker_id := NFworker_id}} -> S2#{worker_id => NFworker_id};
-             {#{worker_id := PFworker_id}, _} -> S2#{worker_id => PFworker_id};
+             {_, #{workerId := NFworkerId}} -> S2#{workerId => NFworkerId};
+             {#{workerId := PFworkerId}, _} -> S2#{workerId => PFworkerId};
              _ -> S2
          end,
     case {PMsg, NMsg} of
-        {_, #{worker_name := NFworker_name}} -> S3#{worker_name => NFworker_name};
-        {#{worker_name := PFworker_name}, _} -> S3#{worker_name => PFworker_name};
+        {_, #{workerName := NFworkerName}} -> S3#{workerName => NFworkerName};
+        {#{workerName := PFworkerName}, _} -> S3#{workerName => PFworkerName};
         _ -> S3
     end.
 
@@ -2157,8 +2155,8 @@ merge_msg_WorkerRegisterResponse(PMsg, NMsg, _) ->
 merge_msg_WorkerListenRequest(PMsg, NMsg, _) ->
     S1 = #{},
     case {PMsg, NMsg} of
-        {_, #{worker_id := NFworker_id}} -> S1#{worker_id => NFworker_id};
-        {#{worker_id := PFworker_id}, _} -> S1#{worker_id => PFworker_id};
+        {_, #{workerId := NFworkerId}} -> S1#{workerId => NFworkerId};
+        {#{workerId := PFworkerId}, _} -> S1#{workerId => PFworkerId};
         _ -> S1
     end.
 
@@ -2166,48 +2164,48 @@ merge_msg_WorkerListenRequest(PMsg, NMsg, _) ->
 merge_msg_AssignedAction(PMsg, NMsg, _) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{tenant_id := NFtenant_id}} -> S1#{tenant_id => NFtenant_id};
-             {#{tenant_id := PFtenant_id}, _} -> S1#{tenant_id => PFtenant_id};
+             {_, #{tenantId := NFtenantId}} -> S1#{tenantId => NFtenantId};
+             {#{tenantId := PFtenantId}, _} -> S1#{tenantId => PFtenantId};
              _ -> S1
          end,
     S3 = case {PMsg, NMsg} of
-             {_, #{workflow_run_id := NFworkflow_run_id}} -> S2#{workflow_run_id => NFworkflow_run_id};
-             {#{workflow_run_id := PFworkflow_run_id}, _} -> S2#{workflow_run_id => PFworkflow_run_id};
+             {_, #{workflowRunId := NFworkflowRunId}} -> S2#{workflowRunId => NFworkflowRunId};
+             {#{workflowRunId := PFworkflowRunId}, _} -> S2#{workflowRunId => PFworkflowRunId};
              _ -> S2
          end,
     S4 = case {PMsg, NMsg} of
-             {_, #{get_group_key_run_id := NFget_group_key_run_id}} -> S3#{get_group_key_run_id => NFget_group_key_run_id};
-             {#{get_group_key_run_id := PFget_group_key_run_id}, _} -> S3#{get_group_key_run_id => PFget_group_key_run_id};
+             {_, #{getGroupKeyRunId := NFgetGroupKeyRunId}} -> S3#{getGroupKeyRunId => NFgetGroupKeyRunId};
+             {#{getGroupKeyRunId := PFgetGroupKeyRunId}, _} -> S3#{getGroupKeyRunId => PFgetGroupKeyRunId};
              _ -> S3
          end,
     S5 = case {PMsg, NMsg} of
-             {_, #{job_id := NFjob_id}} -> S4#{job_id => NFjob_id};
-             {#{job_id := PFjob_id}, _} -> S4#{job_id => PFjob_id};
+             {_, #{jobId := NFjobId}} -> S4#{jobId => NFjobId};
+             {#{jobId := PFjobId}, _} -> S4#{jobId => PFjobId};
              _ -> S4
          end,
     S6 = case {PMsg, NMsg} of
-             {_, #{job_name := NFjob_name}} -> S5#{job_name => NFjob_name};
-             {#{job_name := PFjob_name}, _} -> S5#{job_name => PFjob_name};
+             {_, #{jobName := NFjobName}} -> S5#{jobName => NFjobName};
+             {#{jobName := PFjobName}, _} -> S5#{jobName => PFjobName};
              _ -> S5
          end,
     S7 = case {PMsg, NMsg} of
-             {_, #{job_run_id := NFjob_run_id}} -> S6#{job_run_id => NFjob_run_id};
-             {#{job_run_id := PFjob_run_id}, _} -> S6#{job_run_id => PFjob_run_id};
+             {_, #{jobRunId := NFjobRunId}} -> S6#{jobRunId => NFjobRunId};
+             {#{jobRunId := PFjobRunId}, _} -> S6#{jobRunId => PFjobRunId};
              _ -> S6
          end,
     S8 = case {PMsg, NMsg} of
-             {_, #{step_id := NFstep_id}} -> S7#{step_id => NFstep_id};
-             {#{step_id := PFstep_id}, _} -> S7#{step_id => PFstep_id};
+             {_, #{stepId := NFstepId}} -> S7#{stepId => NFstepId};
+             {#{stepId := PFstepId}, _} -> S7#{stepId => PFstepId};
              _ -> S7
          end,
     S9 = case {PMsg, NMsg} of
-             {_, #{step_run_id := NFstep_run_id}} -> S8#{step_run_id => NFstep_run_id};
-             {#{step_run_id := PFstep_run_id}, _} -> S8#{step_run_id => PFstep_run_id};
+             {_, #{stepRunId := NFstepRunId}} -> S8#{stepRunId => NFstepRunId};
+             {#{stepRunId := PFstepRunId}, _} -> S8#{stepRunId => PFstepRunId};
              _ -> S8
          end,
     S10 = case {PMsg, NMsg} of
-              {_, #{action_id := NFaction_id}} -> S9#{action_id => NFaction_id};
-              {#{action_id := PFaction_id}, _} -> S9#{action_id => PFaction_id};
+              {_, #{actionId := NFactionId}} -> S9#{actionId => NFactionId};
+              {#{actionId := PFactionId}, _} -> S9#{actionId => PFactionId};
               _ -> S9
           end,
     S11 = case {PMsg, NMsg} of
@@ -2216,18 +2214,18 @@ merge_msg_AssignedAction(PMsg, NMsg, _) ->
               _ -> S10
           end,
     S12 = case {PMsg, NMsg} of
-              {_, #{action_payload := NFaction_payload}} -> S11#{action_payload => NFaction_payload};
-              {#{action_payload := PFaction_payload}, _} -> S11#{action_payload => PFaction_payload};
+              {_, #{actionPayload := NFactionPayload}} -> S11#{actionPayload => NFactionPayload};
+              {#{actionPayload := PFactionPayload}, _} -> S11#{actionPayload => PFactionPayload};
               _ -> S11
           end,
     S13 = case {PMsg, NMsg} of
-              {_, #{step_name := NFstep_name}} -> S12#{step_name => NFstep_name};
-              {#{step_name := PFstep_name}, _} -> S12#{step_name => PFstep_name};
+              {_, #{stepName := NFstepName}} -> S12#{stepName => NFstepName};
+              {#{stepName := PFstepName}, _} -> S12#{stepName => PFstepName};
               _ -> S12
           end,
     S14 = case {PMsg, NMsg} of
-              {_, #{retry_count := NFretry_count}} -> S13#{retry_count => NFretry_count};
-              {#{retry_count := PFretry_count}, _} -> S13#{retry_count => PFretry_count};
+              {_, #{retryCount := NFretryCount}} -> S13#{retryCount => NFretryCount};
+              {#{retryCount := PFretryCount}, _} -> S13#{retryCount => PFretryCount};
               _ -> S13
           end,
     S15 = case {PMsg, NMsg} of
@@ -2270,38 +2268,38 @@ merge_msg_AssignedAction(PMsg, NMsg, _) ->
 merge_msg_StepActionEvent(PMsg, NMsg, _) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{worker_id := NFworker_id}} -> S1#{worker_id => NFworker_id};
-             {#{worker_id := PFworker_id}, _} -> S1#{worker_id => PFworker_id};
+             {_, #{workerId := NFworkerId}} -> S1#{workerId => NFworkerId};
+             {#{workerId := PFworkerId}, _} -> S1#{workerId => PFworkerId};
              _ -> S1
          end,
     S3 = case {PMsg, NMsg} of
-             {_, #{job_id := NFjob_id}} -> S2#{job_id => NFjob_id};
-             {#{job_id := PFjob_id}, _} -> S2#{job_id => PFjob_id};
+             {_, #{jobId := NFjobId}} -> S2#{jobId => NFjobId};
+             {#{jobId := PFjobId}, _} -> S2#{jobId => PFjobId};
              _ -> S2
          end,
     S4 = case {PMsg, NMsg} of
-             {_, #{job_run_id := NFjob_run_id}} -> S3#{job_run_id => NFjob_run_id};
-             {#{job_run_id := PFjob_run_id}, _} -> S3#{job_run_id => PFjob_run_id};
+             {_, #{jobRunId := NFjobRunId}} -> S3#{jobRunId => NFjobRunId};
+             {#{jobRunId := PFjobRunId}, _} -> S3#{jobRunId => PFjobRunId};
              _ -> S3
          end,
     S5 = case {PMsg, NMsg} of
-             {_, #{step_id := NFstep_id}} -> S4#{step_id => NFstep_id};
-             {#{step_id := PFstep_id}, _} -> S4#{step_id => PFstep_id};
+             {_, #{stepId := NFstepId}} -> S4#{stepId => NFstepId};
+             {#{stepId := PFstepId}, _} -> S4#{stepId => PFstepId};
              _ -> S4
          end,
     S6 = case {PMsg, NMsg} of
-             {_, #{step_run_id := NFstep_run_id}} -> S5#{step_run_id => NFstep_run_id};
-             {#{step_run_id := PFstep_run_id}, _} -> S5#{step_run_id => PFstep_run_id};
+             {_, #{stepRunId := NFstepRunId}} -> S5#{stepRunId => NFstepRunId};
+             {#{stepRunId := PFstepRunId}, _} -> S5#{stepRunId => PFstepRunId};
              _ -> S5
          end,
     S7 = case {PMsg, NMsg} of
-             {_, #{action_id := NFaction_id}} -> S6#{action_id => NFaction_id};
-             {#{action_id := PFaction_id}, _} -> S6#{action_id => PFaction_id};
+             {_, #{actionId := NFactionId}} -> S6#{actionId => NFactionId};
+             {#{actionId := PFactionId}, _} -> S6#{actionId => PFactionId};
              _ -> S6
          end,
     S8 = case {PMsg, NMsg} of
-             {_, #{event_timestamp := NFevent_timestamp}} -> S7#{event_timestamp => NFevent_timestamp};
-             {#{event_timestamp := PFevent_timestamp}, _} -> S7#{event_timestamp => PFevent_timestamp};
+             {_, #{eventTimestamp := NFeventTimestamp}} -> S7#{eventTimestamp => NFeventTimestamp};
+             {#{eventTimestamp := PFeventTimestamp}, _} -> S7#{eventTimestamp => PFeventTimestamp};
              _ -> S7
          end,
     S9 = case {PMsg, NMsg} of
@@ -2310,8 +2308,8 @@ merge_msg_StepActionEvent(PMsg, NMsg, _) ->
              _ -> S8
          end,
     S10 = case {PMsg, NMsg} of
-              {_, #{event_payload := NFevent_payload}} -> S9#{event_payload => NFevent_payload};
-              {#{event_payload := PFevent_payload}, _} -> S9#{event_payload => PFevent_payload};
+              {_, #{eventPayload := NFeventPayload}} -> S9#{eventPayload => NFeventPayload};
+              {#{eventPayload := PFeventPayload}, _} -> S9#{eventPayload => PFeventPayload};
               _ -> S9
           end,
     S11 = case {PMsg, NMsg} of
@@ -2329,13 +2327,13 @@ merge_msg_StepActionEvent(PMsg, NMsg, _) ->
 merge_msg_ActionEventResponse(PMsg, NMsg, _) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{tenant_id := NFtenant_id}} -> S1#{tenant_id => NFtenant_id};
-             {#{tenant_id := PFtenant_id}, _} -> S1#{tenant_id => PFtenant_id};
+             {_, #{tenantId := NFtenantId}} -> S1#{tenantId => NFtenantId};
+             {#{tenantId := PFtenantId}, _} -> S1#{tenantId => PFtenantId};
              _ -> S1
          end,
     case {PMsg, NMsg} of
-        {_, #{worker_id := NFworker_id}} -> S2#{worker_id => NFworker_id};
-        {#{worker_id := PFworker_id}, _} -> S2#{worker_id => PFworker_id};
+        {_, #{workerId := NFworkerId}} -> S2#{workerId => NFworkerId};
+        {#{workerId := PFworkerId}, _} -> S2#{workerId => PFworkerId};
         _ -> S2
     end.
 
@@ -2343,13 +2341,13 @@ merge_msg_ActionEventResponse(PMsg, NMsg, _) ->
 merge_msg_HeartbeatRequest(PMsg, NMsg, _) ->
     S1 = #{},
     S2 = case {PMsg, NMsg} of
-             {_, #{worker_id := NFworker_id}} -> S1#{worker_id => NFworker_id};
-             {#{worker_id := PFworker_id}, _} -> S1#{worker_id => PFworker_id};
+             {_, #{workerId := NFworkerId}} -> S1#{workerId => NFworkerId};
+             {#{workerId := PFworkerId}, _} -> S1#{workerId => PFworkerId};
              _ -> S1
          end,
     case {PMsg, NMsg} of
-        {_, #{heartbeat_at := NFheartbeat_at}} -> S2#{heartbeat_at => NFheartbeat_at};
-        {#{heartbeat_at := PFheartbeat_at}, _} -> S2#{heartbeat_at => PFheartbeat_at};
+        {_, #{heartbeatAt := NFheartbeatAt}} -> S2#{heartbeatAt => NFheartbeatAt};
+        {#{heartbeatAt := PFheartbeatAt}, _} -> S2#{heartbeatAt => PFheartbeatAt};
         _ -> S2
     end.
 
@@ -2380,7 +2378,7 @@ verify_msg(Msg, MsgName, Opts) ->
 -dialyzer({nowarn_function,v_msg_WorkerRegisterRequest/3}).
 v_msg_WorkerRegisterRequest(#{} = M, Path, TrUserData) ->
     case M of
-        #{worker_name := F1} -> v_type_string(F1, [worker_name | Path], TrUserData);
+        #{workerName := F1} -> v_type_string(F1, [workerName | Path], TrUserData);
         _ -> ok
     end,
     case M of
@@ -2423,7 +2421,7 @@ v_msg_WorkerRegisterRequest(#{} = M, Path, TrUserData) ->
                       (max_runs) -> ok;
                       (services) -> ok;
                       (actions) -> ok;
-                      (worker_name) -> ok;
+                      (workerName) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2439,15 +2437,15 @@ v_submsg_WorkerLabels(Msg, Path, TrUserData) -> v_msg_WorkerLabels(Msg, Path, Tr
 -dialyzer({nowarn_function,v_msg_WorkerLabels/3}).
 v_msg_WorkerLabels(#{} = M, Path, TrUserData) ->
     case M of
-        #{str_value := F1} -> v_type_string(F1, [str_value | Path], TrUserData);
+        #{strValue := F1} -> v_type_string(F1, [strValue | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{int_value := F2} -> v_type_int32(F2, [int_value | Path], TrUserData);
+        #{intValue := F2} -> v_type_int32(F2, [intValue | Path], TrUserData);
         _ -> ok
     end,
-    lists:foreach(fun (int_value) -> ok;
-                      (str_value) -> ok;
+    lists:foreach(fun (intValue) -> ok;
+                      (strValue) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2463,7 +2461,7 @@ v_submsg_RuntimeInfo(Msg, Path, TrUserData) -> v_msg_RuntimeInfo(Msg, Path, TrUs
 -dialyzer({nowarn_function,v_msg_RuntimeInfo/3}).
 v_msg_RuntimeInfo(#{} = M, Path, TrUserData) ->
     case M of
-        #{sdk_version := F1} -> v_type_string(F1, [sdk_version | Path], TrUserData);
+        #{sdkVersion := F1} -> v_type_string(F1, [sdkVersion | Path], TrUserData);
         _ -> ok
     end,
     case M of
@@ -2471,7 +2469,7 @@ v_msg_RuntimeInfo(#{} = M, Path, TrUserData) ->
         _ -> ok
     end,
     case M of
-        #{language_version := F3} -> v_type_string(F3, [language_version | Path], TrUserData);
+        #{languageVersion := F3} -> v_type_string(F3, [languageVersion | Path], TrUserData);
         _ -> ok
     end,
     case M of
@@ -2484,9 +2482,9 @@ v_msg_RuntimeInfo(#{} = M, Path, TrUserData) ->
     end,
     lists:foreach(fun (extra) -> ok;
                       (os) -> ok;
-                      (language_version) -> ok;
+                      (languageVersion) -> ok;
                       (language) -> ok;
-                      (sdk_version) -> ok;
+                      (sdkVersion) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2498,20 +2496,20 @@ v_msg_RuntimeInfo(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'Runtime
 -dialyzer({nowarn_function,v_msg_WorkerRegisterResponse/3}).
 v_msg_WorkerRegisterResponse(#{} = M, Path, TrUserData) ->
     case M of
-        #{tenant_id := F1} -> v_type_string(F1, [tenant_id | Path], TrUserData);
+        #{tenantId := F1} -> v_type_string(F1, [tenantId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{worker_id := F2} -> v_type_string(F2, [worker_id | Path], TrUserData);
+        #{workerId := F2} -> v_type_string(F2, [workerId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{worker_name := F3} -> v_type_string(F3, [worker_name | Path], TrUserData);
+        #{workerName := F3} -> v_type_string(F3, [workerName | Path], TrUserData);
         _ -> ok
     end,
-    lists:foreach(fun (worker_name) -> ok;
-                      (worker_id) -> ok;
-                      (tenant_id) -> ok;
+    lists:foreach(fun (workerName) -> ok;
+                      (workerId) -> ok;
+                      (tenantId) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2523,10 +2521,10 @@ v_msg_WorkerRegisterResponse(X, Path, _TrUserData) -> mk_type_error({expected_ms
 -dialyzer({nowarn_function,v_msg_WorkerListenRequest/3}).
 v_msg_WorkerListenRequest(#{} = M, Path, TrUserData) ->
     case M of
-        #{worker_id := F1} -> v_type_string(F1, [worker_id | Path], TrUserData);
+        #{workerId := F1} -> v_type_string(F1, [workerId | Path], TrUserData);
         _ -> ok
     end,
-    lists:foreach(fun (worker_id) -> ok;
+    lists:foreach(fun (workerId) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2538,39 +2536,39 @@ v_msg_WorkerListenRequest(X, Path, _TrUserData) -> mk_type_error({expected_msg, 
 -dialyzer({nowarn_function,v_msg_AssignedAction/3}).
 v_msg_AssignedAction(#{} = M, Path, TrUserData) ->
     case M of
-        #{tenant_id := F1} -> v_type_string(F1, [tenant_id | Path], TrUserData);
+        #{tenantId := F1} -> v_type_string(F1, [tenantId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{workflow_run_id := F2} -> v_type_string(F2, [workflow_run_id | Path], TrUserData);
+        #{workflowRunId := F2} -> v_type_string(F2, [workflowRunId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{get_group_key_run_id := F3} -> v_type_string(F3, [get_group_key_run_id | Path], TrUserData);
+        #{getGroupKeyRunId := F3} -> v_type_string(F3, [getGroupKeyRunId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{job_id := F4} -> v_type_string(F4, [job_id | Path], TrUserData);
+        #{jobId := F4} -> v_type_string(F4, [jobId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{job_name := F5} -> v_type_string(F5, [job_name | Path], TrUserData);
+        #{jobName := F5} -> v_type_string(F5, [jobName | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{job_run_id := F6} -> v_type_string(F6, [job_run_id | Path], TrUserData);
+        #{jobRunId := F6} -> v_type_string(F6, [jobRunId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{step_id := F7} -> v_type_string(F7, [step_id | Path], TrUserData);
+        #{stepId := F7} -> v_type_string(F7, [stepId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{step_run_id := F8} -> v_type_string(F8, [step_run_id | Path], TrUserData);
+        #{stepRunId := F8} -> v_type_string(F8, [stepRunId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{action_id := F9} -> v_type_string(F9, [action_id | Path], TrUserData);
+        #{actionId := F9} -> v_type_string(F9, [actionId | Path], TrUserData);
         _ -> ok
     end,
     case M of
@@ -2578,15 +2576,15 @@ v_msg_AssignedAction(#{} = M, Path, TrUserData) ->
         _ -> ok
     end,
     case M of
-        #{action_payload := F11} -> v_type_string(F11, [action_payload | Path], TrUserData);
+        #{actionPayload := F11} -> v_type_string(F11, [actionPayload | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{step_name := F12} -> v_type_string(F12, [step_name | Path], TrUserData);
+        #{stepName := F12} -> v_type_string(F12, [stepName | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{retry_count := F13} -> v_type_int32(F13, [retry_count | Path], TrUserData);
+        #{retryCount := F13} -> v_type_int32(F13, [retryCount | Path], TrUserData);
         _ -> ok
     end,
     case M of
@@ -2624,19 +2622,19 @@ v_msg_AssignedAction(#{} = M, Path, TrUserData) ->
                       (child_workflow_key) -> ok;
                       (child_workflow_index) -> ok;
                       (additional_metadata) -> ok;
-                      (retry_count) -> ok;
-                      (step_name) -> ok;
-                      (action_payload) -> ok;
+                      (retryCount) -> ok;
+                      (stepName) -> ok;
+                      (actionPayload) -> ok;
                       (action_type) -> ok;
-                      (action_id) -> ok;
-                      (step_run_id) -> ok;
-                      (step_id) -> ok;
-                      (job_run_id) -> ok;
-                      (job_name) -> ok;
-                      (job_id) -> ok;
-                      (get_group_key_run_id) -> ok;
-                      (workflow_run_id) -> ok;
-                      (tenant_id) -> ok;
+                      (actionId) -> ok;
+                      (stepRunId) -> ok;
+                      (stepId) -> ok;
+                      (jobRunId) -> ok;
+                      (jobName) -> ok;
+                      (jobId) -> ok;
+                      (getGroupKeyRunId) -> ok;
+                      (workflowRunId) -> ok;
+                      (tenantId) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2648,31 +2646,31 @@ v_msg_AssignedAction(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'Assi
 -dialyzer({nowarn_function,v_msg_StepActionEvent/3}).
 v_msg_StepActionEvent(#{} = M, Path, TrUserData) ->
     case M of
-        #{worker_id := F1} -> v_type_string(F1, [worker_id | Path], TrUserData);
+        #{workerId := F1} -> v_type_string(F1, [workerId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{job_id := F2} -> v_type_string(F2, [job_id | Path], TrUserData);
+        #{jobId := F2} -> v_type_string(F2, [jobId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{job_run_id := F3} -> v_type_string(F3, [job_run_id | Path], TrUserData);
+        #{jobRunId := F3} -> v_type_string(F3, [jobRunId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{step_id := F4} -> v_type_string(F4, [step_id | Path], TrUserData);
+        #{stepId := F4} -> v_type_string(F4, [stepId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{step_run_id := F5} -> v_type_string(F5, [step_run_id | Path], TrUserData);
+        #{stepRunId := F5} -> v_type_string(F5, [stepRunId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{action_id := F6} -> v_type_string(F6, [action_id | Path], TrUserData);
+        #{actionId := F6} -> v_type_string(F6, [actionId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{event_timestamp := F7} -> v_type_int64(F7, [event_timestamp | Path], TrUserData);
+        #{eventTimestamp := F7} -> v_type_int64(F7, [eventTimestamp | Path], TrUserData);
         _ -> ok
     end,
     case M of
@@ -2680,7 +2678,7 @@ v_msg_StepActionEvent(#{} = M, Path, TrUserData) ->
         _ -> ok
     end,
     case M of
-        #{event_payload := F9} -> v_type_string(F9, [event_payload | Path], TrUserData);
+        #{eventPayload := F9} -> v_type_string(F9, [eventPayload | Path], TrUserData);
         _ -> ok
     end,
     case M of
@@ -2693,15 +2691,15 @@ v_msg_StepActionEvent(#{} = M, Path, TrUserData) ->
     end,
     lists:foreach(fun (should_not_retry) -> ok;
                       (retry_count) -> ok;
-                      (event_payload) -> ok;
+                      (eventPayload) -> ok;
                       (event_type) -> ok;
-                      (event_timestamp) -> ok;
-                      (action_id) -> ok;
-                      (step_run_id) -> ok;
-                      (step_id) -> ok;
-                      (job_run_id) -> ok;
-                      (job_id) -> ok;
-                      (worker_id) -> ok;
+                      (eventTimestamp) -> ok;
+                      (actionId) -> ok;
+                      (stepRunId) -> ok;
+                      (stepId) -> ok;
+                      (jobRunId) -> ok;
+                      (jobId) -> ok;
+                      (workerId) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2713,15 +2711,15 @@ v_msg_StepActionEvent(X, Path, _TrUserData) -> mk_type_error({expected_msg, 'Ste
 -dialyzer({nowarn_function,v_msg_ActionEventResponse/3}).
 v_msg_ActionEventResponse(#{} = M, Path, TrUserData) ->
     case M of
-        #{tenant_id := F1} -> v_type_string(F1, [tenant_id | Path], TrUserData);
+        #{tenantId := F1} -> v_type_string(F1, [tenantId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{worker_id := F2} -> v_type_string(F2, [worker_id | Path], TrUserData);
+        #{workerId := F2} -> v_type_string(F2, [workerId | Path], TrUserData);
         _ -> ok
     end,
-    lists:foreach(fun (worker_id) -> ok;
-                      (tenant_id) -> ok;
+    lists:foreach(fun (workerId) -> ok;
+                      (tenantId) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2733,15 +2731,15 @@ v_msg_ActionEventResponse(X, Path, _TrUserData) -> mk_type_error({expected_msg, 
 -dialyzer({nowarn_function,v_msg_HeartbeatRequest/3}).
 v_msg_HeartbeatRequest(#{} = M, Path, TrUserData) ->
     case M of
-        #{worker_id := F1} -> v_type_string(F1, [worker_id | Path], TrUserData);
+        #{workerId := F1} -> v_type_string(F1, [workerId | Path], TrUserData);
         _ -> ok
     end,
     case M of
-        #{heartbeat_at := F2} -> v_type_int64(F2, [heartbeat_at | Path], TrUserData);
+        #{heartbeatAt := F2} -> v_type_int64(F2, [heartbeatAt | Path], TrUserData);
         _ -> ok
     end,
-    lists:foreach(fun (heartbeat_at) -> ok;
-                      (worker_id) -> ok;
+    lists:foreach(fun (heartbeatAt) -> ok;
+                      (workerId) -> ok;
                       (OtherKey) -> mk_type_error({extraneous_key, OtherKey}, M, Path)
                   end,
                   maps:keys(M)),
@@ -2763,7 +2761,6 @@ v_enum_SDKS('UNKNOWN', _Path, _TrUserData) -> ok;
 v_enum_SDKS('GO', _Path, _TrUserData) -> ok;
 v_enum_SDKS('PYTHON', _Path, _TrUserData) -> ok;
 v_enum_SDKS('TYPESCRIPT', _Path, _TrUserData) -> ok;
-v_enum_SDKS('GLEAM', _Path, _TrUserData) -> ok;
 v_enum_SDKS(V, _Path, _TrUserData) when -2147483648 =< V, V =< 2147483647, is_integer(V) -> ok;
 v_enum_SDKS(X, Path, _TrUserData) -> mk_type_error({invalid_enum, 'SDKS'}, X, Path).
 
@@ -2902,43 +2899,43 @@ mt_merge_maps_m(M1, M2) -> maps:merge(M1, M2).
 
 
 get_msg_defs() ->
-    [{{enum, 'SDKS'}, [{'UNKNOWN', 0, []}, {'GO', 1, []}, {'PYTHON', 2, []}, {'TYPESCRIPT', 3, []}, {'GLEAM', 4, []}]},
+    [{{enum, 'SDKS'}, [{'UNKNOWN', 0, []}, {'GO', 1, []}, {'PYTHON', 2, []}, {'TYPESCRIPT', 3, []}]},
      {{enum, 'ActionType'}, [{'START_STEP_RUN', 0, []}, {'CANCEL_STEP_RUN', 1, []}, {'START_GET_GROUP_KEY', 2, []}]},
      {{enum, 'StepActionEventType'}, [{'STEP_EVENT_TYPE_UNKNOWN', 0, []}, {'STEP_EVENT_TYPE_STARTED', 1, []}, {'STEP_EVENT_TYPE_COMPLETED', 2, []}, {'STEP_EVENT_TYPE_FAILED', 3, []}, {'STEP_EVENT_TYPE_ACKNOWLEDGED', 4, []}]},
      {{msg, 'WorkerRegisterRequest'},
-      [#{name => worker_name, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+      [#{name => workerName, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
        #{name => actions, fnum => 2, rnum => 3, type => string, occurrence => repeated, opts => []},
        #{name => services, fnum => 3, rnum => 4, type => string, occurrence => repeated, opts => []},
        #{name => max_runs, fnum => 4, rnum => 5, type => int32, occurrence => optional, opts => []},
        #{name => labels, fnum => 5, rnum => 6, type => {map, string, {msg, 'WorkerLabels'}}, occurrence => repeated, opts => []},
        #{name => webhook_id, fnum => 6, rnum => 7, type => string, occurrence => optional, opts => []},
        #{name => runtime_info, fnum => 7, rnum => 8, type => {msg, 'RuntimeInfo'}, occurrence => defaulty, opts => []}]},
-     {{msg, 'WorkerLabels'}, [#{name => str_value, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []}, #{name => int_value, fnum => 2, rnum => 3, type => int32, occurrence => optional, opts => []}]},
+     {{msg, 'WorkerLabels'}, [#{name => strValue, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []}, #{name => intValue, fnum => 2, rnum => 3, type => int32, occurrence => optional, opts => []}]},
      {{msg, 'RuntimeInfo'},
-      [#{name => sdk_version, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
+      [#{name => sdkVersion, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
        #{name => language, fnum => 2, rnum => 3, type => {enum, 'SDKS'}, occurrence => optional, opts => []},
-       #{name => language_version, fnum => 3, rnum => 4, type => string, occurrence => optional, opts => []},
+       #{name => languageVersion, fnum => 3, rnum => 4, type => string, occurrence => optional, opts => []},
        #{name => os, fnum => 4, rnum => 5, type => string, occurrence => optional, opts => []},
        #{name => extra, fnum => 5, rnum => 6, type => string, occurrence => optional, opts => []}]},
      {{msg, 'WorkerRegisterResponse'},
-      [#{name => tenant_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
-       #{name => worker_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
-       #{name => worker_name, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []}]},
-     {{msg, 'WorkerListenRequest'}, [#{name => worker_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}]},
+      [#{name => tenantId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+       #{name => workerId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
+       #{name => workerName, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []}]},
+     {{msg, 'WorkerListenRequest'}, [#{name => workerId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}]},
      {{msg, 'AssignedAction'},
-      [#{name => tenant_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
-       #{name => workflow_run_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
-       #{name => get_group_key_run_id, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
-       #{name => job_id, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
-       #{name => job_name, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
-       #{name => job_run_id, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
-       #{name => step_id, fnum => 7, rnum => 8, type => string, occurrence => defaulty, opts => []},
-       #{name => step_run_id, fnum => 8, rnum => 9, type => string, occurrence => defaulty, opts => []},
-       #{name => action_id, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
+      [#{name => tenantId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+       #{name => workflowRunId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
+       #{name => getGroupKeyRunId, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
+       #{name => jobId, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
+       #{name => jobName, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
+       #{name => jobRunId, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
+       #{name => stepId, fnum => 7, rnum => 8, type => string, occurrence => defaulty, opts => []},
+       #{name => stepRunId, fnum => 8, rnum => 9, type => string, occurrence => defaulty, opts => []},
+       #{name => actionId, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
        #{name => action_type, fnum => 10, rnum => 11, type => {enum, 'ActionType'}, occurrence => defaulty, opts => []},
-       #{name => action_payload, fnum => 11, rnum => 12, type => string, occurrence => defaulty, opts => []},
-       #{name => step_name, fnum => 12, rnum => 13, type => string, occurrence => defaulty, opts => []},
-       #{name => retry_count, fnum => 13, rnum => 14, type => int32, occurrence => defaulty, opts => []},
+       #{name => actionPayload, fnum => 11, rnum => 12, type => string, occurrence => defaulty, opts => []},
+       #{name => stepName, fnum => 12, rnum => 13, type => string, occurrence => defaulty, opts => []},
+       #{name => retryCount, fnum => 13, rnum => 14, type => int32, occurrence => defaulty, opts => []},
        #{name => additional_metadata, fnum => 14, rnum => 15, type => string, occurrence => optional, opts => []},
        #{name => child_workflow_index, fnum => 15, rnum => 16, type => int32, occurrence => optional, opts => []},
        #{name => child_workflow_key, fnum => 16, rnum => 17, type => string, occurrence => optional, opts => []},
@@ -2947,19 +2944,19 @@ get_msg_defs() ->
        #{name => workflow_id, fnum => 19, rnum => 20, type => string, occurrence => optional, opts => []},
        #{name => workflow_version_id, fnum => 20, rnum => 21, type => string, occurrence => optional, opts => []}]},
      {{msg, 'StepActionEvent'},
-      [#{name => worker_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
-       #{name => job_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
-       #{name => job_run_id, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
-       #{name => step_id, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
-       #{name => step_run_id, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
-       #{name => action_id, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
-       #{name => event_timestamp, fnum => 7, rnum => 8, type => int64, occurrence => defaulty, opts => []},
+      [#{name => workerId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+       #{name => jobId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
+       #{name => jobRunId, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
+       #{name => stepId, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
+       #{name => stepRunId, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
+       #{name => actionId, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
+       #{name => eventTimestamp, fnum => 7, rnum => 8, type => int64, occurrence => defaulty, opts => []},
        #{name => event_type, fnum => 8, rnum => 9, type => {enum, 'StepActionEventType'}, occurrence => defaulty, opts => []},
-       #{name => event_payload, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
+       #{name => eventPayload, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
        #{name => retry_count, fnum => 10, rnum => 11, type => int32, occurrence => optional, opts => []},
        #{name => should_not_retry, fnum => 11, rnum => 12, type => bool, occurrence => optional, opts => []}]},
-     {{msg, 'ActionEventResponse'}, [#{name => tenant_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => worker_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []}]},
-     {{msg, 'HeartbeatRequest'}, [#{name => worker_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => heartbeat_at, fnum => 2, rnum => 3, type => int64, occurrence => defaulty, opts => []}]},
+     {{msg, 'ActionEventResponse'}, [#{name => tenantId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => workerId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []}]},
+     {{msg, 'HeartbeatRequest'}, [#{name => workerId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => heartbeatAt, fnum => 2, rnum => 3, type => int64, occurrence => defaulty, opts => []}]},
      {{msg, 'HeartbeatResponse'}, []}].
 
 
@@ -2990,39 +2987,39 @@ fetch_enum_def(EnumName) ->
 
 
 find_msg_def('WorkerRegisterRequest') ->
-    [#{name => worker_name, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+    [#{name => workerName, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
      #{name => actions, fnum => 2, rnum => 3, type => string, occurrence => repeated, opts => []},
      #{name => services, fnum => 3, rnum => 4, type => string, occurrence => repeated, opts => []},
      #{name => max_runs, fnum => 4, rnum => 5, type => int32, occurrence => optional, opts => []},
      #{name => labels, fnum => 5, rnum => 6, type => {map, string, {msg, 'WorkerLabels'}}, occurrence => repeated, opts => []},
      #{name => webhook_id, fnum => 6, rnum => 7, type => string, occurrence => optional, opts => []},
      #{name => runtime_info, fnum => 7, rnum => 8, type => {msg, 'RuntimeInfo'}, occurrence => defaulty, opts => []}];
-find_msg_def('WorkerLabels') -> [#{name => str_value, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []}, #{name => int_value, fnum => 2, rnum => 3, type => int32, occurrence => optional, opts => []}];
+find_msg_def('WorkerLabels') -> [#{name => strValue, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []}, #{name => intValue, fnum => 2, rnum => 3, type => int32, occurrence => optional, opts => []}];
 find_msg_def('RuntimeInfo') ->
-    [#{name => sdk_version, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
+    [#{name => sdkVersion, fnum => 1, rnum => 2, type => string, occurrence => optional, opts => []},
      #{name => language, fnum => 2, rnum => 3, type => {enum, 'SDKS'}, occurrence => optional, opts => []},
-     #{name => language_version, fnum => 3, rnum => 4, type => string, occurrence => optional, opts => []},
+     #{name => languageVersion, fnum => 3, rnum => 4, type => string, occurrence => optional, opts => []},
      #{name => os, fnum => 4, rnum => 5, type => string, occurrence => optional, opts => []},
      #{name => extra, fnum => 5, rnum => 6, type => string, occurrence => optional, opts => []}];
 find_msg_def('WorkerRegisterResponse') ->
-    [#{name => tenant_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
-     #{name => worker_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
-     #{name => worker_name, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []}];
-find_msg_def('WorkerListenRequest') -> [#{name => worker_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}];
+    [#{name => tenantId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+     #{name => workerId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
+     #{name => workerName, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []}];
+find_msg_def('WorkerListenRequest') -> [#{name => workerId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}];
 find_msg_def('AssignedAction') ->
-    [#{name => tenant_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
-     #{name => workflow_run_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
-     #{name => get_group_key_run_id, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
-     #{name => job_id, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
-     #{name => job_name, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
-     #{name => job_run_id, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
-     #{name => step_id, fnum => 7, rnum => 8, type => string, occurrence => defaulty, opts => []},
-     #{name => step_run_id, fnum => 8, rnum => 9, type => string, occurrence => defaulty, opts => []},
-     #{name => action_id, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
+    [#{name => tenantId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+     #{name => workflowRunId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
+     #{name => getGroupKeyRunId, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
+     #{name => jobId, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
+     #{name => jobName, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
+     #{name => jobRunId, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
+     #{name => stepId, fnum => 7, rnum => 8, type => string, occurrence => defaulty, opts => []},
+     #{name => stepRunId, fnum => 8, rnum => 9, type => string, occurrence => defaulty, opts => []},
+     #{name => actionId, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
      #{name => action_type, fnum => 10, rnum => 11, type => {enum, 'ActionType'}, occurrence => defaulty, opts => []},
-     #{name => action_payload, fnum => 11, rnum => 12, type => string, occurrence => defaulty, opts => []},
-     #{name => step_name, fnum => 12, rnum => 13, type => string, occurrence => defaulty, opts => []},
-     #{name => retry_count, fnum => 13, rnum => 14, type => int32, occurrence => defaulty, opts => []},
+     #{name => actionPayload, fnum => 11, rnum => 12, type => string, occurrence => defaulty, opts => []},
+     #{name => stepName, fnum => 12, rnum => 13, type => string, occurrence => defaulty, opts => []},
+     #{name => retryCount, fnum => 13, rnum => 14, type => int32, occurrence => defaulty, opts => []},
      #{name => additional_metadata, fnum => 14, rnum => 15, type => string, occurrence => optional, opts => []},
      #{name => child_workflow_index, fnum => 15, rnum => 16, type => int32, occurrence => optional, opts => []},
      #{name => child_workflow_key, fnum => 16, rnum => 17, type => string, occurrence => optional, opts => []},
@@ -3031,24 +3028,24 @@ find_msg_def('AssignedAction') ->
      #{name => workflow_id, fnum => 19, rnum => 20, type => string, occurrence => optional, opts => []},
      #{name => workflow_version_id, fnum => 20, rnum => 21, type => string, occurrence => optional, opts => []}];
 find_msg_def('StepActionEvent') ->
-    [#{name => worker_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
-     #{name => job_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
-     #{name => job_run_id, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
-     #{name => step_id, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
-     #{name => step_run_id, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
-     #{name => action_id, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
-     #{name => event_timestamp, fnum => 7, rnum => 8, type => int64, occurrence => defaulty, opts => []},
+    [#{name => workerId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []},
+     #{name => jobId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []},
+     #{name => jobRunId, fnum => 3, rnum => 4, type => string, occurrence => defaulty, opts => []},
+     #{name => stepId, fnum => 4, rnum => 5, type => string, occurrence => defaulty, opts => []},
+     #{name => stepRunId, fnum => 5, rnum => 6, type => string, occurrence => defaulty, opts => []},
+     #{name => actionId, fnum => 6, rnum => 7, type => string, occurrence => defaulty, opts => []},
+     #{name => eventTimestamp, fnum => 7, rnum => 8, type => int64, occurrence => defaulty, opts => []},
      #{name => event_type, fnum => 8, rnum => 9, type => {enum, 'StepActionEventType'}, occurrence => defaulty, opts => []},
-     #{name => event_payload, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
+     #{name => eventPayload, fnum => 9, rnum => 10, type => string, occurrence => defaulty, opts => []},
      #{name => retry_count, fnum => 10, rnum => 11, type => int32, occurrence => optional, opts => []},
      #{name => should_not_retry, fnum => 11, rnum => 12, type => bool, occurrence => optional, opts => []}];
-find_msg_def('ActionEventResponse') -> [#{name => tenant_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => worker_id, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []}];
-find_msg_def('HeartbeatRequest') -> [#{name => worker_id, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => heartbeat_at, fnum => 2, rnum => 3, type => int64, occurrence => defaulty, opts => []}];
+find_msg_def('ActionEventResponse') -> [#{name => tenantId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => workerId, fnum => 2, rnum => 3, type => string, occurrence => defaulty, opts => []}];
+find_msg_def('HeartbeatRequest') -> [#{name => workerId, fnum => 1, rnum => 2, type => string, occurrence => defaulty, opts => []}, #{name => heartbeatAt, fnum => 2, rnum => 3, type => int64, occurrence => defaulty, opts => []}];
 find_msg_def('HeartbeatResponse') -> [];
 find_msg_def(_) -> error.
 
 
-find_enum_def('SDKS') -> [{'UNKNOWN', 0, []}, {'GO', 1, []}, {'PYTHON', 2, []}, {'TYPESCRIPT', 3, []}, {'GLEAM', 4, []}];
+find_enum_def('SDKS') -> [{'UNKNOWN', 0, []}, {'GO', 1, []}, {'PYTHON', 2, []}, {'TYPESCRIPT', 3, []}];
 find_enum_def('ActionType') -> [{'START_STEP_RUN', 0, []}, {'CANCEL_STEP_RUN', 1, []}, {'START_GET_GROUP_KEY', 2, []}];
 find_enum_def('StepActionEventType') -> [{'STEP_EVENT_TYPE_UNKNOWN', 0, []}, {'STEP_EVENT_TYPE_STARTED', 1, []}, {'STEP_EVENT_TYPE_COMPLETED', 2, []}, {'STEP_EVENT_TYPE_FAILED', 3, []}, {'STEP_EVENT_TYPE_ACKNOWLEDGED', 4, []}];
 find_enum_def(_) -> error.
@@ -3067,15 +3064,13 @@ enum_value_by_symbol('StepActionEventType', Sym) -> enum_value_by_symbol_StepAct
 enum_symbol_by_value_SDKS(0) -> 'UNKNOWN';
 enum_symbol_by_value_SDKS(1) -> 'GO';
 enum_symbol_by_value_SDKS(2) -> 'PYTHON';
-enum_symbol_by_value_SDKS(3) -> 'TYPESCRIPT';
-enum_symbol_by_value_SDKS(4) -> 'GLEAM'.
+enum_symbol_by_value_SDKS(3) -> 'TYPESCRIPT'.
 
 
 enum_value_by_symbol_SDKS('UNKNOWN') -> 0;
 enum_value_by_symbol_SDKS('GO') -> 1;
 enum_value_by_symbol_SDKS('PYTHON') -> 2;
-enum_value_by_symbol_SDKS('TYPESCRIPT') -> 3;
-enum_value_by_symbol_SDKS('GLEAM') -> 4.
+enum_value_by_symbol_SDKS('TYPESCRIPT') -> 3.
 
 enum_symbol_by_value_ActionType(0) -> 'START_STEP_RUN';
 enum_symbol_by_value_ActionType(1) -> 'CANCEL_STEP_RUN';
@@ -3106,7 +3101,7 @@ get_service_names() -> ['Dispatcher'].
 get_service_def('Dispatcher') ->
     {{service, 'Dispatcher'},
      [#{name => 'Register', input => 'WorkerRegisterRequest', output => 'WorkerRegisterResponse', input_stream => false, output_stream => false, opts => []},
-      #{name => 'ListenV2', input => 'WorkerListenRequest', output => 'AssignedAction', input_stream => true, output_stream => true, opts => []},
+      #{name => 'ListenV2', input => 'WorkerListenRequest', output => 'AssignedAction', input_stream => false, output_stream => true, opts => []},
       #{name => 'SendStepActionEvent', input => 'StepActionEvent', output => 'ActionEventResponse', input_stream => false, output_stream => false, opts => []},
       #{name => 'Heartbeat', input => 'HeartbeatRequest', output => 'HeartbeatResponse', input_stream => false, output_stream => false, opts => []}]};
 get_service_def(_) -> error.
@@ -3121,7 +3116,7 @@ find_rpc_def(_, _) -> error.
 
 
 find_rpc_def_Dispatcher('Register') -> #{name => 'Register', input => 'WorkerRegisterRequest', output => 'WorkerRegisterResponse', input_stream => false, output_stream => false, opts => []};
-find_rpc_def_Dispatcher('ListenV2') -> #{name => 'ListenV2', input => 'WorkerListenRequest', output => 'AssignedAction', input_stream => true, output_stream => true, opts => []};
+find_rpc_def_Dispatcher('ListenV2') -> #{name => 'ListenV2', input => 'WorkerListenRequest', output => 'AssignedAction', input_stream => false, output_stream => true, opts => []};
 find_rpc_def_Dispatcher('SendStepActionEvent') -> #{name => 'SendStepActionEvent', input => 'StepActionEvent', output => 'ActionEventResponse', input_stream => false, output_stream => false, opts => []};
 find_rpc_def_Dispatcher('Heartbeat') -> #{name => 'Heartbeat', input => 'HeartbeatRequest', output => 'HeartbeatResponse', input_stream => false, output_stream => false, opts => []};
 find_rpc_def_Dispatcher(_) -> error.

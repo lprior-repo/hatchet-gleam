@@ -235,15 +235,15 @@ pub fn encode_worker_register_request(
   req: WorkerRegisterRequest,
 ) -> Result(ProtobufMessage, ProtobufError) {
   let map = erlang_map_new()
-  let map = erlang_map_put_string(map, "worker_name", req.worker_name)
+  let map = erlang_map_put_string(map, "workerName", req.worker_name)
   let map = erlang_map_put_list(map, "actions", req.actions)
   let map = erlang_map_put_list(map, "services", req.services)
   let map = case req.max_runs {
-    Some(v) -> erlang_map_put_int(map, "max_runs", v)
+    Some(v) -> erlang_map_put_int(map, "maxRuns", v)
     None -> map
   }
   let map = case req.webhook_id {
-    Some(v) -> erlang_map_put_string(map, "webhook_id", v)
+    Some(v) -> erlang_map_put_string(map, "webhookId", v)
     None -> map
   }
   // Add runtime_info if present
@@ -269,7 +269,7 @@ pub fn encode_worker_register_request(
         Some(e) -> erlang_map_put_string(info_map, "extra", e)
         None -> info_map
       }
-      erlang_map_put_nested(map, "runtime_info", info_map)
+      erlang_map_put_nested(map, "runtimeInfo", info_map)
     }
     None -> map
   }
@@ -297,7 +297,7 @@ pub fn encode_worker_listen_request(
   req: WorkerListenRequest,
 ) -> Result(ProtobufMessage, ProtobufError) {
   let map = erlang_map_new()
-  let map = erlang_map_put_string(map, "worker_id", req.worker_id)
+  let map = erlang_map_put_string(map, "workerId", req.worker_id)
   Ok(ProtobufMessage(encode_msg("WorkerListenRequest", map)))
 }
 
@@ -305,27 +305,27 @@ pub fn encode_step_action_event(
   event: StepActionEvent,
 ) -> Result(ProtobufMessage, ProtobufError) {
   let map = erlang_map_new()
-  let map = erlang_map_put_string(map, "worker_id", event.worker_id)
-  let map = erlang_map_put_string(map, "job_id", event.job_id)
-  let map = erlang_map_put_string(map, "job_run_id", event.job_run_id)
-  let map = erlang_map_put_string(map, "step_id", event.step_id)
-  let map = erlang_map_put_string(map, "step_run_id", event.step_run_id)
-  let map = erlang_map_put_string(map, "action_id", event.action_id)
-  let map = erlang_map_put_int(map, "event_timestamp", event.event_timestamp)
+  let map = erlang_map_put_string(map, "workerId", event.worker_id)
+  let map = erlang_map_put_string(map, "jobId", event.job_id)
+  let map = erlang_map_put_string(map, "jobRunId", event.job_run_id)
+  let map = erlang_map_put_string(map, "stepId", event.step_id)
+  let map = erlang_map_put_string(map, "stepRunId", event.step_run_id)
+  let map = erlang_map_put_string(map, "actionId", event.action_id)
+  let map = erlang_map_put_int(map, "eventTimestamp", event.event_timestamp)
   let map =
     erlang_map_put_int(
       map,
-      "event_type",
+      "eventType",
       step_event_type_to_int(event.event_type),
     )
-  let map = erlang_map_put_string(map, "event_payload", event.event_payload)
+  let map = erlang_map_put_string(map, "eventPayload", event.event_payload)
   let map = case event.retry_count {
-    Some(count) -> erlang_map_put_int(map, "retry_count", count)
+    Some(count) -> erlang_map_put_int(map, "retryCount", count)
     None -> map
   }
   let map = case event.should_not_retry {
-    Some(True) -> erlang_map_put_bool(map, "should_not_retry", True)
-    Some(False) -> erlang_map_put_bool(map, "should_not_retry", False)
+    Some(True) -> erlang_map_put_bool(map, "shouldNotRetry", True)
+    Some(False) -> erlang_map_put_bool(map, "shouldNotRetry", False)
     None -> map
   }
   Ok(ProtobufMessage(encode_msg("StepActionEvent", map)))
@@ -335,8 +335,8 @@ pub fn encode_heartbeat_request(
   req: HeartbeatRequest,
 ) -> Result(ProtobufMessage, ProtobufError) {
   let map = erlang_map_new()
-  let map = erlang_map_put_string(map, "worker_id", req.worker_id)
-  let map = erlang_map_put_int(map, "heartbeat_at", req.heartbeat_at)
+  let map = erlang_map_put_string(map, "workerId", req.worker_id)
+  let map = erlang_map_put_int(map, "heartbeatAt", req.heartbeat_at)
   Ok(ProtobufMessage(encode_msg("HeartbeatRequest", map)))
 }
 
@@ -345,11 +345,11 @@ pub fn decode_worker_register_response(
 ) -> Result(WorkerRegisterResponse, ProtobufError) {
   let ProtobufMessage(bits) = binary
   let map = decode_msg("WorkerRegisterResponse", bits)
-  case erlang_map_get_string(map, "worker_id") {
+  case erlang_map_get_string(map, "workerId") {
     Ok(worker_id) ->
-      case erlang_map_get_string(map, "worker_name") {
+      case erlang_map_get_string(map, "workerName") {
         Ok(worker_name) ->
-          case erlang_map_get_string(map, "tenant_id") {
+          case erlang_map_get_string(map, "tenantId") {
             Ok(tenant_id) ->
               Ok(WorkerRegisterResponse(
                 tenant_id: tenant_id,
@@ -380,36 +380,36 @@ pub fn decode_assigned_action(
   let map = decode_msg("AssignedAction", bits)
 
   // Required fields
-  let tenant_id = erlang_map_get_string_default(map, "tenant_id", "")
+  let tenant_id = erlang_map_get_string_default(map, "tenantId", "")
   let workflow_run_id =
-    erlang_map_get_string_default(map, "workflow_run_id", "")
+    erlang_map_get_string_default(map, "workflowRunId", "")
   let get_group_key_run_id =
-    erlang_map_get_string_default(map, "get_group_key_run_id", "")
-  let job_id = erlang_map_get_string_default(map, "job_id", "")
-  let job_name = erlang_map_get_string_default(map, "job_name", "")
-  let job_run_id = erlang_map_get_string_default(map, "job_run_id", "")
-  let step_id = erlang_map_get_string_default(map, "step_id", "")
-  let step_run_id = erlang_map_get_string_default(map, "step_run_id", "")
-  let action_id = erlang_map_get_string_default(map, "action_id", "")
-  let action_type_int = erlang_map_get_int_default(map, "action_type", 0)
+    erlang_map_get_string_default(map, "getGroupKeyRunId", "")
+  let job_id = erlang_map_get_string_default(map, "jobId", "")
+  let job_name = erlang_map_get_string_default(map, "jobName", "")
+  let job_run_id = erlang_map_get_string_default(map, "jobRunId", "")
+  let step_id = erlang_map_get_string_default(map, "stepId", "")
+  let step_run_id = erlang_map_get_string_default(map, "stepRunId", "")
+  let action_id = erlang_map_get_string_default(map, "actionId", "")
+  let action_type_int = erlang_map_get_int_default(map, "actionType", 0)
   let action_payload =
-    erlang_map_get_string_default(map, "action_payload", "{}")
-  let step_name = erlang_map_get_string_default(map, "step_name", "")
-  let retry_count = erlang_map_get_int_default(map, "retry_count", 0)
+    erlang_map_get_string_default(map, "actionPayload", "{}")
+  let step_name = erlang_map_get_string_default(map, "stepName", "")
+  let retry_count = erlang_map_get_int_default(map, "retryCount", 0)
   let priority = erlang_map_get_int_default(map, "priority", 0)
 
   // Optional fields
   let additional_metadata =
-    erlang_map_get_string_option(map, "additional_metadata")
+    erlang_map_get_string_option(map, "additionalMetadata")
   let child_workflow_index =
-    erlang_map_get_int_option(map, "child_workflow_index")
+    erlang_map_get_int_option(map, "childWorkflowIndex")
   let child_workflow_key =
-    erlang_map_get_string_option(map, "child_workflow_key")
+    erlang_map_get_string_option(map, "childWorkflowKey")
   let parent_workflow_run_id =
-    erlang_map_get_string_option(map, "parent_workflow_run_id")
-  let workflow_id = erlang_map_get_string_option(map, "workflow_id")
+    erlang_map_get_string_option(map, "parentWorkflowRunId")
+  let workflow_id = erlang_map_get_string_option(map, "workflowId")
   let workflow_version_id =
-    erlang_map_get_string_option(map, "workflow_version_id")
+    erlang_map_get_string_option(map, "workflowVersionId")
 
   Ok(AssignedAction(
     tenant_id: tenant_id,
@@ -442,8 +442,8 @@ pub fn decode_action_event_response(
   let ProtobufMessage(bits) = binary
   let map = decode_msg("ActionEventResponse", bits)
 
-  let tenant_id = erlang_map_get_string_default(map, "tenant_id", "")
-  let worker_id = erlang_map_get_string_default(map, "worker_id", "")
+  let tenant_id = erlang_map_get_string_default(map, "tenantId", "")
+  let worker_id = erlang_map_get_string_default(map, "workerId", "")
 
   Ok(ActionEventResponse(tenant_id: tenant_id, worker_id: worker_id))
 }

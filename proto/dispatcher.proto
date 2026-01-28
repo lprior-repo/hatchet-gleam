@@ -23,13 +23,13 @@ service Dispatcher {
 // ============================================================================
 
 message WorkerRegisterRequest {
-  string worker_name = 1;
+  string workerName = 1;
   repeated string actions = 2;
   repeated string services = 3;
-  optional int32 max_runs = 4;
+  optional int32 maxRuns = 4;
   map<string, WorkerLabels> labels = 5;
-  optional string webhook_id = 6;
-  RuntimeInfo runtime_info = 7;
+  optional string webhookId = 6;
+  RuntimeInfo runtimeInfo = 7;
 }
 
 message WorkerLabels {
@@ -53,9 +53,9 @@ enum SDKS {
 }
 
 message WorkerRegisterResponse {
-  string tenant_id = 1;
-  string worker_id = 2;
-  string worker_name = 3;
+  string tenantId = 1;
+  string workerId = 2;
+  string workerName = 3;
 }
 
 // ============================================================================
@@ -63,7 +63,7 @@ message WorkerRegisterResponse {
 // ============================================================================
 
 message WorkerListenRequest {
-  string worker_id = 1;
+  string workerId = 1;
 }
 
 // ============================================================================
@@ -71,26 +71,26 @@ message WorkerListenRequest {
 // ============================================================================
 
 message AssignedAction {
-  string tenant_id = 1;
-  string workflow_run_id = 2;
-  string get_group_key_run_id = 3;
-  string job_id = 4;
-  string job_name = 5;
-  string job_run_id = 6;
-  string step_id = 7;
-  string step_run_id = 8;
-  string action_id = 9;
-  ActionType action_type = 10;
-  string action_payload = 11;
-  string step_name = 12;
-  int32 retry_count = 13;
-  optional string additional_metadata = 14;
-  optional int32 child_workflow_index = 15;
-  optional string child_workflow_key = 16;
-  optional string parent_workflow_run_id = 17;
+  string tenantId = 1;
+  string workflowRunId = 2;
+  string getGroupKeyRunId = 3;
+  string jobId = 4;
+  string jobName = 5;
+  string jobRunId = 6;
+  string stepId = 7;
+  string stepRunId = 8;
+  string actionId = 9;
+  ActionType actionType = 10;
+  string actionPayload = 11;
+  string stepName = 12;
+  int32 retryCount = 13;
+  optional string additionalMetadata = 14;
+  optional int32 childWorkflowIndex = 15;
+  optional string childWorkflowKey = 16;
+  optional string parentWorkflowRunId = 17;
   int32 priority = 18;
-  optional string workflow_id = 19;
-  optional string workflow_version_id = 20;
+  optional string workflowId = 19;
+  optional string workflowVersionId = 20;
 }
 
 enum ActionType {
@@ -104,17 +104,17 @@ enum ActionType {
 // ============================================================================
 
 message StepActionEvent {
-  string worker_id = 1;
-  string job_id = 2;
-  string job_run_id = 3;
-  string step_id = 4;
-  string step_run_id = 5;
-  string action_id = 6;
-  int64 event_timestamp = 7;
-  StepActionEventType event_type = 8;
-  string event_payload = 9;
-  optional int32 retry_count = 10;
-  optional bool should_not_retry = 11;
+  string workerId = 1;
+  string jobId = 2;
+  string jobRunId = 3;
+  string stepId = 4;
+  string stepRunId = 5;
+  string actionId = 6;
+  int64 eventTimestamp = 7;
+  StepActionEventType eventType = 8;
+  string eventPayload = 9;
+  optional int32 retryCount = 10;
+  optional bool shouldNotRetry = 11;
 }
 
 enum StepActionEventType {
@@ -126,8 +126,8 @@ enum StepActionEventType {
 }
 
 message ActionEventResponse {
-  string tenant_id = 1;
-  string worker_id = 2;
+  string tenantId = 1;
+  string workerId = 2;
 }
 
 // ============================================================================
@@ -135,8 +135,8 @@ message ActionEventResponse {
 // ============================================================================
 
 message HeartbeatRequest {
-  string worker_id = 1;
-  int64 heartbeat_at = 2;
+  string workerId = 1;
+  int64 heartbeatAt = 2;
 }
 
 message HeartbeatResponse {
