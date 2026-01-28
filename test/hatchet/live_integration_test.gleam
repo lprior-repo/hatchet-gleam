@@ -1,8 +1,8 @@
 //// Live integration tests against a running Hatchet Docker instance.
 ////
-//// These tests are skipped when HATCHET_CLIENT_TOKEN is not set.
+//// These tests are skipped unless HATCHET_LIVE_TEST=1 is set.
 //// To run:
-////   HATCHET_CLIENT_TOKEN=<token> gleam test
+////   HATCHET_LIVE_TEST=1 HATCHET_CLIENT_TOKEN=<token> gleam test
 
 import envoy
 import gleam/dict
@@ -13,24 +13,31 @@ import gleeunit/should
 import hatchet/client
 import hatchet/types
 
-/// Helper: skip test if no token is available
+/// Helper: skip test unless HATCHET_LIVE_TEST=1 is explicitly set
 fn with_live_client(f: fn(types.Client) -> Nil) -> Nil {
-  case envoy.get("HATCHET_CLIENT_TOKEN") {
-    Error(_) ->
-      case envoy.get("HATCHET_TOKEN") {
-        Error(_) -> Nil
-        Ok(token) -> run_with_token(token, f)
+  case envoy.get("HATCHET_LIVE_TEST") {
+    Ok("1") -> {
+      let token = case envoy.get("HATCHET_CLIENT_TOKEN") {
+        Ok(t) -> t
+        Error(_) ->
+          case envoy.get("HATCHET_TOKEN") {
+            Ok(t) -> t
+            Error(_) -> ""
+          }
       }
-    Ok(token) -> run_with_token(token, f)
+      case token {
+        "" -> Nil
+        t -> {
+          let host =
+            envoy.get("HATCHET_HOST")
+            |> result_or("localhost")
+          let assert Ok(c) = client.new(host, t)
+          f(c)
+        }
+      }
+    }
+    _ -> Nil
   }
-}
-
-fn run_with_token(token: String, f: fn(types.Client) -> Nil) -> Nil {
-  let host =
-    envoy.get("HATCHET_HOST")
-    |> result_or("localhost")
-  let assert Ok(c) = client.new(host, token)
-  f(c)
 }
 
 fn result_or(r: Result(a, e), default: a) -> a {
