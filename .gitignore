@@ -9,3 +9,7 @@ erl_crash.dump
 
 # Gleam
 .gleam/
+
+# Bead state exports
+.beads/
+.tdd15-cache/
