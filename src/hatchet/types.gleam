@@ -2,13 +2,18 @@ import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
 import gleam/erlang/process
 import gleam/option.{type Option, None, Some}
+import gleam/string
 import hatchet/internal/tls.{type TLSConfig}
+
+@external(erlang, "base64", "decode")
+fn base64_decode(str: String) -> String
 
 pub opaque type Client {
   Client(
     host: String,
     port: Int,
     token: String,
+    tenant_id: String,
     namespace: Option(String),
     tls_config: TLSConfig,
   )
@@ -24,6 +29,7 @@ pub fn create_client(
     host: host,
     port: port,
     token: token,
+    tenant_id: "default",
     namespace: namespace,
     tls_config: tls.Insecure,
   )
@@ -40,6 +46,42 @@ pub fn create_client_with_tls(
     host: host,
     port: port,
     token: token,
+    tenant_id: "default",
+    namespace: namespace,
+    tls_config: tls_config,
+  )
+}
+
+pub fn create_client_with_tenant_id(
+  host: String,
+  port: Int,
+  token: String,
+  tenant_id: String,
+  namespace: Option(String),
+) -> Client {
+  Client(
+    host: host,
+    port: port,
+    token: token,
+    tenant_id: tenant_id,
+    namespace: namespace,
+    tls_config: tls.Insecure,
+  )
+}
+
+pub fn create_client_with_tenant_id_and_tls(
+  host: String,
+  port: Int,
+  token: String,
+  tenant_id: String,
+  namespace: Option(String),
+  tls_config: TLSConfig,
+) -> Client {
+  Client(
+    host: host,
+    port: port,
+    token: token,
+    tenant_id: tenant_id,
     namespace: namespace,
     tls_config: tls_config,
   )
@@ -63,6 +105,34 @@ pub fn get_namespace(client: Client) -> Option(String) {
 
 pub fn get_tls_config(client: Client) -> TLSConfig {
   client.tls_config
+}
+
+pub fn get_tenant_id(client: Client) -> String {
+  client.tenant_id
+}
+
+pub fn set_tenant_id(client: Client, tenant_id: String) -> Client {
+  Client(
+    host: client.host,
+    port: client.port,
+    token: client.token,
+    tenant_id: tenant_id,
+    namespace: client.namespace,
+    tls_config: client.tls_config,
+  )
+}
+
+pub fn get_tenant_id_from_token(token: String) -> String {
+  let parts = string.split(token, ".")
+  case parts {
+    [_, payload, _] -> {
+      let decoded = base64_decode(payload)
+      let sub_start = string.slice(decoded, 8, string.length(decoded))
+      let sub_end = string.slice(decoded, 0, string.length(decoded) - 8)
+      sub_start
+    }
+    _ -> "default"
+  }
 }
 
 pub type Workflow {

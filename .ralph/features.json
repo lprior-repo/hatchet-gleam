@@ -1,0 +1,1042 @@
+{
+  "name": "Gleam Hatchet SDK - Ironclad Validation",
+  "description": "Comprehensive bullet-proof validation of 175+ public functions across 13 modules with TDD workflow for open-source submission to Hatchet team",
+  "version": "2.0.0",
+  "codebase": "Gleam SDK for Hatchet distributed task orchestration",
+  "tracking_system": "bd (beads) - https://github.com/priorlewis/bd",
+
+  "phases": [
+    {
+      "id": "phase1_critical",
+      "name": "Phase 1: Critical Path Validation",
+      "description": "Validate core blocking features that prevent production deployment. These features MUST pass for SDK to be production-ready.",
+      "priority": "high",
+      "estimated_duration": "2-3 days",
+      "exit_criteria": [
+        "All Phase 1 features are GREEN",
+        "No critical blockers found",
+        "Ready for Phase 2 or production deployment"
+      ],
+      "beads": ["hatchet-port-7j1", "hatchet-port-0ro"],
+      "features": [
+        {
+          "id": "child_workflow_single",
+          "name": "Single child workflow spawning",
+          "module": "task.gleam",
+          "function": "spawn_workflow()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_child_workflow_spawning_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Parent task spawns child workflow via REST API",
+            "Child workflow executes independently",
+            "Parent-child correlation visible in dashboard",
+            "Child run ID returned to parent",
+            "Failed spawn returns error to parent"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.spawn_workflow() and expects Ok(child_run_id)",
+            "green_phase": "Implement spawn_child_workflow() in worker_actor.gleam via REST API call",
+            "refactor_phase": "Ensure function is pure, handles all error cases, and completes within 25 lines",
+            "validation_phase": "Verify live execution against running Hatchet server at localhost:7077",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-7j1",
+          "exit_gate": "critical"
+        },
+        {
+          "id": "child_workflow_batch",
+          "name": "Batch child workflow spawning",
+          "module": "task.gleam",
+          "function": "spawn_workflows()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_child_workflow_batch_spawning_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Multiple child workflows spawned in single request",
+            "All spawn operations return valid run IDs",
+            "Partial failures don't block successful spawns",
+            "Batch operation is efficient (single HTTP request)",
+            "Error messages are clear and actionable"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.spawn_workflows() with multiple specs",
+            "green_phase": "Verify spawn_workflows() implementation calls REST API correctly for all children",
+            "refactor_phase": "Ensure batch processing is atomic, efficient, and handles all error cases",
+            "validation_phase": "Verify live execution with multiple concurrent child workflows",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-7j1",
+          "exit_gate": "critical"
+        },
+        {
+          "id": "streaming_data",
+          "name": "Task streaming to dashboard",
+          "module": "task.gleam",
+          "function": "put_stream()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_task_streaming_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Streaming data sent to Hatchet during task execution",
+            "Data visible in dashboard real-time",
+            "Multiple streams don't conflict",
+            "Large payload streaming works",
+            "Stream data is consumed correctly by client"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.put_stream() with test data",
+            "green_phase": "Verify put_stream() callback sends gRPC StreamingData event",
+            "refactor_phase": "Ensure streaming is efficient, non-blocking, and doesn't leak memory",
+            "validation_phase": "Verify stream data appears in dashboard in real-time",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-7j1",
+          "exit_gate": "critical"
+        },
+        {
+          "id": "worker_slot_release",
+          "name": "Worker slot early release",
+          "module": "task.gleam",
+          "function": "release_slot()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_worker_slot_release_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Long-running task releases slot early",
+            "Slot becomes available for new task",
+            "Original task continues running after slot release",
+            "No slot leaks detected over extended worker runtime",
+            "Worker tracks slot usage accurately"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.release_slot() during long-running task",
+            "green_phase": "Verify release_slot() callback sends TaskSlotReleased message",
+            "refactor_phase": "Ensure slot tracking is correct across worker lifecycle",
+            "validation_phase": "Verify worker accepts new tasks immediately after slot release",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-7j1",
+          "exit_gate": "critical"
+        },
+        {
+          "id": "timeout_refresh",
+          "name": "Task timeout extension",
+          "module": "task.gleam",
+          "function": "refresh_timeout()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_task_timeout_refresh_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Task timeout extended via gRPC event",
+            "Extension by specified increment succeeds",
+            "Multiple extensions don't exceed server timeout",
+            "Extension fails gracefully with clear error if too late",
+            "Timeout tracking is accurate across extensions"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.refresh_timeout() during long task",
+            "green_phase": "Verify refresh_timeout() callback sends gRPC RefreshTimeout event",
+            "refactor_phase": "Ensure timeout tracking is accurate and handles all edge cases",
+            "validation_phase": "Verify extended timeout visible in dashboard",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-7j1",
+          "exit_gate": "critical"
+        },
+        {
+          "id": "workflow_cancellation",
+          "name": "Workflow cancellation from task",
+          "module": "task.gleam",
+          "function": "cancel()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_workflow_cancellation_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Workflow cancelled via gRPC from within task",
+            "All running tasks in workflow stop gracefully",
+            "Cancellation status visible in dashboard",
+            "Cancelled workflows can't be resumed",
+            "Cancellation propagates correctly to all dependent tasks"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.cancel() during task execution",
+            "green_phase": "Verify cancel() callback sends gRPC Cancelled event",
+            "refactor_phase": "Ensure cancellation propagates correctly to all dependent tasks",
+            "validation_phase": "Verify cancelled workflow status visible in dashboard",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-7j1",
+          "exit_gate": "critical"
+        },
+        {
+          "id": "retry_backoff_timing",
+          "name": "Retry backoff timing verification",
+          "module": "task.gleam",
+          "functions": ["exponential_backoff()", "linear_backoff()", "constant_backoff()"],
+          "test_files": ["test/hatchet/task_test.gleam"],
+          "test_functions": ["exponential_backoff_timing_test", "linear_backoff_timing_test"],
+          "test_type": "unit_integration",
+          "acceptance_criteria": [
+            "Exponential backoff: 1s → 2s → 4s → 8s (capped at max)",
+            "Linear backoff: 2s → 4s → 6s (capped at max)",
+            "Constant backoff: 5s repeated",
+            "Max retry enforcement respected",
+            "Backoff timing matches formula exactly",
+            "Backoff applies between retries, not on initial failure"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write tests that verify backoff timing for 4 retries",
+            "green_phase": "Ensure backoff functions return correct config with proper max",
+            "refactor_phase": "Verify backoff calculation is correct, efficient, and handles edge cases",
+            "validation_phase": "Unit tests verify timing matches expected formulas",
+            "skill": "coding-rigor"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0ro",
+          "exit_gate": "critical"
+        },
+        {
+          "id": "rate_limit_enforcement",
+          "name": "Rate limiting enforcement",
+          "module": "rate_limits.gleam",
+          "function": "upsert()",
+          "test_files": ["test/hatchet/rate_limits_test.gleam"],
+          "test_function": "live_rate_limit_enforcement_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Requests exceeding limit are throttled",
+            "Rate limit resets after duration window",
+            "Multiple rate limits work independently",
+            "Throttled requests return appropriate error",
+            "Rate limiting is accurate and doesn't leak tokens"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that triggers 15 requests with limit of 10",
+            "green_phase": "Verify rate_limit_upsert() sends correct request to server",
+            "refactor_phase": "Ensure rate limiting is accurate, efficient, and doesn't leak tokens",
+            "validation_phase": "Verify throttling behavior matches rate limit rules",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-9w3",
+          "exit_gate": "critical"
+        }
+      ]
+    },
+    {
+      "id": "phase2_important",
+      "name": "Phase 2: Important Features",
+      "description": "Validate features that improve SDK maturity and user experience. Critical blockers in this phase halt validation.",
+      "priority": "medium",
+      "estimated_duration": "3-4 days",
+      "exit_criteria": [
+        "All Phase 1 features are GREEN",
+        "Phase 2 features are GREEN",
+        "No critical blockers",
+        "Ready for Phase 3 or production deployment with documentation of gaps"
+      ],
+      "beads": ["hatchet-port-0z8", "hatchet-port-9w3", "hatchet-port-7cr", "hatchet-port-5xe", "hatchet-port-sit"],
+      "features": [
+        {
+          "id": "durable_sleep_survival",
+          "name": "Durable task sleep survives restart",
+          "module": "durable.gleam",
+          "function": "sleep_for()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_durable_sleep_survival_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Durable sleep call pauses task execution",
+            "Task state checkpointed to Hatchet",
+            "Worker restart while task sleeping",
+            "Task resumes from checkpoint after restart",
+            "Sleep duration honored after resumption",
+            "Checkpoint mechanism is robust and handles restart edge cases"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls durable.sleep_for() in long-running task",
+            "green_phase": "Verify sleep_for() implementation pauses execution correctly",
+            "refactor_phase": "Ensure checkpoint mechanism is robust and handles restart edge cases",
+            "validation_phase": "Verify task survives worker restart and resumes correctly",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-5xe",
+          "note": "Requires Hatchet server v0.53.10+ - check version first via 'docker inspect hatchet-engine'",
+          "exit_gate": "important"
+        },
+        {
+          "id": "wait_event_trigger",
+          "name": "Wait for event condition",
+          "module": "task.gleam",
+          "function": "wait_for_event()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_wait_for_event_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Task waits for published event to arrive",
+            "Event with matching key triggers task",
+            "Event timeout returns error if event doesn't arrive",
+            "Event payload passed to task correctly",
+            "Event matching is case-sensitive and respects wildcards"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.wait_for_event() and publishes event",
+            "green_phase": "Verify wait_for_event() implementation waits correctly",
+            "refactor_phase": "Ensure event matching and timeout handling is robust",
+            "validation_phase": "Verify task triggers when matching event arrives",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0z8",
+          "exit_gate": "important"
+        },
+        {
+          "id": "wait_time_delay",
+          "name": "Wait for time condition",
+          "module": "task.gleam",
+          "function": "wait_for_time()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_wait_for_time_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Task execution delayed by specified duration",
+            "Delay is measured accurately",
+            "Task executes after delay completes",
+            "Delay of 0 seconds works (immediate execution)",
+            "Multiple delays can be chained"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that calls task.wait_for_time() with 5s delay",
+            "green_phase": "Verify wait_for_time() implementation delays correctly",
+            "refactor_phase": "Ensure timing is accurate and doesn't block worker",
+            "validation_phase": "Verify delay behavior matches specification",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0z8",
+          "exit_gate": "important"
+        },
+        {
+          "id": "workflow_concurrency",
+          "name": "Workflow-level concurrency",
+          "module": "workflow.gleam",
+          "function": "with_concurrency()",
+          "test_files": ["test/hatchet/integration_test.gleam"],
+          "test_function": "live_workflow_concurrency_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Workflow limits concurrent executions",
+            "CancelInProgress strategy drops new runs",
+            "DropNew strategy returns error to caller",
+            "Max concurrent limit enforced correctly",
+            "Concurrency works across multiple workers",
+            "Concurrency state is tracked accurately"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that triggers 5 workflows with concurrency limit of 2",
+            "green_phase": "Verify with_concurrency() implementation enforces limit",
+            "refactor_phase": "Ensure concurrency tracking is accurate across multiple workers",
+            "validation_phase": "Verify only 2 workflows run concurrently",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0z8",
+          "exit_gate": "important"
+        },
+        {
+          "id": "task_concurrency",
+          "name": "Task-level concurrency",
+          "module": "workflow.gleam",
+          "function": "with_task_concurrency()",
+          "test_files": ["test/hatchet/integration_test.gleam"],
+          "test_function": "live_task_concurrency_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Task limits concurrent executions",
+            "Max concurrent limit enforced per task",
+            "Concurrency strategy works across multiple workers",
+            "Task slots released correctly when task completes",
+            "Concurrency doesn't interfere with retry logic"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that triggers same task 5 times with concurrency limit of 2",
+            "green_phase": "Verify with_task_concurrency() implementation enforces limit",
+            "refactor_phase": "Ensure task-level concurrency tracking is accurate",
+            "validation_phase": "Verify concurrent task count respects limit",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0z8",
+          "exit_gate": "important"
+        },
+        {
+          "id": "skip_condition_evaluation",
+          "name": "Task skip condition",
+          "module": "task.gleam",
+          "function": "skip_if()",
+          "test_files": ["test/hatchet/integration_test.gleam"],
+          "test_function": "live_skip_condition_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Task skipped when predicate returns True",
+            "Skip based on input data works",
+            "Skip based on metadata works",
+            "Skip doesn't count as execution attempt",
+            "Skip condition is evaluated before task starts",
+            "Skipped tasks appear in dashboard as 'SKIPPED'"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that uses task.skip_if() with input-based predicate",
+            "green_phase": "Verify skip_if() implementation evaluates predicate correctly",
+            "refactor_phase": "Ensure skip condition is applied before task starts",
+            "validation_phase": "Verify skipped tasks are tracked correctly",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0z8",
+          "exit_gate": "important"
+        },
+        {
+          "id": "step_run_errors_access",
+          "name": "Step run error queries",
+          "module": "task.gleam",
+          "function": "get_step_run_errors()",
+          "test_files": ["test/hatchet/integration_test.gleam"],
+          "test_function": "live_step_run_errors_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Error map populated in on-failure handlers",
+            "Errors from all failed steps accessible",
+            "Error messages include actionable information",
+            "Error dictionary doesn't leak sensitive data",
+            "Error query works in failure handlers and normal tasks"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test with on-failure handler that queries step_run_errors",
+            "green_phase": "Verify get_step_run_errors() returns error map",
+            "refactor_phase": "Ensure error collection is complete and secure",
+            "validation_phase": "Verify error data is accessible and properly sanitized",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-7cr",
+          "exit_gate": "important"
+        }
+      ]
+    },
+    {
+      "id": "phase3_polish",
+      "name": "Phase 3: Production Polish",
+      "description": "Validate optional features that improve developer experience and documentation quality. All Phase 1 and 2 features must be GREEN before starting.",
+      "priority": "low",
+      "estimated_duration": "2-3 days",
+      "exit_criteria": [
+        "All Phase 1 features are GREEN",
+        "All Phase 2 features are GREEN",
+        "Documentation is complete",
+        "Known limitations documented",
+        "Test coverage >= 80%",
+        "Ready for open-source submission"
+      ],
+      "beads": ["hatchet-port-9w3", "hatchet-port-0ro"],
+      "features": [
+        {
+          "id": "cron_scheduling",
+          "name": "Cron scheduling triggers",
+          "module": "cron.gleam",
+          "function": "create()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_cron_schedule_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Cron workflow triggers at scheduled time",
+            "Cron expression edge cases handled (leap year, DST)",
+            "Multiple cron schedules coexist",
+            "Cron deletion while workflow running handled",
+            "Cron jobs appear in dashboard with correct schedule",
+            "Cron timezone support works correctly"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that registers workflow with cron '0 * * * *'",
+            "green_phase": "Verify cron.create() sends correct request",
+            "refactor_phase": "Ensure cron parsing is robust and handles edge cases",
+            "validation_phase": "Verify workflow triggers at scheduled times in dashboard",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-9w3",
+          "exit_gate": "polish"
+        },
+        {
+          "id": "scheduled_runs",
+          "name": "One-time schedule triggers",
+          "module": "schedule.gleam",
+          "function": "create()",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_scheduled_run_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "Scheduled workflow triggers at ISO timestamp",
+            "Multiple schedules coexist",
+            "Schedule deletion handled correctly",
+            "Past schedules trigger immediately",
+            "Future schedules trigger at correct time",
+            "Schedule timezone is handled correctly"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that schedules workflow for future time",
+            "green_phase": "Verify schedule.create() sends correct request",
+            "refactor_phase": "Ensure timestamp handling is accurate and timezone-aware",
+            "validation_phase": "Verify workflow triggers at correct time in dashboard",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-9w3",
+          "exit_gate": "polish"
+        },
+        {
+          "id": "mtls_authentication",
+          "name": "mTLS secure connections",
+          "module": "client.gleam",
+          "function": "with_mtls()",
+          "test_files": ["test/hatchet/tls_test.gleam"],
+          "test_function": "live_mtls_connection_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "mTLS connection established with client certificates",
+            "Server validates client certificate",
+            "Connection fails with invalid certificate",
+            "mTLS works with custom CA certificate",
+            "Certificate rotation doesn't require restart",
+            "mTLS works with real CA certificates"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write test that creates client with mTLS certificates",
+            "green_phase": "Verify with_mtls() configures gRPC correctly",
+            "refactor_phase": "Ensure TLS handshake is secure and handles all error cases",
+            "validation_phase": "Verify secure connection with test certificates",
+            "skill": "gleam-tdd-architect",
+          },
+          "status": "pending",
+          "bead": "hatchet-port-sit",
+          "note": "Requires test certificates - skip if not available. Create test certs with openssl if needed.",
+          "exit_gate": "polish"
+        },
+        {
+          "id": "performance_load_testing",
+          "name": "Performance under load",
+          "module": "integration",
+          "test_files": ["test/hatchet/live_integration_test.gleam"],
+          "test_function": "live_performance_test",
+          "test_type": "live_integration",
+          "acceptance_criteria": [
+            "100 concurrent workflows execute without errors",
+            "10,000 events published successfully",
+            "100 workers with 10 slots each handle load",
+            "Memory usage stays within acceptable limits",
+            "Performance scales linearly with load",
+            "No deadlocks or race conditions under load",
+            "Throughput meets production requirements"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write performance test that spawns 100 concurrent workflows",
+            "green_phase": "Monitor system resources during load test",
+            "refactor_phase": "Ensure SDK scales efficiently under load",
+            "validation_phase": "Verify system handles load gracefully",
+            "skill": "gleam-tdd-architect"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0ro",
+          "note": "Optional: requires production-like Hatchet deployment with sufficient resources",
+          "exit_gate": "polish"
+        },
+        {
+          "id": "error_edge_cases",
+          "name": "Error handling edge cases",
+          "module": "errors.gleam",
+          "functions": ["all error types"],
+          "test_files": ["test/hatchet/error_handling_test.gleam"],
+          "test_functions": [
+            "network_timeout_edge_case_test",
+            "invalid_token_edge_case_test",
+            "malformed_payload_edge_case_test"
+          ],
+          "test_type": "unit_integration",
+          "acceptance_criteria": [
+            "Network timeout triggers appropriate retry",
+            "Invalid token returns clear authentication error",
+            "Malformed payload returns validation error",
+            "Task panics caught and converted to error",
+            "All error types have appropriate error messages",
+            "Error recovery patterns are well-documented"
+            "Edge cases are covered comprehensively"
+          ],
+          "tdd_approach": {
+            "red_phase": "Write tests that simulate various error conditions",
+            "green_phase": "Ensure error types cover all failure modes",
+            "refactor_phase": "Verify error handling is consistent, informative, and robust",
+            "validation_phase": "Unit tests verify all error paths",
+            "skill": "coding-rigor"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-sit",
+          "exit_gate": "polish"
+        },
+        {
+          "id": "documentation_completeness",
+          "name": "Documentation completeness",
+          "module": "all",
+          "checklist": [
+            "All public functions have doc comments",
+            "Complex functions have usage examples",
+            "Error types document recovery strategies",
+            "Migration guide from Python/Go SDKs exists",
+            "README covers all 175 functions",
+            "Type safety is documented with examples",
+            "Architecture diagrams or flowcharts exist for complex workflows"
+          ],
+          "test_type": "documentation",
+          "acceptance_criteria": [
+            "Documentation covers all public APIs",
+            "Examples are copy-pasteable and run",
+            "Error patterns include recommended recovery strategies",
+            "Type safety is clearly documented",
+            "API stability is guaranteed through versioning",
+            "Documentation is accurate and up-to-date"
+          ],
+          "tdd_approach": {
+            "red_phase": "Audit documentation for all 175 public functions",
+            "green_phase": "Add missing doc comments where needed",
+            "refactor_phase": "Ensure documentation is clear, accurate, and helpful",
+            "validation_phase": "Documentation review for completeness, accuracy, and clarity",
+            "skill": "manual"
+          },
+          "status": "pending",
+          "bead": "hatchet-port-0ro",
+          "exit_gate": "polish"
+        }
+      ]
+    }
+  ],
+
+  "success_criteria": {
+    "production_ready": {
+      "description": "SDK is bullet-proof and ready for open-source submission to Hatchet team",
+      "requirements": [
+        "All Phase 1 critical features validated (100% GREEN)",
+        "Phase 2 important features validated (100% GREEN)",
+        "Phase 3 polish features validated (100% GREEN)",
+        "Known limitations documented",
+        "Critical bugs fixed (zero blockers)",
+        "Test coverage >= 80%",
+        "Code formatted and linted",
+        "All 175 public functions tested (unit or live)",
+        "Documentation complete",
+        "Validation report generated",
+        "Bead status updated (closed or documented gaps)",
+        "Ready for git push"
+      ]
+    },
+    "minimal_viable": {
+      "description": "SDK has core functionality working but advanced features need work",
+      "requirements": [
+        "Phase 1 critical features validated",
+        "Known limitations clearly documented",
+        "No critical blockers",
+        "Core workflows (simple) production-ready",
+        "Basic usage documented and tested"
+      ]
+    }
+  },
+
+  "risk_mitigation": {
+    "test_environment_pollution": {
+      "risk": "Test data conflicts with real workloads or pollutes dashboard",
+      "mitigation": "Use unique prefixes with timestamp: 'validation-<YYYY-MM-DD>THHMMSS-<random>' for all test entities. Clean up test data after validation completes."
+    },
+    "test_flakiness": {
+      "risk": "Network timeouts, race conditions, and timing issues cause intermittent test failures",
+      "mitigation": "Add retry logic in tests with generous timeouts (60s for live tests). Run each test 3 times if flaky to establish baseline. Use deterministic sleep times. Ensure tests don't depend on external services timing."
+    },
+    "hatchet_version_compatibility": {
+      "risk": "Tested features may not exist in running Hatchet version or require specific version",
+      "mitigation": "Check Hatchet version first: 'docker inspect hatchet-engine | grep version' and document version requirement. Test critical features first. Document unsupported features with 'requires Hatchet v0.53.10+'."
+    },
+    "scope_explosion": {
+      "risk": "Each discovered issue leads to more work than estimated (3 phases -> 10+ days)",
+      "mitigation": "Stop on first critical failure, create separate bead for bug, reassess scope. Ralph will move to next phase only when current phase is ALL GREEN. Max iterations: 100 per phase (default unlimited but track progress). If > 5 failures in a phase, stop and reassess."
+    },
+    "resource_exhaustion": {
+      "risk": "Local Hatchet deployment runs out of memory, disk, or CPU under heavy testing",
+      "mitigation": "Monitor Docker resources during load tests. Clean up test data aggressively. Use batch cleanup between tests. Reduce load test scope if system is constrained."
+    }
+  },
+
+  "output_artifacts": [
+    {
+      "name": "validation_report.md",
+      "description": "Comprehensive validation report with pass/fail matrix and production readiness assessment",
+      "format": "markdown",
+      "sections": [
+        "Executive Summary",
+        "Phase 1: Critical Path Results (detailed per feature)",
+        "Phase 2: Important Features Results (detailed per feature)",
+        "Phase 3: Polish Results (detailed per feature)",
+        "Critical Issues Found (with root cause analysis)",
+        "Known Limitations (with version requirements)",
+        "Recommendations for Improvement",
+        "Production Readiness Assessment (GO/NO-GO decision)",
+        "Test Coverage Summary",
+        "Bead Status Summary (closed, failed, needs work)"
+      ],
+      "location": ".ralph/output/",
+      "auto_generate": true
+    },
+    {
+      "name": "feature_coverage_matrix.csv",
+      "description": "CSV matrix of all 175+ functions with test status, pass/fail status, issues found, and notes",
+      "format": "csv",
+      "columns": [
+        "feature_id",
+        "phase",
+        "module",
+        "function",
+        "test_type",
+        "test_function",
+        "status",
+        "attempts",
+        "last_result",
+        "issues",
+        "notes",
+        "bead_updated"
+        "date_validated"
+      ],
+      "location": ".ralph/output/",
+      "auto_generate": true
+    },
+    {
+      "name": "bead_updates.md",
+      "description": "Summary of all bead updates during validation with reasons and outcomes",
+      "format": "markdown",
+      "sections": [
+        "Closed Beads (with validation results)",
+        "Updated Beads (status changes, notes added)",
+        "Created Bug Beads (critical blockers)",
+        "Beads Requiring Attention (warnings, documentation needs)",
+        "Bead Status Summary (progress by phase)"
+      ],
+      "location": ".ralph/output/",
+      "auto_generate": true
+    }
+  ],
+
+  "tdd_integration": {
+    "gleam_workflow": {
+      "description": "TDD workflow tailored for Gleam SDK validation with gleam-tdd-architect skill",
+      "cycle": "RED → GREEN → REFACTOR → QUALITY GATES → BEAD UPDATE → NEXT FEATURE",
+      "red_phase": {
+        "description": "Write failing test that demonstrates the need for the feature",
+        "actions": [
+          "Write test function in appropriate test file (live_integration_test.gleam for live tests)",
+          "Ensure test uses descriptive name matching feature",
+          "Set up test data (workflows, workers) with unique prefixes",
+          "Write test that calls the feature and expects failure (RED)",
+          "Run test to verify it fails: gleam test",
+          "Document expected failure behavior"
+        ],
+        "exit_gate": "Test must fail before proceeding"
+      },
+      "green_phase": {
+        "description": "Write minimal implementation to make test pass",
+        "actions": [
+          "Implement or fix the feature in source module",
+          "Ensure function is pure (no side effects beyond what's needed)",
+          "Follow Gleam conventions and existing patterns",
+          "Keep function <= 25 lines (coding-rigor requirement)",
+          "Handle all error cases explicitly",
+          "Write documentation comments if public API",
+          "Ensure implementation matches Python/Go SDK behavior",
+          "Test against existing unit tests to ensure no regressions"
+        ],
+        "exit_gate": "Test must pass before proceeding"
+      },
+      "refactor_phase": {
+        "description": "Improve code quality while tests stay green",
+        "actions": [
+          "Extract duplicated code into helper functions",
+          "Simplify complex logic",
+          "Improve naming and clarity",
+          "Reduce nesting depth",
+          "Apply functional programming patterns (pipeline operators)",
+          "Ensure type safety throughout",
+          "Check for performance bottlenecks",
+          "Remove dead code and unused imports",
+          "Verify no compilation warnings",
+        ],
+        "exit_gate": "Tests must stay GREEN during refactoring",
+      },
+      "quality_gates": {
+        "description": "Verify code quality after each feature is complete",
+        "actions": [
+          "Run all tests: gleam test",
+          "Check for compilation warnings: gleam build",
+          "Format all source and test files: gleam format src test",
+          "Verify no unused imports or variables",
+          "Check function length (must be <= 25 lines)",
+          "Check for proper error handling",
+          "Ensure type safety and exhaustiveness",
+        ],
+        "exit_gate": "All quality gates must pass before bead update"
+      },
+      "cycle_complete": {
+        "description": "Update bead status after feature validation is complete",
+        "actions": [
+          "Determine final bead status: 'pass' (all GREEN), 'fail' (critical bug), 'needs_work' (requires new bead for implementation)",
+          "If pass: bd close <bead_id> --reason \"<summary>\"",
+          "If fail: bd update <bead_id> --status in_progress (to create bug bead)",
+          "If needs_work: Document in bead_update.md and continue",
+          "Commit changes to git with descriptive message",
+          "Verify git status is clean after commit"
+        ],
+        "exit_gate": "Bead update required before next feature"
+      },
+      "skill_usage": {
+        "description": "Which skill to use for each phase of validation",
+        "phases": {
+          "phase1_critical": "gleam-tdd-architect",
+          "phase2_important": "gleam-tdd-architect",
+          "phase3_polish": "gleam-tdd-architect or coding-rigor"
+        },
+        "rationale": "Use gleam-tdd-architect for new feature implementations and live integration tests. Use coding-rigor for unit tests and refactoring. Phase 3 polish can use coding-rigor or manual documentation review."
+      }
+    }
+  },
+
+  "test_organization": {
+    "strategy": "Add tests to existing test files based on test_type",
+    "test_file_mapping": {
+      "live_integration": "test/hatchet/live_integration_test.gleam",
+      "unit_integration": "test/hatchet/task_test.gleam, test/hatchet/integration_test.gleam, test/hatchet/error_handling_test.gleam",
+      "documentation": "Manual review of all source modules"
+    },
+    "naming_convention": {
+      "test_function": "live_<feature>_test",
+      "descriptive": "Use feature name in test function (e.g., live_child_workflow_spawning_test)",
+      "unique_prefix": "All test entities must use prefix 'validation-<timestamp>-'"
+      "cleanup": "All test workflows/workers must be cleaned up after test"
+    }
+  },
+
+  "integration_with_beads": {
+    "strategy": "Each Ralph phase corresponds to specific beads",
+    "mapping": {
+      "phase1_critical": ["hatchet-port-7j1", "hatchet-port-0ro"],
+      "phase2_important": ["hatchet-port-0z8", "hatchet-port-9w3", "hatchet-port-7cr", "hatchet-port-5xe", "hatchet-port-sit"],
+      "phase3_polish": ["hatchet-port-9w3", "hatchet-port-0ro"]
+    },
+    "workflow": {
+      "1": "Load current feature from features.json with ralph --tasks",
+      "2": "Apply gleam-tdd-architect skill for TDD workflow (RED → GREEN → REFACTOR)",
+      "3": "Run quality gates after green phase: gleam test && gleam format src test",
+      "4": "Update bead status: 'pass', 'fail', or 'needs_work'",
+      "5": "If pass and phase complete, move to next feature",
+      "6": "If fail with critical bug, stop validation and create bug bead",
+      "7": "After all features in phase are GREEN, generate phase report",
+      "8": "After all phases complete, generate final validation report and bead updates summary"
+      "stop_criteria": "All features in phase must be GREEN before proceeding to next. Phase complete when all features validated and report generated."
+    },
+    "progress_tracking": {
+      "show_status": "ralph --status shows current iteration, elapsed time, pending context, and task list",
+      "check_phase_completion": "A phase is complete when all its features are validated (status: GREEN or FAIL/NEEDS_WORK)",
+      "feature_progress": "Each feature moves: pending → in_progress → done with detailed validation results",
+      "auto_phase_transition": "Ralph automatically moves to next phase when current phase is 100% complete (all GREEN or documented gaps)"
+    }
+  },
+
+  "commands": {
+    "start_validation": {
+      "description": "Begin comprehensive SDK validation loop with Tasks Mode enabled",
+      "command": "ralph --tasks /home/lewis/src/hatchet-port/.ralph/features.json",
+      "prompt": "Begin Phase 1: Critical Path validation. For each feature:\n\n1. Write a failing test that demonstrates the need for the feature (RED phase)\n2. Run test to verify it fails: gleam test\n3. Write minimal implementation to make test pass (GREEN phase)\n4. Run quality gates: gleam test && gleam format src test\n5. If pass and no refactoring needed, update bead status to 'pass' and move to next feature\n6. If fail, create bug bead, stop validation\n\nUse TDD workflow strictly: Never write implementation without failing test first. Never persist RED state.\n\nTest organization: Add tests to existing files (test/hatchet/live_integration_test.gleam for live tests, appropriate unit test files).\n\nIntegration with beads:\n- Update bead status after each feature: 'pass', 'fail', or 'needs_work'\n- Phase complete: When all features in a phase are GREEN, generate phase report\n- Bug beads: Create only if critical bug found that blocks validation\n- Stop immediately if critical bug found - do not continue with other features.\n\nCurrent Phase 1 beads: hatchet-port-7j1 (child workflow single), hatchet-port-0ro (retry backoff)\n- Critical features must be GREEN before Phase 2 starts\n- Max iterations per phase: 100 (default unlimited but track progress to prevent runaway)\n- Exit criteria: A phase is complete when all its features are validated and reported"
+    },
+    "check_status": {
+      "description": "Check current validation progress including active phase, elapsed time, feature status, and bead updates",
+      "command": "ralph --status"
+    },
+    "list_tasks": {
+      "description": "List all current tasks in the active phase with their status",
+      "command": "ralph --list-tasks"
+    },
+    "add_task_context": {
+      "description": "Add context hint for next iteration to help Ralph focus",
+      "command": "ralph --add-context \"Focus on <feature_id> with <specific_hint>\"",
+      "example": "ralph --add-context \"Focus on child_workflow_batch with test the REST API call directly\""
+    },
+    "clear_context": {
+      "description": "Clear all pending context hints to start fresh",
+      "command": "ralph --clear-context"
+    },
+    "stop_loop": {
+      "description": "Stop validation loop gracefully after completing all phases or encountering critical blocker",
+      "command": "ralph COMPLETE",
+    },
+    "force_next_feature": {
+      "description": "Force move to next feature even if current feature isn't complete (use with caution)",
+      "command": "ralph --add-context \"Skip current feature and move to next one\""
+    }
+  },
+
+  "file_structure": {
+    "features_json": ".ralph/features.json",
+    "output_directory": ".ralph/output/",
+    "phase_reports": ".ralph/output/phase_<id>_report.md",
+    "validation_report": ".ralph/output/validation_report.md",
+    "coverage_matrix": ".ralph/output/feature_coverage_matrix.csv",
+    "bead_updates": ".ralph/output/bead_updates.md",
+    "task_context_file": ".ralph/context.json"
+    "progress_file": ".ralph/progress.json"
+    "context_hints_file": ".ralph/context_hints.md"
+    "error_log": ".ralph/errors.log"
+    "tooling": {
+      "preferred_agent": "opencode",
+      "test_runner": "gleam test",
+      "formatter": "gleam format",
+      "builder": "gleam build",
+      "commit_tool": "git commit"
+      "bead_tool": "bd"
+      "skills_used": ["gleam-tdd-architect", "coding-rigor", "skeptical-implementer"]
+    },
+    "cleanup": {
+      "auto_cleanup": true,
+      "cleanup_after_phase": true,
+      "cleanup_after_validation": true,
+      "test_entity_prefix": "validation-",
+      "max_test_age_hours": 24
+    }
+  },
+
+  "quality_gates": {
+    "unit_tests_pass": {
+      "command": "gleam test",
+      "description": "All unit and integration tests must pass",
+      "check_items": [
+        "No test failures",
+        "No compilation errors",
+        "All 442 existing tests still pass"
+      ]
+    },
+    "no_warnings": {
+      "command": "gleam build",
+      "description": "Code must compile without warnings",
+      "check_items": [
+        "Zero compiler warnings",
+        "Zero LSP warnings about unused imports/variables"
+        "All features compile cleanly"
+      ]
+    },
+    "formatted": {
+      "command": "gleam format src test",
+      "description": "All code follows Gleam formatting standards",
+      "check_items": [
+        "No formatting errors",
+        "Consistent indentation (2 spaces)",
+        "Line length <= 100 characters"
+        "Function bodies well-structured"
+      ]
+    },
+    "function_length": {
+      "max_lines": 25,
+      "description": "All functions must be <= 25 lines per coding-rigor requirement",
+      "check_items": [
+        "Any function > 25 lines must be refactored",
+        "Extract helper functions if needed",
+        "No nested functions exceeding limit"
+      ]
+    },
+    "pure_functions": {
+      "description": "Core functions must be pure (no I/O except at boundaries)",
+      "check_items": [
+        "Worker actor functions use callbacks (acceptable)",
+        "Business logic functions have no side effects",
+        "Error handling doesn't introduce impurity"
+        "No hidden logging or debugging in production paths"
+      ]
+    },
+    "type_safety": {
+      "description": "Type safety must be ensured throughout",
+      "check_items": [
+        "All error cases handled with Result types",
+        "No unsafe type casts or dynamic.from usage",
+        "Exhaustive pattern matching where appropriate",
+        "Type annotations added where needed for clarity"
+      ]
+    }
+  },
+
+  "completion_promises": {
+    "feature_complete": "FEATURE_COMPLETE",
+    "phase_complete": "PHASE_1_COMPLETE",
+    "phase_2_complete": "PHASE_2_COMPLETE",
+    "phase_3_complete": "PHASE_3_COMPLETE",
+    "validation_complete": "VALIDATION_COMPLETE",
+    "critical_bug_found": "CRITICAL_BUG"
+    "all_tests_pass": "ALL_TESTS_PASS"
+    "ready_for_review": "READY_FOR_REVIEW"
+    "ready_for_open_source": "READY_FOR_OPEN_SOURCE"
+  },
+
+  "version_check": {
+    "hatchet_version_command": "docker inspect hatchet-engine | grep -A 5 'Config'",
+    "min_required_version": "0.53.10",
+    "check_before_phase1": true,
+    "documentation_required": true
+  },
+
+  "validation_mode": {
+    "strict_mode": true,
+    "continue_on_critical_bug": false,
+    "max_retries_per_feature": 3,
+    "test_timeout_seconds": 120,
+    "max_iterations_per_phase": 100
+  },
+
+  "notification": {
+    "on_feature_start": "Starting validation of feature: <feature_id>",
+    "on_feature_pass": "Feature <feature_id> validated successfully",
+    "on_feature_fail": "Feature <feature_id> FAILED: <error_message>",
+    "on_phase_start": "Starting <phase_id> validation",
+    "on_phase_complete": "<phase_id> complete: <pass_rate>% GREEN, <fail_count> failed",
+    "on_validation_complete": "Validation complete: <summary>",
+    "on_critical_bug": "CRITICAL BUG BLOCKED VALIDATION: <bug_description>"
+  },
+
+  "recovery": {
+    "auto_resume": true,
+    "checkpoint_interval_seconds": 60,
+    "state_file": ".ralph/state.json",
+    "max_recovery_attempts": 5
+  },
+
+  "documentation": {
+    "auto_generate": true,
+    "include_examples": true,
+    "include_migration_guide": true,
+    "include_type_safety": true,
+    "include_error_recovery": true
+  },
+
+  "monitoring": {
+    "track_dashboard_url": "http://localhost:8080",
+    "track_worker_logs": true,
+    "track_test_results": true,
+    "enable_detailed_logging": false
+  }
+}

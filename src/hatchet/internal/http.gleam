@@ -6,11 +6,13 @@ import hatchet/types.{type Client}
 pub fn build_base_url(client: Client) -> String {
   let host = types.get_host(client)
   let port = types.get_port(client)
-  let ns_part = case types.get_namespace(client) {
-    option.Some(ns) -> "/" <> ns
-    option.None -> ""
-  }
-  "http://" <> host <> ":" <> int.to_string(port) <> ns_part
+  let tenant_id = types.get_tenant_id(client)
+  "http://"
+  <> host
+  <> ":"
+  <> int.to_string(port)
+  <> "/api/v1/tenants/"
+  <> tenant_id
 }
 
 pub fn make_authenticated_request(
