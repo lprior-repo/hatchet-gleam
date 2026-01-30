@@ -169,3 +169,27 @@ pub fn workflow_on_failure_test() {
   wf.on_failure
   |> should.not_equal(option.None)
 }
+
+pub fn workflow_on_success_test() {
+  let handler = fn(_ctx) { Ok(dynamic.string("result")) }
+  let success_handler = fn(_ctx) { Ok(Nil) }
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.task("task1", handler)
+    |> workflow.on_success(success_handler)
+
+  wf.on_success
+  |> should.not_equal(option.None)
+}
+
+pub fn workflow_with_cancel_if_test() {
+  let handler = fn(_ctx) { Ok(dynamic.string("result")) }
+  let cancel_predicate = fn(_ctx) { False }
+  let wf =
+    workflow.new("test-workflow")
+    |> workflow.task("task1", handler)
+    |> workflow.with_cancel_if(cancel_predicate)
+
+  let assert [task] = wf.tasks
+  task.cancel_if |> should.not_equal(option.None)
+}

@@ -142,6 +142,7 @@ pub type Workflow {
     version: Option(String),
     tasks: List(TaskDef),
     on_failure: Option(fn(FailureContext) -> Result(Nil, String)),
+    on_success: Option(fn(SuccessContext) -> Result(Nil, String)),
     cron: Option(String),
     events: List(String),
     concurrency: Option(ConcurrencyConfig),
@@ -160,6 +161,7 @@ pub type TaskDef {
     rate_limits: List(RateLimitConfig),
     concurrency: Option(ConcurrencyConfig),
     skip_if: Option(fn(TaskContext) -> Bool),
+    cancel_if: Option(fn(TaskContext) -> Bool),
     wait_for: Option(WaitCondition),
     is_durable: Bool,
     checkpoint_key: Option(String),
@@ -208,6 +210,10 @@ pub type FailureContext {
     input: Dynamic,
     step_run_errors: Dict(String, String),
   )
+}
+
+pub type SuccessContext {
+  SuccessContext(workflow_run_id: String, input: Dynamic, output: Dynamic)
 }
 
 pub opaque type WorkflowRunRef {

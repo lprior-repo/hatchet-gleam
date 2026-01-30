@@ -140,6 +140,7 @@ pub fn task_handler_type_test() {
       retries: 3,
       timeout_ms: 60_000,
       skip_if: None,
+      cancel_if: None,
     )
 
   handler.workflow_name |> should.equal("my-workflow")
@@ -172,6 +173,7 @@ pub fn task_handler_with_retries_test() {
       retries: 5,
       timeout_ms: 30_000,
       skip_if: None,
+      cancel_if: None,
     )
 
   handler.retries |> should.equal(5)
@@ -188,6 +190,7 @@ pub fn task_handler_no_retries_test() {
       retries: 0,
       timeout_ms: 60_000,
       skip_if: None,
+      cancel_if: None,
     )
 
   handler.retries |> should.equal(0)
@@ -209,6 +212,7 @@ pub fn task_handler_with_skip_if_test() {
       retries: 0,
       timeout_ms: 60_000,
       skip_if: Some(skip_condition),
+      cancel_if: None,
     )
 
   // Verify skip_if is set
@@ -228,6 +232,7 @@ pub fn task_handler_without_skip_if_test() {
       retries: 0,
       timeout_ms: 60_000,
       skip_if: None,
+      cancel_if: None,
     )
 
   // Verify skip_if is not set

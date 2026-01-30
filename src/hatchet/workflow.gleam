@@ -4,9 +4,9 @@ import gleam/list
 import gleam/option
 import hatchet/durable.{type DurableContext}
 import hatchet/types.{
-  type BackoffConfig, type FailureContext, type LimitStrategy, type TaskContext,
-  type TaskDef, type WaitCondition, type Workflow, ConcurrencyConfig,
-  RateLimitConfig, TaskDef, Workflow,
+  type BackoffConfig, type FailureContext, type LimitStrategy,
+  type SuccessContext, type TaskContext, type TaskDef, type WaitCondition,
+  type Workflow, ConcurrencyConfig, RateLimitConfig, TaskDef, Workflow,
 }
 
 /// Create a new workflow with the given name.
@@ -30,6 +30,7 @@ pub fn new(name: String) -> Workflow {
     version: option.None,
     tasks: [],
     on_failure: option.None,
+    on_success: option.None,
     cron: option.None,
     events: [],
     concurrency: option.None,
@@ -201,6 +202,7 @@ pub fn task(
       rate_limits: [],
       concurrency: option.None,
       skip_if: option.None,
+      cancel_if: option.None,
       wait_for: option.None,
       is_durable: False,
       checkpoint_key: option.None,
@@ -252,6 +254,7 @@ pub fn task_after(
       rate_limits: [],
       concurrency: option.None,
       skip_if: option.None,
+      cancel_if: option.None,
       wait_for: option.None,
       is_durable: False,
       checkpoint_key: option.None,
@@ -309,6 +312,7 @@ pub fn durable_task(
       rate_limits: [],
       concurrency: option.None,
       skip_if: option.None,
+      cancel_if: option.None,
       wait_for: option.None,
       is_durable: True,
       checkpoint_key: option.Some(checkpoint_key),
@@ -402,6 +406,31 @@ pub fn on_failure(
   handler: fn(FailureContext) -> Result(Nil, String),
 ) {
   Workflow(..wf, on_failure: option.Some(handler))
+}
+
+/// Set a success handler for the workflow.
+///
+/// The handler will be called when the workflow completes successfully.
+///
+/// **Parameters:**
+///   - `wf`: The workflow to configure
+///   - `handler`: Function to handle workflow success
+///
+/// **Returns:** The updated workflow
+///
+/// **Examples:**
+/// ```gleam
+/// workflow.new("success-workflow")
+///   |> workflow.on_success(fn(ctx) {
+///     // Log or notify about the success
+///     Ok(Nil)
+///   })
+/// ```
+pub fn on_success(
+  wf: Workflow,
+  handler: fn(SuccessContext) -> Result(Nil, String),
+) {
+  Workflow(..wf, on_success: option.Some(handler))
 }
 
 /// Set the retry backoff strategy for the most recently added task.
@@ -548,6 +577,38 @@ pub fn with_skip_if(
 ) -> Workflow {
   modify_last_task(wf, fn(task) {
     TaskDef(..task, skip_if: option.Some(predicate))
+  })
+}
+
+/// Set a condition to cancel the most recently added task.
+///
+/// The workflow will be cancelled if the predicate returns True.
+///
+/// **Parameters:**
+///   - `wf`: The workflow to configure
+///   - `predicate`: Function that determines whether to cancel the workflow
+///
+/// **Returns:** The updated workflow
+///
+/// **Examples:**
+/// ```gleam
+/// workflow.new("cancellable-workflow")
+///   |> workflow.task("cancel-me", fn(ctx) {
+///     task.succeed(dynamic.string("done"))
+///   })
+///   |> workflow.with_cancel_if(fn(ctx) {
+///     let should_cancel = task.get_metadata(ctx, "cancel")
+///       |> option.unwrap("false")
+///       |> bool.parse
+///     should_cancel
+///   })
+/// ```
+pub fn with_cancel_if(
+  wf: Workflow,
+  predicate: fn(TaskContext) -> Bool,
+) -> Workflow {
+  modify_last_task(wf, fn(task) {
+    TaskDef(..task, cancel_if: option.Some(predicate))
   })
 }
 

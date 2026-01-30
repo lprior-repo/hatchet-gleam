@@ -474,6 +474,23 @@ pub fn get_step_run_errors(ctx: TaskContext) -> Dict(String, String) {
   ctx.step_run_errors
 }
 
+/// Get error for a specific step by name.
+///
+/// Returns `Some(error_message)` if the step failed,
+/// or `None` if the step didn't fail or doesn't exist.
+///
+/// This is primarily used in on-failure handlers to inspect
+/// specific step failures.
+pub fn get_step_run_error(
+  ctx: TaskContext,
+  step_name: String,
+) -> option.Option(String) {
+  case dict.get(ctx.step_run_errors, step_name) {
+    Ok(value) -> option.Some(value)
+    Error(_) -> option.None
+  }
+}
+
 /// Push streaming data from within a task handler.
 ///
 /// Allows tasks to stream incremental results to clients.

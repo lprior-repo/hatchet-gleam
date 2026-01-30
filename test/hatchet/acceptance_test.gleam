@@ -387,6 +387,35 @@ pub fn test_023_workflow_with_on_failure_handler_test() {
   wf.on_failure |> should.not_equal(None)
 }
 
+/// TEST-023b: Workflow with On Success Handler
+/// EARS: WHEN workflow completes successfully AND on_success is configured
+///       THE system SHALL execute success handler
+pub fn test_023b_workflow_with_on_success_handler_test() {
+  let handler = fn(_ctx) { Ok(dynamic.string("result")) }
+  let success_handler = fn(_ctx) { Ok(Nil) }
+  let wf =
+    workflow.new("test")
+    |> workflow.task("task1", handler)
+    |> workflow.on_success(success_handler)
+
+  wf.on_success |> should.not_equal(None)
+}
+
+/// TEST-023c: Workflow with Cancel If Condition
+/// EARS: WHEN cancel_if condition evaluates to true
+///       THE system SHALL cancel the workflow
+pub fn test_023c_workflow_with_cancel_if_test() {
+  let handler = fn(_ctx) { Ok(dynamic.string("result")) }
+  let cancel_predicate = fn(_ctx) { False }
+  let wf =
+    workflow.new("test")
+    |> workflow.task("task1", handler)
+    |> workflow.with_cancel_if(cancel_predicate)
+
+  let assert [task] = wf.tasks
+  task.cancel_if |> should.not_equal(None)
+}
+
 /// TEST-024: Workflow with Rate Limit
 /// EARS: WHEN with_rate_limit is called
 ///       THE system SHALL enforce rate limit on task execution

@@ -118,6 +118,20 @@ pub fn step_run_errors(ctx: Context) -> Dict(String, String) {
   ctx.step_run_errors
 }
 
+/// Get error for a specific step by name.
+///
+/// Returns `Some(error_message)` if the step failed,
+/// or `None` if the step didn't fail or doesn't exist.
+///
+/// This is primarily used in on-failure handlers to inspect
+/// specific step failures.
+pub fn get_step_run_error(ctx: Context, step_name: String) -> Option(String) {
+  case dict.get(ctx.step_run_errors, step_name) {
+    Ok(value) -> Some(value)
+    Error(_) -> None
+  }
+}
+
 /// Get the workflow run ID.
 pub fn workflow_run_id(ctx: Context) -> String {
   ctx.workflow_run_id

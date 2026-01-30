@@ -13,9 +13,9 @@ import hatchet/standalone
 import hatchet/task
 import hatchet/types.{
   type BackoffConfig, type Client, type FailureContext, type LimitStrategy,
-  type RateLimitConfig, type RunOptions, type StandaloneTask, type TaskContext,
-  type TaskDef, type WaitCondition, type Worker, type WorkerConfig,
-  type Workflow, type WorkflowRunRef,
+  type RateLimitConfig, type RunOptions, type StandaloneTask,
+  type SuccessContext, type TaskContext, type TaskDef, type WaitCondition,
+  type Worker, type WorkerConfig, type Workflow, type WorkflowRunRef,
 }
 import hatchet/workflow
 
@@ -86,6 +86,11 @@ pub fn context_retry_count(ctx: Context) {
 /// Get errors from failed steps in this workflow run.
 pub fn context_step_run_errors(ctx: Context) {
   context.step_run_errors(ctx)
+}
+
+/// Get error for a specific step by name.
+pub fn context_get_step_run_error(ctx: Context, step_name: String) {
+  context.get_step_run_error(ctx, step_name)
 }
 
 /// Get the workflow run ID.
@@ -173,6 +178,13 @@ pub fn workflow_on_failure(
   workflow.on_failure(wf, handler)
 }
 
+pub fn workflow_on_success(
+  wf: Workflow,
+  handler: fn(SuccessContext) -> Result(Nil, String),
+) {
+  workflow.on_success(wf, handler)
+}
+
 pub fn workflow_with_retry_backoff(wf: Workflow, backoff: BackoffConfig) {
   workflow.with_retry_backoff(wf, backoff)
 }
@@ -200,6 +212,10 @@ pub fn workflow_with_task_concurrency(
 
 pub fn workflow_with_skip_if(wf: Workflow, predicate: fn(TaskContext) -> Bool) {
   workflow.with_skip_if(wf, predicate)
+}
+
+pub fn workflow_with_cancel_if(wf: Workflow, predicate: fn(TaskContext) -> Bool) {
+  workflow.with_cancel_if(wf, predicate)
 }
 
 pub fn workflow_with_wait_for(wf: Workflow, condition: WaitCondition) {
@@ -288,6 +304,10 @@ pub fn get_metadata(ctx: TaskContext, key: String) {
 
 pub fn get_all_metadata(ctx: TaskContext) {
   task.get_all_metadata(ctx)
+}
+
+pub fn get_step_run_error(ctx: TaskContext, step_name: String) {
+  task.get_step_run_error(ctx, step_name)
 }
 
 pub fn log(ctx: TaskContext, message: String) {
