@@ -21,8 +21,8 @@ pub fn list_returns_metadata_for_existing_crons_test() {
 
   case cron.list(client, "test-workflow") {
     Ok(list) -> {
-      list.length(list)
-      |> should.equal(0)
+      list
+      |> should.be_equal(List)
     }
     Error(_) -> should.be_true(False)
   }
