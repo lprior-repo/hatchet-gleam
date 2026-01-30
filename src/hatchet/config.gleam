@@ -1,5 +1,7 @@
+import gleam/dynamic
 import gleam/option.{type Option, None, Some}
 import hatchet/errors
+import hatchet/types.{type Client}
 
 /// Client configuration loaded from file or environment.
 pub type Config {
@@ -28,13 +30,12 @@ pub type TlsConfig {
 /// This maps the Config type to the Client type used
 /// throughout the SDK.
 pub fn to_client(config: Config) -> Client {
-  Client(
-    host: config.host,
-    port: config.port,
-    token: config.token,
-    tenant_id: config.tenant_id,
-    namespace: config.namespace,
-    tls_config: config.tls_config,
+  types.create_client_with_tenant_id(
+    config.host,
+    config.port,
+    config.token,
+    config.tenant_id,
+    config.namespace,
   )
 }
 
@@ -93,12 +94,5 @@ pub fn from_toml(path: String) -> Result(Config, String) {
 }
 
 fn read_file(path: String) -> Result(String, String) {
-  let assert Ok(module) = dynamic.decode_module("simplifile")
-  let read_fn = dynamic.field(module, "read_file", dynamic.string)
-  let read_result = read_fn(path, dynamic.empty())
-
-  case read_result {
-    dynamic.String(content) -> Ok(content)
-    _ -> Error("Failed to read file: " <> path)
-  }
+  Error("File reading not implemented: " <> path)
 }
