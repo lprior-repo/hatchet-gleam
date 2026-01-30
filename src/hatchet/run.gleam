@@ -309,7 +309,7 @@ pub fn get_status_with_http(
 }
 
 pub fn cancel(ref: WorkflowRunRef) -> Result(Nil, String) {
-  cancel_with_http(ref, http_client.real_http_client())
+  cancel_with_http(ref, real_http_client())
 }
 
 pub fn cancel_with_http(
@@ -376,7 +376,7 @@ fn sleep_ms(ms: Int) -> Nil {
 
 /// Cancel multiple workflow runs at once.
 pub fn bulk_cancel(client: Client, run_ids: List(String)) -> Result(Nil, String) {
-  bulk_cancel_with_http(client, run_ids, http_client.real_http_client())
+  bulk_cancel_with_http(client, run_ids, real_http_client())
 }
 
 pub fn bulk_cancel_with_http(
