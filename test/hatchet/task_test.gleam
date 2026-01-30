@@ -147,7 +147,7 @@ pub fn task_context_accessors_test() {
       release_slot_fn: fn() { Ok(Nil) },
       refresh_timeout_fn: fn(_) { Ok(Nil) },
       cancel_fn: fn() { Ok(Nil) },
-      spawn_workflow_fn: fn(workflow_name, input, metadata) {
+      spawn_workflow_fn: fn(_workflow_name, _input, _metadata) {
         Ok("workflow-run-id")
       },
     )
@@ -186,7 +186,7 @@ pub fn get_parent_output_test() {
       release_slot_fn: fn() { Ok(Nil) },
       refresh_timeout_fn: fn(_) { Ok(Nil) },
       cancel_fn: fn() { Ok(Nil) },
-      spawn_workflow_fn: fn(workflow_name, input, metadata) {
+      spawn_workflow_fn: fn(_workflow_name, _input, _metadata) {
         Ok("workflow-run-id")
       },
     )

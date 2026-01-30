@@ -27,7 +27,6 @@ pub fn tls_config_tls_test() {
   let tls_config = tls.Tls(ca_path: "/path/to/ca.pem")
   case tls_config {
     tls.Tls(ca) -> ca |> should.equal("/path/to/ca.pem")
-    _ -> should.be_false(True)
   }
 }
 
@@ -46,7 +45,6 @@ pub fn tls_config_mtls_test() {
       cert |> should.equal("/path/to/client.pem")
       key |> should.equal("/path/to/key.pem")
     }
-    _ -> should.be_false(True)
   }
 }
 

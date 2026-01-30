@@ -53,7 +53,6 @@ pub fn unhealthy_status_contains_reason_test() {
   let status = health.Unhealthy("Connection failed")
 
   case status {
-    health.Healthy -> should.be_true(False)
     health.Unhealthy(reason) -> {
       reason
       |> should.equal("Connection failed")
@@ -89,12 +88,10 @@ pub fn health_status_distinguishes_status_types_test() {
 
   let is_healthy = case healthy_status {
     health.Healthy -> True
-    _ -> False
   }
 
   let is_unhealthy = case unhealthy_status {
     health.Unhealthy(_) -> True
-    _ -> False
   }
 
   is_healthy

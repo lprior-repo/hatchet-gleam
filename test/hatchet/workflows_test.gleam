@@ -1,6 +1,4 @@
 import envoy
-import gleam/option
-import gleeunit
 import gleeunit/should
 import hatchet/client
 import hatchet/types

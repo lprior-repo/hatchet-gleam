@@ -3,7 +3,7 @@
 //// These tests verify that TLS and mTLS configurations work correctly
 //// with the client and worker. They run unit tests only (no live server required).
 
-import gleam/option.{type Option, None, Some}
+import gleam/option.{None, Some}
 import gleeunit
 import gleeunit/should
 import hatchet/client

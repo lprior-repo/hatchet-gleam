@@ -72,27 +72,22 @@ pub fn error_types_distinguishable_test() {
   let task_err = TaskError(HandlerError("task", "error"))
   let config_err = ConfigError(MissingConfig("key"))
   let protocol_err = ProtocolError(DecodeError("msg", "reason"))
-  let generic_err = GenericError("generic")
 
   // Pattern matching should distinguish all error types
   let conn_is_connection_error = case conn_err {
     ConnectionError(_) -> True
-    _ -> False
   }
 
   let task_is_task_error = case task_err {
     TaskError(_) -> True
-    _ -> False
   }
 
   let config_is_config_error = case config_err {
     ConfigError(_) -> True
-    _ -> False
   }
 
   let protocol_is_protocol_error = case protocol_err {
     ProtocolError(_) -> True
-    _ -> False
   }
 
   should.be_true(conn_is_connection_error)
