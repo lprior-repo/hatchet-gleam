@@ -2,7 +2,6 @@ import gleam/dict
 import gleam/erlang/process
 import gleam/http
 import gleam/http/request
-import gleam/httpc
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
 import hatchet/errors
@@ -10,6 +9,7 @@ import hatchet/internal/config.{
   type Config, MissingTokenError, from_environment_checked,
 }
 import hatchet/internal/http as h
+import hatchet/internal/http_client.{type HttpClient}
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
 import hatchet/internal/tls
@@ -338,6 +338,24 @@ pub fn register_workflow(
   client: Client,
   workflow: Workflow,
 ) -> Result(Nil, String) {
+  register_workflow_with_http(client, workflow, http_client.real_http_client())
+}
+
+/// Register a workflow with an injected HTTP client.
+///
+/// This is the internal version that accepts an HttpClient for testing.
+///
+/// **Parameters:**
+///   - `client`: The Hatchet client
+///   - `workflow`: The workflow to register
+///   - `http`: The HTTP client to use for requests
+///
+/// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
+pub fn register_workflow_with_http(
+  client: Client,
+  workflow: Workflow,
+  http: HttpClient,
+) -> Result(Nil, String) {
   let protocol_req = run.convert_workflow_to_protocol_for_test(workflow)
   let req_body = j.encode_workflow_create(protocol_req)
   let base_url = h.build_base_url(client)
@@ -345,7 +363,7 @@ pub fn register_workflow(
 
   case h.make_authenticated_request(client, url, option.Some(req_body)) {
     Ok(req) -> {
-      case httpc.send(req) {
+      case http_client.send(http, req) {
         Ok(resp) if resp.status == 200 || resp.status == 201 -> Ok(Nil)
         Ok(resp) -> {
           Error(
@@ -556,6 +574,24 @@ pub fn stop_worker(worker: Worker) -> Nil {
 /// }
 /// ```
 pub fn pause_worker(worker: Worker, client: Client) -> Result(Nil, String) {
+  pause_worker_with_http(worker, client, http_client.real_http_client())
+}
+
+/// Pause a worker with an injected HTTP client.
+///
+/// This is the internal version that accepts an HttpClient for testing.
+///
+/// **Parameters:**
+///   - `worker`: The worker to pause
+///   - `client`: The Hatchet client
+///   - `http`: The HTTP client to use for requests
+///
+/// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
+pub fn pause_worker_with_http(
+  worker: Worker,
+  client: Client,
+  http: HttpClient,
+) -> Result(Nil, String) {
   let worker_id = types.get_worker_id(worker)
   let url = h.build_base_url(client) <> "/workers/" <> worker_id <> "/pause"
 
@@ -569,7 +605,7 @@ pub fn pause_worker(worker: Worker, client: Client) -> Result(Nil, String) {
         )
         |> request.set_header("content-type", "application/json")
 
-      case httpc.send(req) {
+      case http_client.send(http, req) {
         Ok(resp) if resp.status == 200 || resp.status == 204 -> Ok(Nil)
         Ok(resp) ->
           Error(
@@ -599,6 +635,24 @@ pub fn pause_worker(worker: Worker, client: Client) -> Result(Nil, String) {
 /// }
 /// ```
 pub fn resume_worker(worker: Worker, client: Client) -> Result(Nil, String) {
+  resume_worker_with_http(worker, client, http_client.real_http_client())
+}
+
+/// Resume a worker with an injected HTTP client.
+///
+/// This is the internal version that accepts an HttpClient for testing.
+///
+/// **Parameters:**
+///   - `worker`: The worker to resume
+///   - `client`: The Hatchet client
+///   - `http`: The HTTP client to use for requests
+///
+/// **Returns:** `Ok(Nil)` on success, `Error(String)` on failure
+pub fn resume_worker_with_http(
+  worker: Worker,
+  client: Client,
+  http: HttpClient,
+) -> Result(Nil, String) {
   let worker_id = types.get_worker_id(worker)
   let url = h.build_base_url(client) <> "/workers/" <> worker_id <> "/resume"
 
@@ -612,7 +666,7 @@ pub fn resume_worker(worker: Worker, client: Client) -> Result(Nil, String) {
         )
         |> request.set_header("content-type", "application/json")
 
-      case httpc.send(req) {
+      case http_client.send(http, req) {
         Ok(resp) if resp.status == 200 || resp.status == 204 -> Ok(Nil)
         Ok(resp) ->
           Error(

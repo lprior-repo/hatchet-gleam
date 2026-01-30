@@ -1,11 +1,11 @@
 import gleam/dict
 import gleam/dynamic.{type Dynamic}
-import gleam/httpc
 import gleam/list
 import gleam/option
 import hatchet/errors
 import hatchet/internal/ffi/timer
 import hatchet/internal/http as h
+import hatchet/internal/http_client.{type HttpClient, real_http_client, send}
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
 import hatchet/types.{
@@ -29,6 +29,22 @@ pub fn run_with_options(
   input: Dynamic,
   options: RunOptions,
 ) -> Result(Dynamic, String) {
+  run_with_options_and_http(
+    client,
+    workflow,
+    input,
+    options,
+    real_http_client(),
+  )
+}
+
+pub fn run_with_options_and_http(
+  client: Client,
+  workflow: Workflow,
+  input: Dynamic,
+  options: RunOptions,
+  http: HttpClient,
+) -> Result(Dynamic, String) {
   let run_req =
     p.WorkflowRunRequest(
       workflow_name: workflow.name,
@@ -45,13 +61,13 @@ pub fn run_with_options(
 
   case h.make_authenticated_request(client, url, option.Some(req_body)) {
     Ok(req) -> {
-      case httpc.send(req) {
+      case send(http, req) {
         Ok(resp) if resp.status == 200 -> {
           case j.decode_workflow_run_response(resp.body) {
             Ok(run_resp) -> {
               let run_ref =
                 types.create_workflow_run_ref(run_resp.run_id, client)
-              await_result(run_ref)
+              await_result_with_http(run_ref, http)
             }
             Error(e) -> {
               Error(
@@ -93,6 +109,22 @@ pub fn run_no_wait_with_options(
   input: Dynamic,
   options: RunOptions,
 ) -> Result(WorkflowRunRef, String) {
+  run_no_wait_with_options_and_http(
+    client,
+    workflow,
+    input,
+    options,
+    real_http_client(),
+  )
+}
+
+pub fn run_no_wait_with_options_and_http(
+  client: Client,
+  workflow: Workflow,
+  input: Dynamic,
+  options: RunOptions,
+  http: HttpClient,
+) -> Result(WorkflowRunRef, String) {
   let run_req =
     p.WorkflowRunRequest(
       workflow_name: workflow.name,
@@ -109,7 +141,7 @@ pub fn run_no_wait_with_options(
 
   case h.make_authenticated_request(client, url, option.Some(req_body)) {
     Ok(req) -> {
-      case httpc.send(req) {
+      case send(http, req) {
         Ok(resp) if resp.status == 200 -> {
           case j.decode_workflow_run_response(resp.body) {
             Ok(run_resp) -> {
@@ -164,11 +196,22 @@ pub fn run_many(
 }
 
 pub fn await_result(ref: WorkflowRunRef) -> Result(Dynamic, String) {
-  poll_result(ref, 10)
+  await_result_with_http(ref, real_http_client())
 }
 
-fn poll_result(ref: WorkflowRunRef, attempts: Int) -> Result(Dynamic, String) {
-  case get_status(ref) {
+fn await_result_with_http(
+  ref: WorkflowRunRef,
+  http: HttpClient,
+) -> Result(Dynamic, String) {
+  poll_result(ref, 10, http)
+}
+
+fn poll_result(
+  ref: WorkflowRunRef,
+  attempts: Int,
+  http: HttpClient,
+) -> Result(Dynamic, String) {
+  case get_status_with_http(ref, http) {
     Ok(Succeeded) -> {
       let url =
         h.build_base_url(types.get_ref_client(ref))
@@ -182,7 +225,7 @@ fn poll_result(ref: WorkflowRunRef, attempts: Int) -> Result(Dynamic, String) {
         )
       {
         Ok(req) -> {
-          case httpc.send(req) {
+          case send(http, req) {
             Ok(resp) if resp.status == 200 -> {
               case j.decode_workflow_status_response(resp.body) {
                 Ok(status_resp) -> {
@@ -215,17 +258,24 @@ fn poll_result(ref: WorkflowRunRef, attempts: Int) -> Result(Dynamic, String) {
     Ok(Cancelled) -> Error("Workflow was cancelled")
     Ok(Pending) if attempts > 0 -> {
       sleep_ms(500)
-      poll_result(ref, attempts - 1)
+      poll_result(ref, attempts - 1, http)
     }
     Ok(Running) if attempts > 0 -> {
       sleep_ms(500)
-      poll_result(ref, attempts - 1)
+      poll_result(ref, attempts - 1, http)
     }
     _ -> Error("Workflow timed out")
   }
 }
 
 pub fn get_status(ref: WorkflowRunRef) -> Result(RunStatus, String) {
+  get_status_with_http(ref, real_http_client())
+}
+
+pub fn get_status_with_http(
+  ref: WorkflowRunRef,
+  http: HttpClient,
+) -> Result(RunStatus, String) {
   let url =
     h.build_base_url(types.get_ref_client(ref))
     <> "/api/v1/runs/"
@@ -235,7 +285,7 @@ pub fn get_status(ref: WorkflowRunRef) -> Result(RunStatus, String) {
     h.make_authenticated_request(types.get_ref_client(ref), url, option.None)
   {
     Ok(req) -> {
-      case httpc.send(req) {
+      case send(http, req) {
         Ok(resp) if resp.status == 200 -> {
           case j.decode_workflow_status_response(resp.body) {
             Ok(status_resp) -> Ok(parse_status(status_resp))
@@ -259,6 +309,13 @@ pub fn get_status(ref: WorkflowRunRef) -> Result(RunStatus, String) {
 }
 
 pub fn cancel(ref: WorkflowRunRef) -> Result(Nil, String) {
+  cancel_with_http(ref, http_client.real_http_client())
+}
+
+pub fn cancel_with_http(
+  ref: WorkflowRunRef,
+  http: HttpClient,
+) -> Result(Nil, String) {
   let url =
     h.build_base_url(types.get_ref_client(ref))
     <> "/api/v1/runs/"
@@ -268,7 +325,7 @@ pub fn cancel(ref: WorkflowRunRef) -> Result(Nil, String) {
     h.make_authenticated_request(types.get_ref_client(ref), url, option.None)
   {
     Ok(req) -> {
-      case httpc.send(req) {
+      case send(http, req) {
         Ok(resp) if resp.status == 200 -> Ok(Nil)
         Ok(resp) ->
           Error(
@@ -319,12 +376,20 @@ fn sleep_ms(ms: Int) -> Nil {
 
 /// Cancel multiple workflow runs at once.
 pub fn bulk_cancel(client: Client, run_ids: List(String)) -> Result(Nil, String) {
+  bulk_cancel_with_http(client, run_ids, http_client.real_http_client())
+}
+
+pub fn bulk_cancel_with_http(
+  client: Client,
+  run_ids: List(String),
+  http: HttpClient,
+) -> Result(Nil, String) {
   let body = j.encode_bulk_cancel(run_ids)
   let url = h.build_base_url(client) <> "/api/v1/runs/bulk/cancel"
 
   case h.make_authenticated_request(client, url, option.Some(body)) {
     Ok(req) -> {
-      case httpc.send(req) {
+      case send(http, req) {
         Ok(resp) if resp.status == 200 -> Ok(Nil)
         Ok(resp) ->
           Error(
@@ -342,12 +407,20 @@ pub fn bulk_cancel(client: Client, run_ids: List(String)) -> Result(Nil, String)
 
 /// Replay (re-run) failed workflow runs.
 pub fn replay(client: Client, run_ids: List(String)) -> Result(Nil, String) {
+  replay_with_http(client, run_ids, http_client.real_http_client())
+}
+
+pub fn replay_with_http(
+  client: Client,
+  run_ids: List(String),
+  http: HttpClient,
+) -> Result(Nil, String) {
   let body = j.encode_bulk_replay(run_ids)
   let url = h.build_base_url(client) <> "/api/v1/runs/bulk/replay"
 
   case h.make_authenticated_request(client, url, option.Some(body)) {
     Ok(req) -> {
-      case httpc.send(req) {
+      case send(http, req) {
         Ok(resp) if resp.status == 200 -> Ok(Nil)
         Ok(resp) ->
           Error(
