@@ -1,6 +1,4 @@
-import gleam/option
 import gleeunit/should
-import hatchet/types.{RateLimitConfig}
 import hatchet/workflow
 
 // ============================================================================

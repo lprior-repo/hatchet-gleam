@@ -15,7 +15,6 @@
 import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/dynamic.{type Dynamic}
-import gleam/dynamic/decode
 import gleam/erlang/process.{type Pid, type Subject}
 import gleam/http/request
 import gleam/httpc
@@ -28,12 +27,12 @@ import gleam/otp/actor
 import gleam/result
 import gleam/string
 
-import hatchet/context
 import hatchet/errors
 import hatchet/internal/ffi/protobuf
 import hatchet/internal/grpc
 import hatchet/internal/json as j
 import hatchet/internal/protocol as p
+import hatchet/internal/task_executor
 import hatchet/internal/tls.{type TLSConfig}
 import hatchet/task
 import hatchet/types.{type Client, type WorkerConfig, type Workflow}
@@ -723,6 +722,13 @@ fn spawn_task_process(
   })
 }
 
+/// Execute a task in a separate process using the pure task_executor module.
+///
+/// This is a thin adapter that bridges between the actor-based worker and
+/// the pure task execution logic. It:
+/// 1. Builds a TaskSpec and TaskEffects from the action and handler
+/// 2. Delegates execution to task_executor.execute_task
+/// 3. Sends protocol events and actor messages based on ExecutionResult
 fn execute_task_in_process(
   action: protobuf.AssignedAction,
   handler: TaskHandler,
@@ -733,67 +739,48 @@ fn execute_task_in_process(
   client: Client,
   parent: Subject(WorkerMessage),
 ) -> Nil {
-  // Send ACKNOWLEDGED
-  send_event_from_task(
-    channel,
-    token,
-    action,
-    worker_id,
-    protobuf.StepEventTypeAcknowledged,
-    "{}",
-  )
-
   // Notify parent we started
   process.send(parent, TaskStarted(action.step_run_id))
 
-  // Send STARTED event
-  send_event_from_task(
-    channel,
-    token,
-    action,
-    worker_id,
-    protobuf.StepEventTypeStarted,
-    "{}",
-  )
+  // Build TaskSpec from action and handler
+  let task_handler =
+    task_executor.TaskHandler(
+      workflow_name: handler.workflow_name,
+      task_name: handler.task_name,
+      handler: handler.handler,
+      retries: handler.retries,
+      timeout_ms: handler.timeout_ms,
+      skip_if: handler.skip_if,
+      cancel_if: handler.cancel_if,
+    )
 
-  // Create context
-  let log_fn = fn(msg: String) {
-    log_info("[" <> action.step_name <> "] " <> msg)
-  }
+  let spec =
+    task_executor.TaskSpec(
+      action: action,
+      handler: task_handler,
+      worker_id: worker_id,
+      parent_outputs: local_parent_outputs,
+    )
 
-  // Convert local parent outputs from JSON strings to Dynamic
-  let parent_outputs_dynamic =
-    dict.fold(local_parent_outputs, dict.new(), fn(acc, step_name, output_json) {
-      case json.parse(output_json, decode.dynamic) {
-        Ok(value) -> dict.insert(acc, step_name, value)
-        Error(_) -> acc
-      }
-    })
-
-  // Build context callbacks for interacting with the server
-  let callbacks =
-    context.ContextCallbacks(
-      log_fn: log_fn,
-      stream_fn: fn(data) {
-        // Send streaming data via gRPC
-        let payload = encode_dynamic_to_json(data)
+  // Create TaskEffects with closures for side effects
+  let effects =
+    task_executor.TaskEffects(
+      log: fn(msg: String) { log_info("[" <> action.step_name <> "] " <> msg) },
+      emit_event: fn(event_type, payload) {
         send_event_from_task(
           channel,
           token,
           action,
           worker_id,
-          protobuf.StepEventTypeStream,
+          event_type,
           payload,
         )
-        Ok(Nil)
       },
-      release_slot_fn: fn() {
-        // Notify the worker actor to free a slot
+      release_slot: fn() {
         process.send(parent, TaskSlotReleased(action.step_run_id))
         Ok(Nil)
       },
-      refresh_timeout_fn: fn(increment_ms) {
-        // Send timeout refresh via gRPC event
+      refresh_timeout: fn(increment_ms) {
         let payload = "{\"increment_ms\":" <> int_to_string(increment_ms) <> "}"
         send_event_from_task(
           channel,
@@ -805,8 +792,7 @@ fn execute_task_in_process(
         )
         Ok(Nil)
       },
-      cancel_fn: fn() {
-        // Send cancel request via gRPC
+      cancel: fn() {
         send_event_from_task(
           channel,
           token,
@@ -817,166 +803,57 @@ fn execute_task_in_process(
         )
         Ok(Nil)
       },
-      spawn_workflow_fn: fn(workflow_name, input, metadata) {
-        // Spawn child workflow via REST API
+      spawn_workflow: fn(workflow_name, input, metadata) {
         spawn_child_workflow(client, workflow_name, input, metadata)
       },
     )
 
-  let ctx =
-    context.from_assigned_action(
-      action,
-      worker_id,
-      parent_outputs_dynamic,
-      callbacks,
-    )
+  // Execute task using pure task_executor logic
+  let result = task_executor.execute_task(spec, effects)
 
-  // Convert to TaskContext for handler and skip_if evaluation
-  let task_ctx = context.to_task_context(ctx)
-
-  // Check cancel_if condition before executing
-  let should_cancel = case handler.cancel_if {
-    Some(cancel_fn) -> cancel_fn(task_ctx)
-    None -> False
-  }
-
-  case should_cancel {
-    True -> {
-      // Workflow should be cancelled - send CANCELLED event
-      let workflow_name = case action.workflow_id {
-        Some(id) -> id
-        None -> "unknown"
-      }
-      log_info(
-        "Cancelling workflow: " <> workflow_name <> " (cancel_if condition met)",
+  // Handle result and send appropriate messages to parent
+  case result {
+    task_executor.Completed(output) -> {
+      process.send(
+        parent,
+        TaskCompleted(action.step_run_id, output.output_json),
       )
-
-      let cancel_output_json =
-        json.to_string(
-          json.object([
-            #("cancelled", json.bool(True)),
-            #("reason", json.string("cancel_if condition evaluated to true")),
-          ]),
-        )
-
-      // Send CANCELLED event
-      send_event_from_task(
+    }
+    task_executor.Skipped(output) -> {
+      process.send(
+        parent,
+        TaskCompleted(action.step_run_id, output.output_json),
+      )
+    }
+    task_executor.Failed(error) -> {
+      // Send FAILED event with should_not_retry flag
+      send_event_from_task_with_retry(
         channel,
         token,
         action,
         worker_id,
-        protobuf.StepEventTypeCancelled,
-        cancel_output_json,
+        protobuf.StepEventTypeFailed,
+        // Build error payload from TaskError
+        json.to_string(
+          json.object([
+            #("error", json.string(error.error)),
+            #("retry_count", json.int(error.retry_count)),
+            #("max_retries", json.int(handler.retries)),
+            #("should_retry", json.bool(error.should_retry)),
+          ]),
+        ),
+        Some(bool.negate(error.should_retry)),
       )
-
-      // Notify parent
       process.send(
         parent,
-        TaskFailed(
-          action.step_run_id,
-          "Workflow cancelled via cancel_if",
-          False,
-        ),
+        TaskFailed(action.step_run_id, error.error, error.should_retry),
       )
     }
-    False -> {
-      // Check skip_if condition before executing
-      let should_skip = case handler.skip_if {
-        Some(skip_fn) -> skip_fn(task_ctx)
-        None -> False
-      }
-
-      case should_skip {
-        True -> {
-          // Task should be skipped - send COMPLETED with skip marker
-          log_info(
-            "Skipping task: " <> action.step_name <> " (skip_if condition met)",
-          )
-
-          let skip_output_json =
-            json.to_string(
-              json.object([
-                #("skipped", json.bool(True)),
-                #("reason", json.string("skip_if condition evaluated to true")),
-              ]),
-            )
-
-          // Send COMPLETED event with skip indicator
-          send_event_from_task(
-            channel,
-            token,
-            action,
-            worker_id,
-            protobuf.StepEventTypeCompleted,
-            skip_output_json,
-          )
-
-          // Notify parent
-          process.send(
-            parent,
-            TaskCompleted(action.step_run_id, skip_output_json),
-          )
-        }
-        False -> {
-          // Execute the handler normally
-          case handler.handler(task_ctx) {
-            Ok(output) -> {
-              // Encode output as proper JSON
-              let output_json = encode_dynamic_to_json(output)
-
-              // Send COMPLETED event
-              send_event_from_task(
-                channel,
-                token,
-                action,
-                worker_id,
-                protobuf.StepEventTypeCompleted,
-                output_json,
-              )
-
-              // Notify parent with output (for local tracking)
-              process.send(
-                parent,
-                TaskCompleted(action.step_run_id, output_json),
-              )
-            }
-            Error(error) -> {
-              // Determine if we should retry based on handler config and retry count
-              // The server handles retries by re-assigning the task with incremented retry_count
-              // We report should_retry=True if we haven't exceeded max retries
-              let should_retry = action.retry_count < handler.retries
-
-              // Encode error with retry info
-              let error_json =
-                json.to_string(
-                  json.object([
-                    #("error", json.string(error)),
-                    #("retry_count", json.int(action.retry_count)),
-                    #("max_retries", json.int(handler.retries)),
-                    #("should_retry", json.bool(should_retry)),
-                  ]),
-                )
-
-              // Send FAILED event with should_not_retry flag
-              send_event_from_task_with_retry(
-                channel,
-                token,
-                action,
-                worker_id,
-                protobuf.StepEventTypeFailed,
-                error_json,
-                Some(bool.negate(should_retry)),
-              )
-
-              // Notify parent with retry decision
-              process.send(
-                parent,
-                TaskFailed(action.step_run_id, error, should_retry),
-              )
-            }
-          }
-        }
-      }
+    task_executor.Cancelled(cancelled) -> {
+      process.send(
+        parent,
+        TaskFailed(action.step_run_id, cancelled.reason, False),
+      )
     }
   }
 }
@@ -1343,59 +1220,6 @@ fn cleanup_stale_outputs(
       Error(_) -> acc
     }
   })
-}
-
-// ============================================================================
-// JSON Encoding for Dynamic Values
-// ============================================================================
-
-fn encode_dynamic_to_json(value: Dynamic) -> String {
-  // Try to decode as common types and encode properly
-  case decode.run(value, decode.string) {
-    Ok(s) -> json.to_string(json.string(s))
-    Error(_) ->
-      case decode.run(value, decode.int) {
-        Ok(i) -> json.to_string(json.int(i))
-        Error(_) ->
-          case decode.run(value, decode.float) {
-            Ok(f) -> json.to_string(json.float(f))
-            Error(_) ->
-              case decode.run(value, decode.bool) {
-                Ok(b) -> json.to_string(json.bool(b))
-                Error(_) ->
-                  case decode.run(value, decode.list(decode.dynamic)) {
-                    Ok(list) -> {
-                      let items = list.map(list, encode_dynamic_to_json_value)
-                      json.to_string(json.array(items, fn(x) { x }))
-                    }
-                    Error(_) -> {
-                      // Fall back to string representation for complex types
-                      json.to_string(json.string(string.inspect(value)))
-                    }
-                  }
-              }
-          }
-      }
-  }
-}
-
-fn encode_dynamic_to_json_value(value: Dynamic) -> json.Json {
-  case decode.run(value, decode.string) {
-    Ok(s) -> json.string(s)
-    Error(_) ->
-      case decode.run(value, decode.int) {
-        Ok(i) -> json.int(i)
-        Error(_) ->
-          case decode.run(value, decode.float) {
-            Ok(f) -> json.float(f)
-            Error(_) ->
-              case decode.run(value, decode.bool) {
-                Ok(b) -> json.bool(b)
-                Error(_) -> json.string(string.inspect(value))
-              }
-          }
-      }
-  }
 }
 
 // ============================================================================
