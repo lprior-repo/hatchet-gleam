@@ -232,7 +232,7 @@ fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler)
 
     // Register on_failure handler if present
     // The server sends this with action name: workflow_name:on_failure
-    case workflow.on_failure {
+    let reg_after_failure = case workflow.on_failure {
       Some(failure_fn) -> {
         let failure_action = workflow.name <> ":on_failure"
         let failure_handler =
@@ -295,11 +295,11 @@ fn build_action_registry(workflows: List(Workflow)) -> Dict(String, TaskHandler)
             skip_if: None,
             cancel_if: None,
           )
-        reg_with_tasks
+        reg_after_failure
         |> dict.insert(success_action, success_handler)
         |> dict.insert("on_success", success_handler)
       }
-      None -> reg_with_tasks
+      None -> reg_after_failure
     }
   })
 }

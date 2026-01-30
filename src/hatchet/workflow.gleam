@@ -285,7 +285,7 @@ pub fn task_after(
 pub fn durable_task(
   wf: Workflow,
   name: String,
-  handler: fn(DurableContext) -> Result(Dynamic, String),
+  _handler: fn(DurableContext) -> Result(Dynamic, String),
   checkpoint_key: String,
 ) -> Workflow {
   // Store the durable handler for use by the worker

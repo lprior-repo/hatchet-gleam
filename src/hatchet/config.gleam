@@ -1,6 +1,4 @@
-import gleam/dynamic
-import gleam/option.{type Option, None, Some}
-import hatchet/errors
+import gleam/option.{type Option}
 import hatchet/types.{type Client}
 
 /// Client configuration loaded from file or environment.

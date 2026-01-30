@@ -1,5 +1,5 @@
 import gleam/dict
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic
 import gleam/dynamic/decode
 import gleam/option
 import hatchet/client

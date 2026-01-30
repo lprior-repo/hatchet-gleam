@@ -127,9 +127,7 @@ pub fn get_tenant_id_from_token(token: String) -> String {
   case parts {
     [_, payload, _] -> {
       let decoded = base64_decode(payload)
-      let sub_start = string.slice(decoded, 8, string.length(decoded))
-      let sub_end = string.slice(decoded, 0, string.length(decoded) - 8)
-      sub_start
+      string.slice(decoded, 8, string.length(decoded))
     }
     _ -> "default"
   }

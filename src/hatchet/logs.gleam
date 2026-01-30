@@ -1,6 +1,6 @@
 import gleam/httpc
 import gleam/int
-import gleam/option.{type Option, None, Some}
+import gleam/option.{type Option}
 import hatchet/errors
 import hatchet/internal/http as h
 import hatchet/internal/json as j

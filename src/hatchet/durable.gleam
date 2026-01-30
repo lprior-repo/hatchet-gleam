@@ -130,7 +130,7 @@ pub fn to_task_context(durable_ctx: DurableContext) -> TaskContext {
 pub fn save_checkpoint(
   _ctx: DurableContext,
   _checkpoint_key: String,
-  data: Dynamic,
+  _data: Dynamic,
 ) -> Result(Nil, String) {
   // Checkpoint saving is not yet available in Gleam SDK
   // The official Python/Go SDKs have this feature as a TODO.

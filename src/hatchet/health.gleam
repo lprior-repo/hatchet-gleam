@@ -1,5 +1,3 @@
-import hatchet/types.{type Client}
-
 /// Health check server configuration.
 pub type HealthConfig {
   HealthConfig(port: Int, enabled: Bool)
