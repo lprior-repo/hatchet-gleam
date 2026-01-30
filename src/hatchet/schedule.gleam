@@ -113,3 +113,63 @@ fn build_base_url(client: Client) -> String {
   let port = types.get_port(client)
   "http://" <> host <> ":" <> int.to_string(port)
 }
+
+/// List all scheduled runs for a workflow.
+///
+/// Returns metadata for all scheduled runs including their
+/// trigger times, creation timestamps, and status.
+///
+/// ## Example
+///
+/// ```gleam
+/// case schedule.list(client, "my-workflow") {
+///   Ok(list) -> io.debug(list)
+///   Error(e) -> io.println(e)
+/// }
+/// ```
+pub fn list(
+  client: Client,
+  workflow_name: String,
+) -> Result(List(p.ScheduleMetadata), String) {
+  let url =
+    build_base_url(client)
+    <> "/api/v1/workflows/"
+    <> workflow_name
+    <> "/schedules"
+
+  case request.to(url) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_header(
+          "authorization",
+          "Bearer " <> types.get_token(client),
+        )
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 -> {
+          case j.decode_schedule_list(resp.body) {
+            Ok(list_resp) -> Ok(list_resp.schedules)
+            Error(e) -> {
+              Error(
+                errors.to_simple_string(errors.decode_error(
+                  "schedule list response",
+                  e,
+                )),
+              )
+            }
+          }
+        }
+        Ok(resp) ->
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
+      }
+    }
+    Error(_) -> Error("Invalid URL")
+  }
+}

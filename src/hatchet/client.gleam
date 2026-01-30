@@ -1,5 +1,7 @@
 import gleam/dict
 import gleam/erlang/process
+import gleam/http
+import gleam/http/request
 import gleam/httpc
 import gleam/option.{type Option, None, Some}
 import gleam/otp/actor
@@ -9,6 +11,7 @@ import hatchet/internal/config.{
 }
 import hatchet/internal/http as h
 import hatchet/internal/json as j
+import hatchet/internal/protocol as p
 import hatchet/internal/tls
 import hatchet/internal/worker_actor
 import hatchet/run
@@ -536,6 +539,92 @@ pub fn stop_worker(worker: Worker) -> Nil {
       Nil
     }
     None -> Nil
+  }
+}
+
+/// Pause a worker, stopping it from accepting new tasks.
+///
+/// Existing in-progress tasks will complete, but no new tasks
+/// will be assigned until the worker is resumed.
+///
+/// ## Example
+///
+/// ```gleam
+/// case worker.pause(worker, client) {
+///   Ok(Nil) -> io.println("Worker paused")
+///   Error(e) -> io.println(e)
+/// }
+/// ```
+pub fn pause_worker(worker: Worker, client: Client) -> Result(Nil, String) {
+  let worker_id = types.get_worker_id(worker)
+  let url = h.build_base_url(client) <> "/workers/" <> worker_id <> "/pause"
+
+  case h.make_authenticated_request(client, url, option.None) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_method(http.Post)
+        |> request.set_body(
+          j.encode_worker_pause(p.WorkerPauseRequest(worker_id: worker_id)),
+        )
+        |> request.set_header("content-type", "application/json")
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 || resp.status == 204 -> Ok(Nil)
+        Ok(resp) ->
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
+      }
+    }
+    Error(e) -> Error(e)
+  }
+}
+
+/// Resume a paused worker, allowing it to accept new tasks.
+///
+/// The worker will begin receiving new task assignments
+/// from the Hatchet orchestrator.
+///
+/// ## Example
+///
+/// ```gleam
+/// case worker.resume(worker, client) {
+///   Ok(Nil) -> io.println("Worker resumed")
+///   Error(e) -> io.println(e)
+/// }
+/// ```
+pub fn resume_worker(worker: Worker, client: Client) -> Result(Nil, String) {
+  let worker_id = types.get_worker_id(worker)
+  let url = h.build_base_url(client) <> "/workers/" <> worker_id <> "/resume"
+
+  case h.make_authenticated_request(client, url, option.None) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_method(http.Post)
+        |> request.set_body(
+          j.encode_worker_resume(p.WorkerResumeRequest(worker_id: worker_id)),
+        )
+        |> request.set_header("content-type", "application/json")
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 || resp.status == 204 -> Ok(Nil)
+        Ok(resp) ->
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
+      }
+    }
+    Error(e) -> Error(e)
   }
 }
 

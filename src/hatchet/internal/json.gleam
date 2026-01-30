@@ -330,6 +330,371 @@ pub fn encode_rate_limit_upsert(req: p.RateLimitUpsertRequest) -> String {
 }
 
 // ============================================================================
+// Workflow Management Decoders
+// ============================================================================
+
+pub fn decode_workflow_list(
+  body: String,
+) -> Result(p.WorkflowListResponse, String) {
+  let decoder = {
+    use workflows <- decode.field(
+      "workflows",
+      decode.list(decode_workflow_metadata_internal()),
+    )
+    decode.success(p.WorkflowListResponse(workflows: workflows))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+fn decode_workflow_metadata_internal() -> decode.Decoder(p.WorkflowMetadata) {
+  let decoder = {
+    use name <- decode.field("name", decode.string)
+    use description <- decode.optional_field(
+      "description",
+      option.None,
+      decode.optional(decode.string),
+    )
+    use version <- decode.optional_field(
+      "version",
+      option.None,
+      decode.optional(decode.string),
+    )
+    use created_at <- decode.field("created_at", decode.string)
+    use cron_triggers <- decode.field(
+      "cron_triggers",
+      decode.list(decode.string),
+    )
+    use event_triggers <- decode.field(
+      "event_triggers",
+      decode.list(decode.string),
+    )
+    use concurrency <- decode.optional_field(
+      "concurrency",
+      option.None,
+      decode.optional(decode.int),
+    )
+    use status <- decode.field("status", decode.string)
+    decode.success(p.WorkflowMetadata(
+      name: name,
+      description: description,
+      version: version,
+      created_at: created_at,
+      cron_triggers: cron_triggers,
+      event_triggers: event_triggers,
+      concurrency: concurrency,
+      status: status,
+    ))
+  }
+  decoder
+}
+
+pub fn decode_workflow_metadata(
+  body: String,
+) -> Result(p.WorkflowMetadata, String) {
+  case json.parse(from: body, using: decode_workflow_metadata_internal()) {
+    Ok(metadata) -> Ok(metadata)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+// ============================================================================
+// Worker Management Decoders
+// ============================================================================
+
+pub fn decode_worker_list(body: String) -> Result(p.WorkerListResponse, String) {
+  let decoder = {
+    use workers <- decode.field(
+      "workers",
+      decode.list(decode_worker_metadata()),
+    )
+    decode.success(p.WorkerListResponse(workers: workers))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+fn decode_worker_metadata() -> decode.Decoder(p.WorkerMetadata) {
+  let decoder = {
+    use id <- decode.field("id", decode.string)
+    use name <- decode.field("name", decode.string)
+    use status <- decode.field("status", decode.string)
+    use slots <- decode.field("slots", decode.int)
+    use active_slots <- decode.field("active_slots", decode.int)
+    use labels <- decode.field(
+      "labels",
+      decode.dict(decode.string, decode.string),
+    )
+    use last_heartbeat <- decode.optional_field(
+      "last_heartbeat",
+      option.None,
+      decode.optional(decode.string),
+    )
+    decode.success(p.WorkerMetadata(
+      id: id,
+      name: name,
+      status: status,
+      slots: slots,
+      active_slots: active_slots,
+      labels: labels,
+      last_heartbeat: last_heartbeat,
+    ))
+  }
+  decoder
+}
+
+pub fn decode_worker_pause_response(
+  body: String,
+) -> Result(p.WorkerPauseResponse, String) {
+  let decoder = {
+    use success <- decode.field("success", decode.bool)
+    decode.success(p.WorkerPauseResponse(success: success))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+pub fn decode_worker_resume_response(
+  body: String,
+) -> Result(p.WorkerResumeResponse, String) {
+  let decoder = {
+    use success <- decode.field("success", decode.bool)
+    decode.success(p.WorkerResumeResponse(success: success))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+// ============================================================================
+// Metrics Management Decoders
+// ============================================================================
+
+pub fn decode_workflow_metrics(
+  body: String,
+) -> Result(p.WorkflowMetrics, String) {
+  let decoder = {
+    use workflow_name <- decode.field("workflow_name", decode.string)
+    use total_runs <- decode.field("total_runs", decode.int)
+    use successful_runs <- decode.field("successful_runs", decode.int)
+    use failed_runs <- decode.field("failed_runs", decode.int)
+    use success_rate <- decode.field("success_rate", decode.float)
+    use avg_duration_ms <- decode.optional_field(
+      "avg_duration_ms",
+      option.None,
+      decode.optional(decode.int),
+    )
+    use p50_duration_ms <- decode.optional_field(
+      "p50_duration_ms",
+      option.None,
+      decode.optional(decode.int),
+    )
+    use p95_duration_ms <- decode.optional_field(
+      "p95_duration_ms",
+      option.None,
+      decode.optional(decode.int),
+    )
+    use p99_duration_ms <- decode.optional_field(
+      "p99_duration_ms",
+      option.None,
+      decode.optional(decode.int),
+    )
+    decode.success(p.WorkflowMetrics(
+      workflow_name: workflow_name,
+      total_runs: total_runs,
+      successful_runs: successful_runs,
+      failed_runs: failed_runs,
+      success_rate: success_rate,
+      avg_duration_ms: avg_duration_ms,
+      p50_duration_ms: p50_duration_ms,
+      p95_duration_ms: p95_duration_ms,
+      p99_duration_ms: p99_duration_ms,
+    ))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+pub fn decode_worker_metrics(body: String) -> Result(p.WorkerMetrics, String) {
+  let decoder = {
+    use worker_id <- decode.field("worker_id", decode.string)
+    use total_tasks <- decode.field("total_tasks", decode.int)
+    use successful_tasks <- decode.field("successful_tasks", decode.int)
+    use failed_tasks <- decode.field("failed_tasks", decode.int)
+    use active_tasks <- decode.field("active_tasks", decode.int)
+    use uptime_ms <- decode.optional_field(
+      "uptime_ms",
+      option.None,
+      decode.optional(decode.int),
+    )
+    decode.success(p.WorkerMetrics(
+      worker_id: worker_id,
+      total_tasks: total_tasks,
+      successful_tasks: successful_tasks,
+      failed_tasks: failed_tasks,
+      active_tasks: active_tasks,
+      uptime_ms: uptime_ms,
+    ))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+// ============================================================================
+// Logs Management Decoders
+// ============================================================================
+
+pub fn decode_log_list(body: String) -> Result(p.LogListResponse, String) {
+  let decoder = {
+    use logs <- decode.field("logs", decode.list(decode_log_entry()))
+    use has_more <- decode.field("has_more", decode.bool)
+    decode.success(p.LogListResponse(logs: logs, has_more: has_more))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+fn decode_log_entry() -> decode.Decoder(p.LogEntry) {
+  let decoder = {
+    use run_id <- decode.field("run_id", decode.string)
+    use task_run_id <- decode.optional_field(
+      "task_run_id",
+      option.None,
+      decode.optional(decode.string),
+    )
+    use timestamp <- decode.field("timestamp", decode.string)
+    use level <- decode.field("level", decode.string)
+    use message <- decode.field("message", decode.string)
+    use metadata <- decode.field(
+      "metadata",
+      decode.dict(decode.string, decode.string),
+    )
+    decode.success(p.LogEntry(
+      run_id: run_id,
+      task_run_id: task_run_id,
+      timestamp: timestamp,
+      level: level,
+      message: message,
+      metadata: metadata,
+    ))
+  }
+  decoder
+}
+
+// ============================================================================
+// Cron List Decoder
+// ============================================================================
+
+pub fn decode_cron_list(body: String) -> Result(p.CronListResponse, String) {
+  let decoder = {
+    use crons <- decode.field("crons", decode.list(decode_cron_metadata()))
+    decode.success(p.CronListResponse(crons: crons))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+fn decode_cron_metadata() -> decode.Decoder(p.CronMetadata) {
+  let decoder = {
+    use id <- decode.field("id", decode.string)
+    use workflow_name <- decode.field("workflow_name", decode.string)
+    use name <- decode.field("name", decode.string)
+    use expression <- decode.field("expression", decode.string)
+    use next_run <- decode.optional_field(
+      "next_run",
+      option.None,
+      decode.optional(decode.string),
+    )
+    use created_at <- decode.field("created_at", decode.string)
+    decode.success(p.CronMetadata(
+      id: id,
+      workflow_name: workflow_name,
+      name: name,
+      expression: expression,
+      next_run: next_run,
+      created_at: created_at,
+    ))
+  }
+  decoder
+}
+
+// ============================================================================
+// Schedule List Decoder
+// ============================================================================
+
+// ============================================================================
+// Worker Management Encoders
+// ============================================================================
+
+pub fn encode_worker_pause(req: p.WorkerPauseRequest) -> String {
+  json.object([#("worker_id", json.string(req.worker_id))])
+  |> json.to_string()
+}
+
+pub fn encode_worker_resume(req: p.WorkerResumeRequest) -> String {
+  json.object([#("worker_id", json.string(req.worker_id))])
+  |> json.to_string()
+}
+
+pub fn decode_schedule_list(
+  body: String,
+) -> Result(p.ScheduleListResponse, String) {
+  let decoder = {
+    use schedules <- decode.field(
+      "schedules",
+      decode.list(decode_schedule_metadata()),
+    )
+    decode.success(p.ScheduleListResponse(schedules: schedules))
+  }
+
+  case json.parse(from: body, using: decoder) {
+    Ok(response) -> Ok(response)
+    Error(err) -> Error(decode_error_to_string(err))
+  }
+}
+
+fn decode_schedule_metadata() -> decode.Decoder(p.ScheduleMetadata) {
+  let decoder = {
+    use id <- decode.field("id", decode.string)
+    use workflow_name <- decode.field("workflow_name", decode.string)
+    use trigger_at <- decode.field("trigger_at", decode.string)
+    use created_at <- decode.field("created_at", decode.string)
+    use status <- decode.field("status", decode.string)
+    decode.success(p.ScheduleMetadata(
+      id: id,
+      workflow_name: workflow_name,
+      trigger_at: trigger_at,
+      created_at: created_at,
+      status: status,
+    ))
+  }
+  decoder
+}
+
+// ============================================================================
 // Decode Helpers
 // ============================================================================
 

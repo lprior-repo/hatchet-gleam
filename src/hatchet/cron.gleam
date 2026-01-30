@@ -110,3 +110,60 @@ fn build_base_url(client: Client) -> String {
   let port = types.get_port(client)
   "http://" <> host <> ":" <> int.to_string(port)
 }
+
+/// List all cron triggers for a workflow.
+///
+/// Returns metadata for all cron triggers including their
+/// expressions, next run times, and creation timestamps.
+///
+/// ## Example
+///
+/// ```gleam
+/// case cron.list(client, "my-workflow") {
+///   Ok(list) -> io.debug(list)
+///   Error(e) -> io.println(e)
+/// }
+/// ```
+pub fn list(
+  client: Client,
+  workflow_name: String,
+) -> Result(List(p.CronMetadata), String) {
+  let url =
+    build_base_url(client) <> "/api/v1/workflows/" <> workflow_name <> "/crons"
+
+  case request.to(url) {
+    Ok(req) -> {
+      let req =
+        req
+        |> request.set_header(
+          "authorization",
+          "Bearer " <> types.get_token(client),
+        )
+
+      case httpc.send(req) {
+        Ok(resp) if resp.status == 200 -> {
+          case j.decode_cron_list(resp.body) {
+            Ok(list_resp) -> Ok(list_resp.crons)
+            Error(e) -> {
+              Error(
+                errors.to_simple_string(errors.decode_error(
+                  "cron list response",
+                  e,
+                )),
+              )
+            }
+          }
+        }
+        Ok(resp) ->
+          Error(
+            errors.to_simple_string(errors.api_http_error(
+              resp.status,
+              resp.body,
+            )),
+          )
+        Error(_) -> Error(errors.to_simple_string(errors.network_error("")))
+      }
+    }
+    Error(_) -> Error("Invalid URL")
+  }
+}

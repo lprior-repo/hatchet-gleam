@@ -170,3 +170,137 @@ pub type ScheduleResponse {
 pub type RateLimitUpsertRequest {
   RateLimitUpsertRequest(key: String, limit: Int, duration: String)
 }
+
+// ============================================================================
+// Workflow Management
+// ============================================================================
+
+pub type WorkflowMetadata {
+  WorkflowMetadata(
+    name: String,
+    description: Option(String),
+    version: Option(String),
+    created_at: String,
+    cron_triggers: List(String),
+    event_triggers: List(String),
+    concurrency: Option(Int),
+    status: String,
+  )
+}
+
+pub type WorkflowListResponse {
+  WorkflowListResponse(workflows: List(WorkflowMetadata))
+}
+
+// ============================================================================
+// Worker Management
+// ============================================================================
+
+pub type WorkerMetadata {
+  WorkerMetadata(
+    id: String,
+    name: String,
+    status: String,
+    slots: Int,
+    active_slots: Int,
+    labels: Dict(String, String),
+    last_heartbeat: Option(String),
+  )
+}
+
+pub type WorkerListResponse {
+  WorkerListResponse(workers: List(WorkerMetadata))
+}
+
+pub type WorkerPauseRequest {
+  WorkerPauseRequest(worker_id: String)
+}
+
+pub type WorkerPauseResponse {
+  WorkerPauseResponse(success: Bool)
+}
+
+pub type WorkerResumeRequest {
+  WorkerResumeRequest(worker_id: String)
+}
+
+pub type WorkerResumeResponse {
+  WorkerResumeResponse(success: Bool)
+}
+
+// ============================================================================
+// Metrics Management
+// ============================================================================
+
+pub type WorkflowMetrics {
+  WorkflowMetrics(
+    workflow_name: String,
+    total_runs: Int,
+    successful_runs: Int,
+    failed_runs: Int,
+    success_rate: Float,
+    avg_duration_ms: Option(Int),
+    p50_duration_ms: Option(Int),
+    p95_duration_ms: Option(Int),
+    p99_duration_ms: Option(Int),
+  )
+}
+
+pub type WorkerMetrics {
+  WorkerMetrics(
+    worker_id: String,
+    total_tasks: Int,
+    successful_tasks: Int,
+    failed_tasks: Int,
+    active_tasks: Int,
+    uptime_ms: Option(Int),
+  )
+}
+
+// ============================================================================
+// Logs Management
+// ============================================================================
+
+pub type LogEntry {
+  LogEntry(
+    run_id: String,
+    task_run_id: Option(String),
+    timestamp: String,
+    level: String,
+    message: String,
+    metadata: Dict(String, String),
+  )
+}
+
+pub type LogListResponse {
+  LogListResponse(logs: List(LogEntry), has_more: Bool)
+}
+
+pub type CronListResponse {
+  CronListResponse(crons: List(CronMetadata))
+}
+
+pub type CronMetadata {
+  CronMetadata(
+    id: String,
+    workflow_name: String,
+    name: String,
+    expression: String,
+    next_run: Option(String),
+    created_at: String,
+  )
+}
+
+pub type ScheduleListResponse {
+  ScheduleListResponse(schedules: List(ScheduleMetadata))
+}
+
+pub type ScheduleMetadata {
+  ScheduleMetadata(
+    id: String,
+    workflow_name: String,
+    trigger_at: String,
+    created_at: String,
+    status: String,
+  )
+}
