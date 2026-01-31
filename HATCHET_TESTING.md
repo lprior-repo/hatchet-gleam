@@ -201,13 +201,16 @@ If you encounter database connection issues with Hatchet:
 
 When testing against a live Hatchet server, verify:
 
-- [ ] Client can connect to Hatchet server
-- [ ] Workflow can be registered with the server
-- [ ] Worker can listen for and execute tasks
-- [ ] Workflow runs can be triggered
-- [ ] Task outputs are properly passed between dependent tasks
-- [ ] Retries work as configured
-- [ ] Timeouts are enforced
-- [ ] Workflow failures are handled correctly
-- [ ] Event triggers work (cron and event-based)
-- [ ] Concurrency limits are respected
+- [x] Client can connect to Hatchet server (`worker_registration_and_connection_test`)
+- [x] Workflow can be registered with the server (`end_to_end_workflow_execution_test`)
+- [x] Worker can listen for and execute tasks (`end_to_end_workflow_execution_test`)
+- [x] Workflow runs can be triggered (`end_to_end_workflow_execution_test`)
+- [x] Task outputs are properly passed between dependent tasks (`task_dependency_output_test`)
+- [x] Retries work as configured (`retry_behavior_test`)
+- [x] Timeouts are enforced (`timeout_enforcement_test`)
+- [x] Workflow failures are handled correctly (`failure_handling_test`)
+- [x] Event triggers work (cron and event-based) (`event_trigger_test`)
+- [x] Concurrency limits are respected (`concurrency_limit_test`)
+- [x] Skip/Cancel conditions are evaluated (`skip_cancel_conditions_test`)
+
+All tests are located in `test/integration/live_test.gleam`.

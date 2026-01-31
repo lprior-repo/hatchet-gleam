@@ -3,6 +3,9 @@
 //// These tests are skipped unless HATCHET_LIVE_TEST=1 is set.
 //// To run:
 ////   HATCHET_LIVE_TEST=1 HATCHET_CLIENT_TOKEN=<token> gleam test
+////
+//// For comprehensive live integration tests covering the full Manual Testing
+//// Checklist from HATCHET_TESTING.md, see: test/integration/live_test.gleam
 
 import envoy
 import gleam/dict
